@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/types"
+  },
+  "include": ["src/GamcheonMap.tsx", "src/filterPlaces.ts", "src/index.ts", "src/types.ts"],
+  "exclude": ["src/*.test.ts", "src/demo.tsx"]
+}
