@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>감천 주택 부재 예시</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #eef1ec; font-family: "Malgun Gothic", system-ui, sans-serif; }
+  #stage { position: relative; width: 1200px; height: 800px; margin: 0 auto; overflow: hidden; }
+  canvas { display: block; }
+  .title { position: absolute; left: 32px; top: 26px; color: #23302b; }
+  .title strong { display: block; font-size: 24px; letter-spacing: -0.02em; }
+  .title span { font-size: 13px; color: #5d6c65; }
+  .label { position: absolute; transform: translate(-50%, -100%); padding: 7px 12px; border-radius: 999px;
+    background: #fffdf7; box-shadow: 0 4px 14px rgba(20, 40, 32, .16); color: #1f3a31; font-size: 14px; font-weight: 700; white-space: nowrap; }
+  .label i { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 7px; border-radius: 50%;
+    background: #d9482f; color: #fff; font-style: normal; font-size: 12px; }
+  svg.leaders { position: absolute; inset: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="title"><strong>감천 주택 부재 예시</strong><span>외부 계단 · 발코니 난간 · 경사지붕 처마 두께 (지도와 같은 조명·그림자)</span></div>
+  <svg class="leaders" id="leaders" width="1200" height="800"></svg>
+</div>
+<script type="module">
+import * as THREE from 'three'
+
+const W = 1200, H = 800
+const stage = document.getElementById('stage')
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio))
+renderer.setSize(W, H)
+renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.toneMappingExposure = 1.05
+renderer.shadowMap.enabled = true
+renderer.shadowMap.type = THREE.PCFSoftShadowMap
+stage.prepend(renderer.domElement)
+
+const scene = new THREE.Scene()
+scene.background = new THREE.Color(0xeef1ec)
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.1, 200)
+camera.position.set(15.5, 7.2, 20.5)
+camera.lookAt(0.4, 3.6, 0.2)
+
+// 지도와 같은 조명: 하늘빛·지면 반사광 + 남동쪽 태양(부드러운 그림자)
+scene.add(new THREE.HemisphereLight(0xeaf3ff, 0xb8aa92, 1.35))
+scene.add(new THREE.AmbientLight(0xffffff, 0.35))
+const sun = new THREE.DirectionalLight(0xfff0dc, 2.7)
+sun.position.set(15, 15, 9)
+sun.castShadow = true
+sun.shadow.mapSize.set(4096, 4096)
+Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 60 })
+sun.shadow.bias = -0.0004
+sun.shadow.normalBias = 0.02
+sun.shadow.radius = 3
+scene.add(sun)
+
+const materials = new Map()
+const mat = (color, opts = {}) => {
+  const key = color + JSON.stringify(opts)
+  if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial({ color, roughness: 0.86, ...opts }))
+  return materials.get(key)
+}
+function box(color, w, h, d, x, y, z, opts) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color, opts))
+  mesh.position.set(x, y, z)
+  mesh.castShadow = mesh.receiveShadow = true
+  scene.add(mesh)
+  return mesh
+}
+function beam(color, from, to, t) {
+  const a = new THREE.Vector3(...from), b = new THREE.Vector3(...to)
+  const v = b.clone().sub(a)
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(t, t, v.length(), 10), mat(color, { roughness: 0.45, metalness: 0.35 }))
+  mesh.position.copy(a.clone().add(b).multiplyScalar(0.5))
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v.normalize())
+  mesh.castShadow = true
+  scene.add(mesh)
+}
+
+// 바닥: 골목 포장과 대지
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), mat(0xe9e6dc))
+ground.rotation.x = -Math.PI / 2
+ground.receiveShadow = true
+scene.add(ground)
+box(0xc9ccc6, 60, 0.04, 3.2, 0, 0.02, 5.6)
+for (let x = -28; x < 28; x += 1.2) box(0xbfc2bc, 0.02, 0.05, 3.2, x, 0.03, 5.6)
+
+// 몸채: 2층 미장 주택(가로 7m × 깊이 5.5m)
+const WALL = 0xcfe3d6, TRIM = 0xf1f0ea, BASE = 0x9aa19b
+const WX = 7, WZ = 5.5, FLOOR = 3.0, TOP = 6.0
+box(WALL, WX, TOP, WZ, 0, TOP / 2, 0)
+box(BASE, WX + 0.06, 0.45, WZ + 0.06, 0, 0.225, 0)
+box(TRIM, WX + 0.1, 0.12, WZ + 0.1, 0, FLOOR, 0)
+
+function windowAt(x, y, z, w, h, facing = 'z', bars = false) {
+  const along = facing === 'z' ? [w, h, 0.06] : [0.06, h, w]
+  const out = facing === 'z' ? [0, 0, 0.04] : [0.04, 0, 0]
+  box(0x33474e, along[0], along[1], along[2], x, y, z, { roughness: 0.2, metalness: 0.2 })
+  const f = (dx, dy, fw, fh) => box(TRIM, facing === 'z' ? fw : 0.09, fh, facing === 'z' ? 0.09 : fw,
+    x + (facing === 'z' ? dx : out[0] * 1.5), y + dy, z + (facing === 'z' ? out[2] * 1.5 : dx))
+  f(0, h / 2 + 0.04, w + 0.16, 0.08); f(0, -h / 2 - 0.04, w + 0.16, 0.08)
+  f(-w / 2 - 0.04, 0, 0.08, h + 0.16); f(w / 2 + 0.04, 0, 0.08, h + 0.16); f(0, 0, 0.05, h)
+  // 창턱
+  box(0xdcdad0, facing === 'z' ? w + 0.3 : 0.24, 0.09, facing === 'z' ? 0.24 : w + 0.3,
+    x + out[0] * 3, y - h / 2 - 0.1, z + out[2] * 3)
+  if (bars) for (let o = -w / 2 + 0.12; o < w / 2; o += 0.16)
+    box(0xd6ddd4, facing === 'z' ? 0.025 : 0.025, h - 0.06, 0.025, x + (facing === 'z' ? o : 0.16), y, z + (facing === 'z' ? 0.16 : o))
+}
+// 앞면(+z): 1층 창·문, 2층 발코니 문
+windowAt(-1.9, 1.55, WZ / 2, 1.7, 1.25, 'z', true)
+box(0x6b7c78, 0.95, 2.15, 0.08, 1.0, 1.12, WZ / 2 + 0.02)
+box(TRIM, 1.1, 0.08, 0.12, 1.0, 2.25, WZ / 2 + 0.04)
+windowAt(-0.8, 4.35, WZ / 2, 1.1, 2.0, 'z')
+windowAt(1.5, 4.55, WZ / 2, 1.3, 1.1, 'z')
+// 옆면(+x)
+windowAt(WX / 2, 1.6, -1.2, 1.2, 1.1, 'x', true)
+windowAt(WX / 2, 4.5, -1.4, 1.2, 1.1, 'x')
+
+// ② 발코니: 두께 있는 캔틸레버 슬래브 + 금속 난간(상·하부 가로대, 촘촘한 살, 기둥)
+const BX = -0.6, BW = 3.4, BD = 1.15, BY = FLOOR + 0.02
+box(0xe3e1d8, BW, 0.2, BD, BX, BY, WZ / 2 + BD / 2)
+box(0xc9c7be, BW - 0.1, 0.05, BD - 0.1, BX, BY - 0.12, WZ / 2 + BD / 2)
+const RAIL = 0x3f5d57, RH = 1.05, front = WZ / 2 + BD - 0.06
+const railLine = (ax, az, bx, bz) => {
+  beam(RAIL, [ax, BY + RH, az], [bx, BY + RH, bz], 0.035)
+  beam(RAIL, [ax, BY + 0.2, az], [bx, BY + 0.2, bz], 0.022)
+  const len = Math.hypot(bx - ax, bz - az), n = Math.round(len / 0.12)
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, x = ax + (bx - ax) * t, z = az + (bz - az) * t
+    beam(RAIL, [x, BY + 0.1, z], [x, BY + RH, z], i % 8 === 0 ? 0.03 : 0.011)
+  }
+}
+railLine(BX - BW / 2 + 0.06, front, BX + BW / 2 - 0.06, front)
+railLine(BX - BW / 2 + 0.06, WZ / 2, BX - BW / 2 + 0.06, front)
+railLine(BX + BW / 2 - 0.06, WZ / 2, BX + BW / 2 - 0.06, front)
+
+// ③ 경사지붕: 두께 있는 지붕판, 처마 내밀기, 서까래 끝, 처마 널판, 박공 널판
+const PITCH = THREE.MathUtils.degToRad(24), EAVE = 0.85, GABLE = 0.5, THICK = 0.2
+const half = WZ / 2 + EAVE, run = half, rise = Math.tan(PITCH) * (WZ / 2)
+const slope = run / Math.cos(PITCH)
+const ROOF = 0xa9533f, FASCIA = 0xf2efe6, RAFTER = 0x8a6c58
+for (const side of [1, -1]) {
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(WX + GABLE * 2, THICK, slope), mat(ROOF, { roughness: 0.6, metalness: 0.15 }))
+  panel.position.set(0, TOP + rise / 2 - Math.tan(PITCH) * EAVE / 2 + THICK / 2, side * (half / 2))
+  panel.rotation.x = side * PITCH
+  panel.castShadow = panel.receiveShadow = true
+  scene.add(panel)
+  // 골강판 골: 지붕판 위의 얇은 리브
+  for (let x = -WX / 2 - GABLE + 0.15; x < WX / 2 + GABLE; x += 0.3) {
+    const rib = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, slope), mat(0x8f4535, { roughness: 0.55, metalness: 0.2 }))
+    rib.position.copy(panel.position).add(new THREE.Vector3(x, THICK / 2 + 0.02, 0).applyAxisAngle(new THREE.Vector3(1, 0, 0), side * PITCH))
+    rib.rotation.x = side * PITCH
+    rib.castShadow = true
+    scene.add(rib)
+  }
+  // 처마 끝 높이와 처마 널판(두께감의 핵심)
+  const eaveY = TOP - Math.tan(PITCH) * EAVE
+  box(FASCIA, WX + GABLE * 2 + 0.04, 0.34, 0.09, 0, eaveY - 0.06, side * (half + 0.03))
+  // 처마 밑 서까래 끝
+  for (let x = -WX / 2 - GABLE + 0.2; x <= WX / 2 + GABLE - 0.2; x += 0.55) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, EAVE + 0.1), mat(RAFTER))
+    r.position.set(x, eaveY + Math.tan(PITCH) * EAVE / 2 - 0.08, side * (WZ / 2 + EAVE / 2))
+    r.rotation.x = side * PITCH
+    r.castShadow = true
+    scene.add(r)
+  }
+  // 처마 밑면(소핏)
+  const soffit = new THREE.Mesh(new THREE.BoxGeometry(WX + GABLE * 2, 0.03, EAVE), mat(0xdedbd1))
+  soffit.position.set(0, eaveY + Math.tan(PITCH) * EAVE / 2 - 0.15, side * (WZ / 2 + EAVE / 2))
+  soffit.rotation.x = side * PITCH
+  scene.add(soffit)
+}
+// 박공벽 삼각형과 박공 널판
+const gableShape = new THREE.Shape([new THREE.Vector2(-WZ / 2, 0), new THREE.Vector2(WZ / 2, 0), new THREE.Vector2(0, rise)])
+for (const side of [1, -1]) {
+  const g = new THREE.Mesh(new THREE.ExtrudeGeometry(gableShape, { depth: 0.19, bevelEnabled: false }), mat(WALL))
+  g.rotation.y = Math.PI / 2
+  g.position.set(side * WX / 2 - 0.095, TOP, 0)
+  g.castShadow = g.receiveShadow = true
+  scene.add(g)
+  for (const s of [1, -1]) {
+    const barge = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.32, slope + 0.1), mat(FASCIA))
+    barge.position.set(side * (WX / 2 + GABLE), TOP + rise / 2 - Math.tan(PITCH) * EAVE / 2 + 0.02, s * half / 2)
+    barge.rotation.x = s * PITCH
+    barge.castShadow = true
+    scene.add(barge)
+  }
+}
+box(0x8f4535, WX + GABLE * 2 + 0.1, 0.12, 0.3, 0, TOP + rise + THICK + 0.02, 0, { roughness: 0.55, metalness: 0.2 })
+
+// ① 외부 계단: 옆벽(+x)을 따라 올라가는 콘크리트 계단과 챌판·디딤판, 층참, 손잡이 난간
+const SX = WX / 2 + 0.62, SW = 1.05, STEPS = 14, RISE = FLOOR / STEPS, RUN = 0.27
+const CONCRETE = 0xd8d5cb, NOSE = 0xbfbcb2, startZ = WZ / 2 - 0.1
+for (let i = 0; i < STEPS; i++) {
+  const y = RISE * (i + 1), z = startZ - RUN * i - RUN / 2
+  box(CONCRETE, SW, y, RUN, SX, y / 2, z)
+  box(NOSE, SW + 0.02, 0.04, 0.05, SX, y + 0.005, z + RUN / 2 - 0.02)
+}
+const landingZ = startZ - RUN * STEPS - 0.6
+box(CONCRETE, SW + 0.05, 0.2, 1.2, SX, FLOOR - 0.1, landingZ)
+box(0xbdbab0, 0.22, FLOOR - 0.2, 0.22, SX + SW / 2 - 0.12, (FLOOR - 0.2) / 2, landingZ - 0.45)
+box(0x6b7c78, 0.06, 2.1, 0.9, WX / 2 + 0.02, FLOOR + 1.05, landingZ)
+box(TRIM, 0.1, 0.08, 1.05, WX / 2 + 0.04, FLOOR + 2.14, landingZ)
+// 손잡이: 계단 경사를 따라 가는 파이프와 짧은 기둥
+const HR = 0x55635f, hx = SX + SW / 2 - 0.05
+for (let i = 0; i <= STEPS; i += 2) {
+  const y = RISE * i, z = startZ - RUN * i
+  beam(HR, [hx, y + 0.02, z], [hx, y + 0.95, z], 0.022)
+}
+beam(HR, [hx, 0.95, startZ], [hx, FLOOR + 0.95, startZ - RUN * STEPS], 0.028)
+beam(HR, [hx, FLOOR + 0.95, startZ - RUN * STEPS], [hx, FLOOR + 0.95, landingZ - 0.55], 0.028)
+beam(HR, [hx, FLOOR, landingZ - 0.55], [hx, FLOOR + 0.95, landingZ - 0.55], 0.022)
+
+// 주변 맥락: 옆 건물 일부와 화분
+box(0xd9c7b1, 6, 4.2, 5, -9.2, 2.1, -0.6)
+box(0xa35a45, 5, 7.4, 5, 9.6, 3.7, -4.8)
+for (const [x, z] of [[-3.2, 3.4], [-2.6, 3.4]]) {
+  box(0x9a6f55, 0.4, 0.35, 0.4, x, 0.18, z)
+  const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12), mat(0x6f9f5f))
+  leaf.position.set(x, 0.62, z); leaf.castShadow = true; scene.add(leaf)
+}
+
+renderer.render(scene, camera)
+
+// 설명 라벨: 부재 위치를 화면 좌표로 투영해 지시선과 함께 표시
+const labels = [
+  { n: 1, text: '외부 계단 · 디딤판·챌판·층참·손잡이', at: [SX, 1.6, startZ - RUN * 6], dx: 150, dy: 110 },
+  { n: 2, text: '발코니 · 두께 있는 슬래브와 금속 난간', at: [BX - 0.8, BY + RH, front], dx: -210, dy: 60 },
+  { n: 3, text: '경사지붕 · 처마 내밀기·처마널·서까래 끝', at: [-1.2, TOP - 0.4, half + 0.05], dx: -150, dy: -95 },
+]
+const svg = document.getElementById('leaders')
+for (const label of labels) {
+  const p = new THREE.Vector3(...label.at).project(camera)
+  const x = (p.x + 1) / 2 * W, y = (1 - p.y) / 2 * H
+  const lx = x + label.dx, ly = y + label.dy
+  svg.insertAdjacentHTML('beforeend',
+    `<line x1="${x}" y1="${y}" x2="${lx}" y2="${ly}" stroke="#d9482f" stroke-width="1.6"/>` +
+    `<circle cx="${x}" cy="${y}" r="4.5" fill="#d9482f" stroke="#fff" stroke-width="1.5"/>`)
+  const el = document.createElement('div')
+  el.className = 'label'
+  el.innerHTML = `<i>${label.n}</i>${label.text}`
+  el.style.left = lx + 'px'
+  el.style.top = (ly + (label.dy < 0 ? 0 : 38)) + 'px'
+  stage.appendChild(el)
+}
+document.body.dataset.ready = 'true'
+</script>
+</body>
+</html>

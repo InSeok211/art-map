@@ -1,4 +1,10 @@
 node_modules/
 dist/
 .npm-cache/
+.tmp/
 *.zip
+# 참고 이미지(카카오 로드뷰 캡처·현장 사진·생성 시안)는 저작권 때문에 공개 저장소에 올리지 않습니다.
+design/**/*.jpg
+design/**/*.jpeg
+design/**/*.png
+design/**/*.webp
