@@ -1,0 +1,2014 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="openstreetmap-cgimap 2.1.0 (2942780 spike-08.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">
+ <bounds minlat="35.0943000" minlon="129.0086000" maxlat="35.0958000" maxlon="129.0096000"/>
+ <node id="436827940" visible="true" version="3" changeset="132672260" timestamp="2023-02-17T12:05:44Z" user="adreamy" uid="2750856" lat="35.0970435" lon="129.0101758"/>
+ <node id="436863654" visible="true" version="4" changeset="166910410" timestamp="2025-05-29T09:21:56Z" user="TejasSatkar" uid="22889547" lat="35.0932429" lon="129.0093639"/>
+ <node id="1769426556" visible="true" version="3" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0947663" lon="129.0085174"/>
+ <node id="1769949167" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0969872" lon="129.0093750"/>
+ <node id="1769949171" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0974648" lon="129.0095290"/>
+ <node id="1769949172" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0951843" lon="129.0085355"/>
+ <node id="1769949173" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0974124" lon="129.0101107"/>
+ <node id="1769949174" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0979214" lon="129.0093775"/>
+ <node id="1769949175" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0950784" lon="129.0085758"/>
+ <node id="1769949184" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0953967" lon="129.0089102"/>
+ <node id="1769949186" visible="true" version="2" changeset="132785737" timestamp="2023-02-20T11:13:19Z" user="adreamy" uid="2750856" lat="35.0954506" lon="129.0090949"/>
+ <node id="1769949187" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0976150" lon="129.0101114"/>
+ <node id="1769949199" visible="true" version="3" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0971192" lon="129.0101360"/>
+ <node id="1769949205" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0961837" lon="129.0093251"/>
+ <node id="1769949215" visible="true" version="3" changeset="132685967" timestamp="2023-02-17T16:50:47Z" user="adreamy" uid="2750856" lat="35.0933267" lon="129.0092919"/>
+ <node id="1769949218" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0981109" lon="129.0096647"/>
+ <node id="1769949233" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0949415" lon="129.0085685"/>
+ <node id="1769949234" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0972608" lon="129.0094400"/>
+ <node id="1769949236" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0980189" lon="129.0094075"/>
+ <node id="1769949240" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0977711" lon="129.0094769"/>
+ <node id="1769949243" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0980742" lon="129.0097220"/>
+ <node id="1769949245" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0974702" lon="129.0101211"/>
+ <node id="1769949246" visible="true" version="1" changeset="11742698" timestamp="2012-05-29T21:09:20Z" user="aquilegia" uid="476671" lat="35.0954033" lon="129.0087228"/>
+ <node id="1769949249" visible="true" version="3" changeset="132685967" timestamp="2023-02-17T16:50:47Z" user="adreamy" uid="2750856" lat="35.0934860" lon="129.0092491"/>
+ <node id="1769949250" visible="true" version="5" changeset="132743171" timestamp="2023-02-19T11:02:55Z" user="adreamy" uid="2750856" lat="35.0981220" lon="129.0095734"/>
+ <node id="1769949251" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0953250" lon="129.0085659"/>
+ <node id="1769949252" visible="true" version="6" changeset="132773549" timestamp="2023-02-20T05:28:42Z" user="adreamy" uid="2750856" lat="35.0963448" lon="129.0093739"/>
+ <node id="1769949253" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0958197" lon="129.0092554"/>
+ <node id="1769949255" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0943657" lon="129.0088400"/>
+ <node id="1769949256" visible="true" version="3" changeset="132773549" timestamp="2023-02-20T05:28:42Z" user="adreamy" uid="2750856" lat="35.0964778" lon="129.0094132"/>
+ <node id="1769949263" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0976083" lon="129.0095864"/>
+ <node id="1769949264" visible="true" version="3" changeset="132773549" timestamp="2023-02-20T05:28:42Z" user="adreamy" uid="2750856" lat="35.0967383" lon="129.0094088"/>
+ <node id="1769949266" visible="true" version="2" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0948500" lon="129.0085366"/>
+ <node id="2449241334" visible="true" version="6" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0963945" lon="129.0090619"/>
+ <node id="4941889423" visible="true" version="1" changeset="49913631" timestamp="2017-06-29T09:49:06Z" user="Santiago Trujillo Pereira" uid="4905628" lat="35.0950741" lon="129.0089208">
+  <tag k="tourism" v="artwork"/>
+ </node>
+ <node id="6831876186" visible="true" version="1" changeset="75030645" timestamp="2019-09-28T02:40:36Z" user="pandaroux" uid="5598398" lat="35.0955049" lon="129.0089294">
+  <tag k="amenity" v="shower"/>
+  <tag k="name:fr" v="Jimjilmbang"/>
+ </node>
+ <node id="7812008074" visible="true" version="2" changeset="162696754" timestamp="2025-02-19T11:29:24Z" user="chiho_kang" uid="10604125" lat="35.0945065" lon="129.0094134">
+  <tag k="addr:city" v="부산광역시"/>
+  <tag k="addr:district" v="사하구"/>
+  <tag k="addr:housenumber" v="14"/>
+  <tag k="addr:postcode" v="49365"/>
+  <tag k="addr:street" v="옥천로93번길"/>
+  <tag k="amenity" v="townhall"/>
+  <tag k="government" v="administrative"/>
+  <tag k="name" v="감천2동 행정복지센터"/>
+  <tag k="name:ko" v="감천2동 행정복지센터"/>
+  <tag k="office" v="government"/>
+ </node>
+ <node id="10666212933" visible="true" version="4" changeset="132785737" timestamp="2023-02-20T11:13:19Z" user="adreamy" uid="2750856" lat="35.0965319" lon="129.0094332"/>
+ <node id="10666212935" visible="true" version="4" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0966068" lon="129.0092055"/>
+ <node id="10673265885" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0973241" lon="129.0101089"/>
+ <node id="10673265886" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0972552" lon="129.0101146"/>
+ <node id="10673265887" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0975604" lon="129.0101203"/>
+ <node id="10673265888" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0976867" lon="129.0100701"/>
+ <node id="10673265889" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0978974" lon="129.0099063"/>
+ <node id="10673265890" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0979478" lon="129.0098580"/>
+ <node id="10673265891" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0981151" lon="129.0095408"/>
+ <node id="10673265892" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0980563" lon="129.0094499"/>
+ <node id="10673265893" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0980973" lon="129.0094982"/>
+ <node id="10673265894" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0979741" lon="129.0093883"/>
+ <node id="10673265895" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0977169" lon="129.0095275"/>
+ <node id="10673265896" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0978246" lon="129.0094224"/>
+ <node id="10673265897" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0976673" lon="129.0095626"/>
+ <node id="10673265898" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0975209" lon="129.0095730"/>
+ <node id="10673265899" visible="true" version="2" changeset="132785737" timestamp="2023-02-20T11:13:19Z" user="adreamy" uid="2750856" lat="35.0975613" lon="129.0095873"/>
+ <node id="10673265900" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0974132" lon="129.0095020"/>
+ <node id="10673265901" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0970785" lon="129.0093912"/>
+ <node id="10673265902" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0968352" lon="129.0093807"/>
+ <node id="10673265903" visible="true" version="2" changeset="132773549" timestamp="2023-02-20T05:28:42Z" user="adreamy" uid="2750856" lat="35.0966454" lon="129.0094361"/>
+ <node id="10673265904" visible="true" version="2" changeset="132773549" timestamp="2023-02-20T05:28:42Z" user="adreamy" uid="2750856" lat="35.0965835" lon="129.0094335"/>
+ <node id="10673326105" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0956134" lon="129.0092217"/>
+ <node id="10673326106" visible="true" version="3" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955217" lon="129.0091904"/>
+ <node id="10673326107" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0953477" lon="129.0088883"/>
+ <node id="10673326108" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0952082" lon="129.0088599"/>
+ <node id="10673326144" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0938655" lon="129.0090607"/>
+ <node id="10673326145" visible="true" version="2" changeset="132685967" timestamp="2023-02-17T16:50:47Z" user="adreamy" uid="2750856" lat="35.0943073" lon="129.0088550"/>
+ <node id="10673326146" visible="true" version="2" changeset="132685967" timestamp="2023-02-17T16:50:47Z" user="adreamy" uid="2750856" lat="35.0944591" lon="129.0088361"/>
+ <node id="10673326147" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0954159" lon="129.0088694"/>
+ <node id="10673326148" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0954135" lon="129.0088003"/>
+ <node id="10673326149" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0953980" lon="129.0086762"/>
+ <node id="10673326150" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0953694" lon="129.0086099"/>
+ <node id="10673326151" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0952617" lon="129.0085446"/>
+ <node id="10673326152" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0951238" lon="129.0085541"/>
+ <node id="10673326153" visible="true" version="1" changeset="132672925" timestamp="2023-02-17T12:21:13Z" user="adreamy" uid="2750856" lat="35.0950145" lon="129.0085815"/>
+ <node id="10674038526" visible="true" version="1" changeset="132685967" timestamp="2023-02-17T16:50:47Z" user="adreamy" uid="2750856" lat="35.0978904" lon="129.0093919"/>
+ <node id="10674038542" visible="true" version="3" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0965795" lon="129.0091787"/>
+ <node id="10674038543" visible="true" version="3" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0964680" lon="129.0090985"/>
+ <node id="10674038544" visible="true" version="3" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0963135" lon="129.0090131"/>
+ <node id="10674038545" visible="true" version="3" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0962482" lon="129.0089873"/>
+ <node id="10674038546" visible="true" version="3" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0961489" lon="129.0089663"/>
+ <node id="10674038547" visible="true" version="3" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0960812" lon="129.0089547"/>
+ <node id="10674038549" visible="true" version="3" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0960308" lon="129.0089464"/>
+ <node id="10674038550" visible="true" version="3" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0958990" lon="129.0089332"/>
+ <node id="10674038551" visible="true" version="3" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0957582" lon="129.0089264"/>
+ <node id="10674038553" visible="true" version="3" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0956598" lon="129.0089314"/>
+ <node id="10674038555" visible="true" version="3" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0954981" lon="129.0089473"/>
+ <node id="10674038556" visible="true" version="2" changeset="132785737" timestamp="2023-02-20T11:13:19Z" user="adreamy" uid="2750856" lat="35.0954433" lon="129.0089655"/>
+ <node id="10674038557" visible="true" version="2" changeset="132785737" timestamp="2023-02-20T11:13:19Z" user="adreamy" uid="2750856" lat="35.0954101" lon="129.0089840"/>
+ <node id="10674038558" visible="true" version="3" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953384" lon="129.0104084"/>
+ <node id="10674038559" visible="true" version="3" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953499" lon="129.0103929"/>
+ <node id="10674038560" visible="true" version="3" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952546" lon="129.0101662"/>
+ <node id="10674038561" visible="true" version="3" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952566" lon="129.0100926"/>
+ <node id="10674038563" visible="true" version="3" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952888" lon="129.0098931"/>
+ <node id="10674038564" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953147" lon="129.0097331"/>
+ <node id="10674038565" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953350" lon="129.0096191"/>
+ <node id="10674038566" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953722" lon="129.0094101"/>
+ <node id="10674038567" visible="true" version="3" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953980" lon="129.0093390"/>
+ <node id="10674038568" visible="true" version="3" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0954412" lon="129.0092977"/>
+ <node id="10674038569" visible="true" version="4" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0954776" lon="129.0091954"/>
+ <node id="10674038570" visible="true" version="3" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0954986" lon="129.0091761"/>
+ <node id="10674038571" visible="true" version="1" changeset="132685967" timestamp="2023-02-17T16:50:47Z" user="adreamy" uid="2750856" lat="35.0950346" lon="129.0088577"/>
+ <node id="10674038572" visible="true" version="1" changeset="132685967" timestamp="2023-02-17T16:50:47Z" user="adreamy" uid="2750856" lat="35.0946977" lon="129.0088476"/>
+ <node id="10674038573" visible="true" version="1" changeset="132685967" timestamp="2023-02-17T16:50:47Z" user="adreamy" uid="2750856" lat="35.0937826" lon="129.0091105"/>
+ <node id="10674074745" visible="true" version="1" changeset="132686635" timestamp="2023-02-17T17:07:50Z" user="adreamy" uid="2750856" lat="35.0981261" lon="129.0096020"/>
+ <node id="10678132282" visible="true" version="1" changeset="132743171" timestamp="2023-02-19T11:02:55Z" user="adreamy" uid="2750856" lat="35.0974426" lon="129.0101161"/>
+ <node id="10678132293" visible="true" version="1" changeset="132743171" timestamp="2023-02-19T11:02:55Z" user="adreamy" uid="2750856" lat="35.0974383" lon="129.0095151"/>
+ <node id="10679808967" visible="true" version="1" changeset="132773549" timestamp="2023-02-20T05:28:42Z" user="adreamy" uid="2750856" lat="35.0964662" lon="129.0094098"/>
+ <node id="10680113928" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0938315" lon="129.0090811"/>
+ <node id="10680113960" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0928793" lon="129.0115045"/>
+ <node id="10680113961" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0928910" lon="129.0114091"/>
+ <node id="10680113962" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0929404" lon="129.0111611"/>
+ <node id="10680113963" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0929925" lon="129.0109989"/>
+ <node id="10680113964" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0930185" lon="129.0109035"/>
+ <node id="10680113965" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0930757" lon="129.0106539"/>
+ <node id="10680113966" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0930966" lon="129.0104122"/>
+ <node id="10680113967" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0931265" lon="129.0101435"/>
+ <node id="10680113968" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0931291" lon="129.0099081"/>
+ <node id="10680113969" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0931317" lon="129.0096807"/>
+ <node id="10680113970" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0931538" lon="129.0095535"/>
+ <node id="10680113971" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0931824" lon="129.0094247"/>
+ <node id="10680113972" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856" lat="35.0931928" lon="129.0093850"/>
+ <node id="10680116049" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953279" lon="129.0096592"/>
+ <node id="10680116051" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0951287" lon="129.0096842"/>
+ <node id="10680116052" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0950507" lon="129.0096914"/>
+ <node id="10680116056" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0948705" lon="129.0103176"/>
+ <node id="10680116057" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0948906" lon="129.0102343"/>
+ <node id="10680116058" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0948743" lon="129.0096571"/>
+ <node id="10680116059" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0948597" lon="129.0095955"/>
+ <node id="10680116060" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0949490" lon="129.0095723"/>
+ <node id="10680116061" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0949359" lon="129.0094857"/>
+ <node id="10680116063" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0950207" lon="129.0095427"/>
+ <node id="10680116064" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0950910" lon="129.0095188"/>
+ <node id="10680116065" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952625" lon="129.0094470"/>
+ <node id="10680116066" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952763" lon="129.0094713"/>
+ <node id="10680116067" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953584" lon="129.0094775"/>
+ <node id="10680116068" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0948777" lon="129.0097731"/>
+ <node id="10680116069" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953110" lon="129.0097559"/>
+ <node id="10680116070" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952885" lon="129.0104640"/>
+ <node id="10680116071" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953024" lon="129.0104079"/>
+ <node id="10680133949" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0944912" lon="129.0104392"/>
+ <node id="10680133950" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0944886" lon="129.0102802"/>
+ <node id="10680133951" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0945355" lon="129.0103009"/>
+ <node id="10680133963" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0930344" lon="129.0108339"/>
+ <node id="10680154969" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0935796" lon="129.0092054"/>
+ <node id="10680154975" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0941985" lon="129.0090877"/>
+ <node id="10680154976" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0945574" lon="129.0102163"/>
+ <node id="10680154977" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0945654" lon="129.0101832"/>
+ <node id="10680154978" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0945615" lon="129.0101196"/>
+ <node id="10680154979" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0945446" lon="129.0100401"/>
+ <node id="10680154980" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0945186" lon="129.0099383"/>
+ <node id="10680154981" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0944522" lon="129.0095361"/>
+ <node id="10680154982" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0944509" lon="129.0094391"/>
+ <node id="10680154983" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0948230" lon="129.0091767"/>
+ <node id="10680154984" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0946447" lon="129.0092371"/>
+ <node id="10680154985" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0945133" lon="129.0093071"/>
+ <node id="10680154986" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0944366" lon="129.0093230"/>
+ <node id="10680154987" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0944028" lon="129.0091974"/>
+ <node id="10680154988" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0943663" lon="129.0090622"/>
+ <node id="10680154989" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0943182" lon="129.0089223"/>
+ <node id="10680154992" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0942789" lon="129.0088682"/>
+ <node id="10680154993" visible="true" version="2" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0942628" lon="129.0085663"/>
+ <node id="10680154994" visible="true" version="2" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943304" lon="129.0085885"/>
+ <node id="10680154995" visible="true" version="2" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943942" lon="129.0086140"/>
+ <node id="10680154996" visible="true" version="2" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945203" lon="129.0086633"/>
+ <node id="10680154997" visible="true" version="2" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945555" lon="129.0086696"/>
+ <node id="10680154998" visible="true" version="2" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946099" lon="129.0086556"/>
+ <node id="10680154999" visible="true" version="2" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946674" lon="129.0086492"/>
+ <node id="10680155000" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856" lat="35.0947462" lon="129.0086170"/>
+ <node id="10680155001" visible="true" version="2" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948267" lon="129.0085649"/>
+ <node id="10680541146" visible="true" version="1" changeset="132785737" timestamp="2023-02-20T11:13:19Z" user="adreamy" uid="2750856" lat="35.0975296" lon="129.0095775"/>
+ <node id="10680551161" visible="true" version="2" changeset="145908640" timestamp="2024-01-05T07:15:20Z" user="MappingMore" uid="20144444" lat="35.0952941" lon="129.0085486"/>
+ <node id="10680551171" visible="true" version="2" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0965393" lon="129.0091472"/>
+ <node id="13468876787" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0955684" lon="129.0086013"/>
+ <node id="13468876788" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0956751" lon="129.0085108"/>
+ <node id="13468876789" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0958154" lon="129.0087244"/>
+ <node id="13468876790" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0957828" lon="129.0087590"/>
+ <node id="13468876791" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0957935" lon="129.0087694"/>
+ <node id="13468876792" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0957315" lon="129.0088339"/>
+ <node id="13468876793" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0956694" lon="129.0089054"/>
+ <node id="13468876794" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0956187" lon="129.0089180"/>
+ <node id="13468876795" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0955376" lon="129.0087880"/>
+ <node id="13468876796" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0956081" lon="129.0087278"/>
+ <node id="13468876797" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0958226" lon="129.0087907"/>
+ <node id="13468876798" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0957872" lon="129.0088273"/>
+ <node id="13468876799" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0958377" lon="129.0089003"/>
+ <node id="13468876800" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0958731" lon="129.0088637"/>
+ <node id="13468876886" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0957436" lon="129.0091906"/>
+ <node id="13468876887" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0957515" lon="129.0090983"/>
+ <node id="13468876888" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0958613" lon="129.0091122"/>
+ <node id="13468876889" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0958534" lon="129.0092046"/>
+ <node id="13468876899" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0956044" lon="129.0090601"/>
+ <node id="13468876900" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0955869" lon="129.0091643"/>
+ <node id="13468876901" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0956632" lon="129.0091835"/>
+ <node id="13468876902" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0956807" lon="129.0090793"/>
+ <node id="13468876903" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0955611" lon="129.0090333"/>
+ <node id="13468876904" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0956771" lon="129.0090595"/>
+ <node id="13468876905" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0956771" lon="129.0090439"/>
+ <node id="13468876906" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0956317" lon="129.0089595"/>
+ <node id="13468876907" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0955611" lon="129.0089489"/>
+ <node id="13468876908" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0954707" lon="129.0088374"/>
+ <node id="13468876909" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0955378" lon="129.0088225"/>
+ <node id="13468876910" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0955532" lon="129.0089167"/>
+ <node id="13468876911" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0954768" lon="129.0089108"/>
+ <node id="13468876912" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0955007" lon="129.0086956"/>
+ <node id="13468876913" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0954528" lon="129.0087096"/>
+ <node id="13468876914" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0955308" lon="129.0087395"/>
+ <node id="13468876915" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0954482" lon="129.0085929"/>
+ <node id="13468876916" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0955007" lon="129.0085487"/>
+ <node id="13468876917" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0955833" lon="129.0086953"/>
+ <node id="13468876936" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0957260" lon="129.0089434"/>
+ <node id="13468876937" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0957198" lon="129.0090712"/>
+ <node id="13468876938" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0957694" lon="129.0090867"/>
+ <node id="13468876939" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0958606" lon="129.0090905"/>
+ <node id="13468876940" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934" lat="35.0958610" lon="129.0089438"/>
+ <node id="13469154127" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0954414" lon="129.0104008"/>
+ <node id="13469154128" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0955320" lon="129.0102162"/>
+ <node id="13469154129" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0956086" lon="129.0101198"/>
+ <node id="13469154130" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0956556" lon="129.0101779"/>
+ <node id="13469154131" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0957647" lon="129.0101369"/>
+ <node id="13469154132" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0958257" lon="129.0100118"/>
+ <node id="13469154133" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0958687" lon="129.0099154"/>
+ <node id="13469154134" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0957826" lon="129.0097964"/>
+ <node id="13469154135" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0958066" lon="129.0097356"/>
+ <node id="13469154136" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0957887" lon="129.0096467"/>
+ <node id="13469154137" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0956965" lon="129.0097294"/>
+ <node id="13469154138" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0955275" lon="129.0099550"/>
+ <node id="13469154139" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0954185" lon="129.0101663"/>
+ <node id="13469154140" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0953720" lon="129.0101806"/>
+ <node id="13469154141" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0953827" lon="129.0100856"/>
+ <node id="13469154142" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0954526" lon="129.0100152"/>
+ <node id="13469154143" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0954296" lon="129.0099297"/>
+ <node id="13469154144" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0955835" lon="129.0097096"/>
+ <node id="13469154145" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0956864" lon="129.0095537"/>
+ <node id="13469154146" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0957552" lon="129.0095011"/>
+ <node id="13469154147" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0958156" lon="129.0095394"/>
+ <node id="13469154148" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0959196" lon="129.0094949"/>
+ <node id="13469154149" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0959308" lon="129.0093972"/>
+ <node id="13469154150" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0959627" lon="129.0094177"/>
+ <node id="13469154151" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0959812" lon="129.0095688"/>
+ <node id="13469154152" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0960819" lon="129.0097417"/>
+ <node id="13469154153" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0960595" lon="129.0098258"/>
+ <node id="13469154154" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0961048" lon="129.0099441"/>
+ <node id="13469154155" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0960936" lon="129.0100384"/>
+ <node id="13469154156" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0959118" lon="129.0101513"/>
+ <node id="13469154157" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0957804" lon="129.0102723"/>
+ <node id="13469154158" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0956892" lon="129.0103803"/>
+ <node id="13469154159" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0956265" lon="129.0104151"/>
+ <node id="13469154160" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0955505" lon="129.0104186"/>
+ <node id="13469154161" visible="true" version="1" changeset="177449210" timestamp="2026-01-19T21:07:23Z" user="Money Moustache" uid="12369934" lat="35.0954884" lon="129.0104110"/>
+ <node id="13469247087" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957017" lon="129.0092601"/>
+ <node id="13469247088" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956992" lon="129.0093292"/>
+ <node id="13469247089" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957373" lon="129.0093313"/>
+ <node id="13469247090" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957382" lon="129.0093083"/>
+ <node id="13469247091" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957646" lon="129.0093097"/>
+ <node id="13469247092" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957659" lon="129.0092738"/>
+ <node id="13469247093" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957359" lon="129.0092722"/>
+ <node id="13469247094" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957362" lon="129.0092620"/>
+ <node id="13469247095" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956877" lon="129.0093518"/>
+ <node id="13469247096" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957832" lon="129.0093204"/>
+ <node id="13469247097" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0958086" lon="129.0094361"/>
+ <node id="13469247098" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957446" lon="129.0094572"/>
+ <node id="13469247099" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957293" lon="129.0093879"/>
+ <node id="13469247100" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956980" lon="129.0093983"/>
+ <node id="13469247101" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957242" lon="129.0094372"/>
+ <node id="13469247102" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957042" lon="129.0094603"/>
+ <node id="13469247103" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956880" lon="129.0094394"/>
+ <node id="13469247104" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956258" lon="129.0095114"/>
+ <node id="13469247105" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956683" lon="129.0095662"/>
+ <node id="13469247106" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0957505" lon="129.0094711"/>
+ <node id="13469247107" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955646" lon="129.0094473"/>
+ <node id="13469247108" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955953" lon="129.0095077"/>
+ <node id="13469247109" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956648" lon="129.0094550"/>
+ <node id="13469247110" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956340" lon="129.0093945"/>
+ <node id="13469247111" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956131" lon="129.0095375"/>
+ <node id="13469247112" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955452" lon="129.0096080"/>
+ <node id="13469247113" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955866" lon="129.0096675"/>
+ <node id="13469247114" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956612" lon="129.0095901"/>
+ <node id="13469247115" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956353" lon="129.0095528"/>
+ <node id="13469247116" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956286" lon="129.0095598"/>
+ <node id="13469247117" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956327" lon="129.0093521"/>
+ <node id="13469247118" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956081" lon="129.0092868"/>
+ <node id="13469247119" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956507" lon="129.0092381"/>
+ <node id="13469247120" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956842" lon="129.0092538"/>
+ <node id="13469247121" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956966" lon="129.0093120"/>
+ <node id="13469247122" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955798" lon="129.0094020"/>
+ <node id="13469247123" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955463" lon="129.0093204"/>
+ <node id="13469247124" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955984" lon="129.0092885"/>
+ <node id="13469247125" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0956320" lon="129.0093700"/>
+ <node id="13469247126" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955098" lon="129.0092497"/>
+ <node id="13469247127" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955408" lon="129.0093185"/>
+ <node id="13469247128" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954741" lon="129.0093634"/>
+ <node id="13469247129" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954431" lon="129.0092947"/>
+ <node id="13469247130" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955424" lon="129.0093273"/>
+ <node id="13469247131" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954670" lon="129.0093749"/>
+ <node id="13469247132" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954974" lon="129.0094468"/>
+ <node id="13469247133" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955728" lon="129.0093992"/>
+ <node id="13469247134" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955407" lon="129.0094281"/>
+ <node id="13469247135" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955637" lon="129.0094110"/>
+ <node id="13469247136" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955733" lon="129.0094302"/>
+ <node id="13469247137" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955503" lon="129.0094473"/>
+ <node id="13469247138" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955495" lon="129.0094575"/>
+ <node id="13469247139" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955168" lon="129.0094788"/>
+ <node id="13469247140" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955392" lon="129.0095305"/>
+ <node id="13469247141" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955720" lon="129.0095092"/>
+ <node id="13469247142" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954060" lon="129.0094605"/>
+ <node id="13469247143" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953946" lon="129.0094152"/>
+ <node id="13469247144" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954058" lon="129.0093893"/>
+ <node id="13469247145" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954375" lon="129.0093880"/>
+ <node id="13469247146" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954623" lon="129.0093717"/>
+ <node id="13469247147" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954851" lon="129.0094338"/>
+ <node id="13469247148" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954253" lon="129.0093442"/>
+ <node id="13469247149" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954406" lon="129.0093773"/>
+ <node id="13469247150" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954701" lon="129.0093568"/>
+ <node id="13469247151" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954570" lon="129.0093285"/>
+ <node id="13469247152" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954532" lon="129.0093311"/>
+ <node id="13469247153" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954455" lon="129.0093144"/>
+ <node id="13469247154" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954323" lon="129.0093235"/>
+ <node id="13469247155" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955421" lon="129.0093089"/>
+ <node id="13469247156" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955265" lon="129.0092603"/>
+ <node id="13469247157" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955664" lon="129.0092411"/>
+ <node id="13469247158" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955820" lon="129.0092898"/>
+ <node id="13469247159" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953882" lon="129.0094648"/>
+ <node id="13469247160" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954267" lon="129.0094606"/>
+ <node id="13469247161" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954878" lon="129.0094390"/>
+ <node id="13469247162" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954941" lon="129.0095079"/>
+ <node id="13469247163" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954301" lon="129.0095236"/>
+ <node id="13469247164" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953732" lon="129.0095069"/>
+ <node id="13469247165" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954347" lon="129.0095298"/>
+ <node id="13469247166" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954435" lon="129.0095685"/>
+ <node id="13469247167" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955313" lon="129.0095385"/>
+ <node id="13469247168" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955225" lon="129.0094999"/>
+ <node id="13469247169" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954723" lon="129.0095717"/>
+ <node id="13469247170" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955231" lon="129.0095481"/>
+ <node id="13469247171" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955384" lon="129.0095975"/>
+ <node id="13469247172" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954874" lon="129.0096210"/>
+ <node id="13469247173" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954307" lon="129.0095907"/>
+ <node id="13469247174" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954459" lon="129.0096400"/>
+ <node id="13469247179" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954791" lon="129.0092302"/>
+ <node id="13469247180" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955008" lon="129.0091822"/>
+ <node id="13469247181" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955533" lon="129.0092179"/>
+ <node id="13469247182" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955491" lon="129.0092407"/>
+ <node id="13469247183" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0955209" lon="129.0092509"/>
+ <node id="13469247184" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952885" lon="129.0090507"/>
+ <node id="13469247185" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953729" lon="129.0090423"/>
+ <node id="13469247186" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954206" lon="129.0090541"/>
+ <node id="13469247187" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954265" lon="129.0091257"/>
+ <node id="13469247188" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952891" lon="129.0091257"/>
+ <node id="13469247189" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952203" lon="129.0089736"/>
+ <node id="13469247190" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953129" lon="129.0089558"/>
+ <node id="13469247191" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953225" lon="129.0090301"/>
+ <node id="13469247192" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952299" lon="129.0090479"/>
+ <node id="13469247193" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953477" lon="129.0090183"/>
+ <node id="13469247194" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953424" lon="129.0089600"/>
+ <node id="13469247195" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953633" lon="129.0089254"/>
+ <node id="13469247196" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954107" lon="129.0090000"/>
+ <node id="13469247197" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954029" lon="129.0090270"/>
+ <node id="13469247198" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953907" lon="129.0090183"/>
+ <node id="13469247199" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953658" lon="129.0090293"/>
+ <node id="13469247218" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952229" lon="129.0095605"/>
+ <node id="13469247219" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952856" lon="129.0095528"/>
+ <node id="13469247220" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952923" lon="129.0096339"/>
+ <node id="13469247221" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952296" lon="129.0096416"/>
+ <node id="13469247222" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954152" lon="129.0092384"/>
+ <node id="13469247223" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954305" lon="129.0091453"/>
+ <node id="13469247224" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953973" lon="129.0091372"/>
+ <node id="13469247225" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953919" lon="129.0091702"/>
+ <node id="13469247226" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953506" lon="129.0091600"/>
+ <node id="13469247227" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953407" lon="129.0092201"/>
+ <node id="13469247228" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953342" lon="129.0092212"/>
+ <node id="13469247229" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953334" lon="129.0091414"/>
+ <node id="13469247230" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952706" lon="129.0091424"/>
+ <node id="13469247231" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952714" lon="129.0092221"/>
+ <node id="13469247232" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954160" lon="129.0092645"/>
+ <node id="13469247233" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954460" lon="129.0091670"/>
+ <node id="13469247234" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954649" lon="129.0091757"/>
+ <node id="13469247235" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0954349" lon="129.0092732"/>
+ <node id="13469247236" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953694" lon="129.0092309"/>
+ <node id="13469247237" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952590" lon="129.0092479"/>
+ <node id="13469247238" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952666" lon="129.0093213"/>
+ <node id="13469247239" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953770" lon="129.0093042"/>
+ <node id="13469247367" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952008" lon="129.0087276"/>
+ <node id="13469247368" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953057" lon="129.0087274"/>
+ <node id="13469247369" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953059" lon="129.0088134"/>
+ <node id="13469247370" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952009" lon="129.0088136"/>
+ <node id="13469247371" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953240" lon="129.0088129"/>
+ <node id="13469247372" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952976" lon="129.0086890"/>
+ <node id="13469247373" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953440" lon="129.0086742"/>
+ <node id="13469247374" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953704" lon="129.0087981"/>
+ <node id="13469247375" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951888" lon="129.0088042"/>
+ <node id="13469247376" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951916" lon="129.0087093"/>
+ <node id="13469247377" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0950797" lon="129.0087043"/>
+ <node id="13469247378" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0950769" lon="129.0087993"/>
+ <node id="13469247379" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951693" lon="129.0085683"/>
+ <node id="13469247380" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951675" lon="129.0086262"/>
+ <node id="13469247381" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951763" lon="129.0086267"/>
+ <node id="13469247382" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951744" lon="129.0086881"/>
+ <node id="13469247383" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952740" lon="129.0086927"/>
+ <node id="13469247384" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952754" lon="129.0086487"/>
+ <node id="13469247385" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953035" lon="129.0086500"/>
+ <node id="13469247386" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953058" lon="129.0085746"/>
+ <node id="13469247391" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0949349" lon="129.0087890"/>
+ <node id="13469247392" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0949371" lon="129.0087154"/>
+ <node id="13469247393" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0950716" lon="129.0087213"/>
+ <node id="13469247394" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0950694" lon="129.0087949"/>
+ <node id="13469247395" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0950245" lon="129.0089041"/>
+ <node id="13469247396" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0950822" lon="129.0089068"/>
+ <node id="13469247397" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0950803" lon="129.0089678"/>
+ <node id="13469247398" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0950227" lon="129.0089652"/>
+ <node id="13469247399" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951078" lon="129.0089698"/>
+ <node id="13469247400" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952100" lon="129.0089484"/>
+ <node id="13469247401" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952221" lon="129.0090353"/>
+ <node id="13469247402" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951200" lon="129.0090566"/>
+ <node id="13469247403" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951307" lon="129.0089423"/>
+ <node id="13469247404" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951313" lon="129.0089062"/>
+ <node id="13469247405" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952186" lon="129.0089082"/>
+ <node id="13469247406" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952182" lon="129.0089317"/>
+ <node id="13469247407" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951934" lon="129.0089438"/>
+ <node id="13469247408" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952605" lon="129.0089524"/>
+ <node id="13469247409" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952590" lon="129.0089068"/>
+ <node id="13469247410" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953189" lon="129.0089040"/>
+ <node id="13469247411" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0953203" lon="129.0089495"/>
+ <node id="13469247412" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952063" lon="129.0090633"/>
+ <node id="13469247413" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952790" lon="129.0090657"/>
+ <node id="13469247414" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952776" lon="129.0091296"/>
+ <node id="13469247415" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952048" lon="129.0091272"/>
+ <node id="13469247416" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951310" lon="129.0091583"/>
+ <node id="13469247417" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952192" lon="129.0091572"/>
+ <node id="13469247418" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952199" lon="129.0092445"/>
+ <node id="13469247419" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0952163" lon="129.0092574"/>
+ <node id="13469247420" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934" lat="35.0951318" lon="129.0092584"/>
+ <node id="13480401073" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950597" lon="129.0086490"/>
+ <node id="13480401074" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950587" lon="129.0086968"/>
+ <node id="13480401075" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951422" lon="129.0086995"/>
+ <node id="13480401076" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951432" lon="129.0086517"/>
+ <node id="13480401094" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949820" lon="129.0086147"/>
+ <node id="13480401095" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949811" lon="129.0086357"/>
+ <node id="13480401096" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949954" lon="129.0086441"/>
+ <node id="13480401097" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950436" lon="129.0086473"/>
+ <node id="13480401098" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950448" lon="129.0086188"/>
+ <node id="13480401099" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949655" lon="129.0086269"/>
+ <node id="13480401100" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948753" lon="129.0086303"/>
+ <node id="13480401101" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948772" lon="129.0087033"/>
+ <node id="13480401102" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949674" lon="129.0086999"/>
+ <node id="13480401103" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948707" lon="129.0086500"/>
+ <node id="13480401104" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947987" lon="129.0086550"/>
+ <node id="13480401105" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948011" lon="129.0087049"/>
+ <node id="13480401106" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948730" lon="129.0086999"/>
+ <node id="13480401107" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948571" lon="129.0085900"/>
+ <node id="13480401108" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948333" lon="129.0086040"/>
+ <node id="13480401109" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948464" lon="129.0086373"/>
+ <node id="13480401110" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948703" lon="129.0086233"/>
+ <node id="13480401111" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949268" lon="129.0087141"/>
+ <node id="13480401112" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949253" lon="129.0087861"/>
+ <node id="13480401113" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948488" lon="129.0087836"/>
+ <node id="13480401114" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948503" lon="129.0087116"/>
+ <node id="13480401115" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948449" lon="129.0087130"/>
+ <node id="13480401116" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947685" lon="129.0087133"/>
+ <node id="13480401117" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947688" lon="129.0087859"/>
+ <node id="13480401118" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948451" lon="129.0087856"/>
+ <node id="13480401119" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947593" lon="129.0087258"/>
+ <node id="13480401120" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947136" lon="129.0087262"/>
+ <node id="13480401121" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947140" lon="129.0088050"/>
+ <node id="13480401122" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947598" lon="129.0088046"/>
+ <node id="13480401123" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947745" lon="129.0086017"/>
+ <node id="13480401124" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948282" lon="129.0085674"/>
+ <node id="13480401125" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948405" lon="129.0085962"/>
+ <node id="13480401126" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947868" lon="129.0086305"/>
+ <node id="13480401127" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946122" lon="129.0086615"/>
+ <node id="13480401128" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946129" lon="129.0086987"/>
+ <node id="13480401129" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947007" lon="129.0086962"/>
+ <node id="13480401130" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947000" lon="129.0086590"/>
+ <node id="13480401131" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947099" lon="129.0087110"/>
+ <node id="13480401132" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947091" lon="129.0086927"/>
+ <node id="13480401133" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947216" lon="129.0086919"/>
+ <node id="13480401134" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947204" lon="129.0086642"/>
+ <node id="13480401135" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947892" lon="129.0086599"/>
+ <node id="13480401136" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947911" lon="129.0087058"/>
+ <node id="13480401137" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946475" lon="129.0086006"/>
+ <node id="13480401138" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946552" lon="129.0086323"/>
+ <node id="13480401139" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947055" lon="129.0086141"/>
+ <node id="13480401140" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947020" lon="129.0085997"/>
+ <node id="13480401141" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946750" lon="129.0086095"/>
+ <node id="13480401142" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946708" lon="129.0085921"/>
+ <node id="13480401157" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945814" lon="129.0085935"/>
+ <node id="13480401158" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946434" lon="129.0085936"/>
+ <node id="13480401159" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946433" lon="129.0086442"/>
+ <node id="13480401160" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946045" lon="129.0086442"/>
+ <node id="13480401169" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944946" lon="129.0085857"/>
+ <node id="13480401170" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944773" lon="129.0086359"/>
+ <node id="13480401171" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945322" lon="129.0086618"/>
+ <node id="13480401172" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945557" lon="129.0086642"/>
+ <node id="13480401173" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945769" lon="129.0086587"/>
+ <node id="13480401174" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945894" lon="129.0086516"/>
+ <node id="13480401175" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945669" lon="129.0086073"/>
+ <node id="13480401176" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944309" lon="129.0085521"/>
+ <node id="13480401177" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944138" lon="129.0086001"/>
+ <node id="13480401178" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944728" lon="129.0086314"/>
+ <node id="13480401179" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944898" lon="129.0085834"/>
+ <node id="13480401180" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944130" lon="129.0085567"/>
+ <node id="13480401181" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943503" lon="129.0085353"/>
+ <node id="13480401182" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943380" lon="129.0085890"/>
+ <node id="13480401183" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944007" lon="129.0086104"/>
+ <node id="13480401188" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947005" lon="129.0087071"/>
+ <node id="13480401189" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946144" lon="129.0087051"/>
+ <node id="13480401190" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946133" lon="129.0087750"/>
+ <node id="13480401191" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946994" lon="129.0087770"/>
+ <node id="13480401192" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945950" lon="129.0087048"/>
+ <node id="13480401193" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945404" lon="129.0087004"/>
+ <node id="13480401194" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945362" lon="129.0087786"/>
+ <node id="13480401195" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945908" lon="129.0087830"/>
+ <node id="13480401196" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944851" lon="129.0086963"/>
+ <node id="13480401197" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944811" lon="129.0087741"/>
+ <node id="13480401198" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944199" lon="129.0087690"/>
+ <node id="13480401199" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944237" lon="129.0086921"/>
+ <node id="13480401200" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944361" lon="129.0086379"/>
+ <node id="13480401201" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944341" lon="129.0086827"/>
+ <node id="13480401202" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945211" lon="129.0086883"/>
+ <node id="13480401203" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945218" lon="129.0086707"/>
+ <node id="13480401204" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945364" lon="129.0088809"/>
+ <node id="13480401205" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945357" lon="129.0089127"/>
+ <node id="13480401206" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945471" lon="129.0089130"/>
+ <node id="13480401207" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945465" lon="129.0089471"/>
+ <node id="13480401208" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946435" lon="129.0089500"/>
+ <node id="13480401209" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946448" lon="129.0088841"/>
+ <node id="13480401210" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945085" lon="129.0088765"/>
+ <node id="13480401211" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945081" lon="129.0089365"/>
+ <node id="13480401212" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943952" lon="129.0089354"/>
+ <node id="13480401213" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943955" lon="129.0088755"/>
+ <node id="13480401214" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944175" lon="129.0089532"/>
+ <node id="13480401215" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945029" lon="129.0089478"/>
+ <node id="13480401216" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945115" lon="129.0089865"/>
+ <node id="13480401217" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944350" lon="129.0090143"/>
+ <node id="13480401218" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946031" lon="129.0089675"/>
+ <node id="13480401219" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945327" lon="129.0089925"/>
+ <node id="13480401220" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945604" lon="129.0091087"/>
+ <node id="13480401221" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946307" lon="129.0090838"/>
+ <node id="13480401222" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946508" lon="129.0088839"/>
+ <node id="13480401223" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946499" lon="129.0089513"/>
+ <node id="13480401224" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947128" lon="129.0089525"/>
+ <node id="13480401225" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947136" lon="129.0088851"/>
+ <node id="13480401226" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947204" lon="129.0088885"/>
+ <node id="13480401227" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947188" lon="129.0089517"/>
+ <node id="13480401228" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947820" lon="129.0089541"/>
+ <node id="13480401229" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947836" lon="129.0088910"/>
+ <node id="13480401230" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947936" lon="129.0088930"/>
+ <node id="13480401231" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947919" lon="129.0089540"/>
+ <node id="13480401232" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948467" lon="129.0089562"/>
+ <node id="13480401233" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948483" lon="129.0088952"/>
+ <node id="13480401234" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948549" lon="129.0088933"/>
+ <node id="13480401235" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948520" lon="129.0089603"/>
+ <node id="13480401236" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949169" lon="129.0089645"/>
+ <node id="13480401237" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949198" lon="129.0088976"/>
+ <node id="13480401238" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948316" lon="129.0089679"/>
+ <node id="13480401239" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947820" lon="129.0089783"/>
+ <node id="13480401240" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948018" lon="129.0091185"/>
+ <node id="13480401241" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948513" lon="129.0091081"/>
+ <node id="13480401242" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948479" lon="129.0090201"/>
+ <node id="13480401243" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949117" lon="129.0090031"/>
+ <node id="13480401244" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949270" lon="129.0090893"/>
+ <node id="13480401245" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948633" lon="129.0091063"/>
+ <node id="13480401246" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949260" lon="129.0088965"/>
+ <node id="13480401247" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949241" lon="129.0089661"/>
+ <node id="13480401248" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949675" lon="129.0089678"/>
+ <node id="13480401249" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949693" lon="129.0088982"/>
+ <node id="13480401250" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949990" lon="129.0089807"/>
+ <node id="13480401251" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949246" lon="129.0089969"/>
+ <node id="13480401252" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949373" lon="129.0090842"/>
+ <node id="13480401253" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950117" lon="129.0090680"/>
+ <node id="13480401254" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950207" lon="129.0089744"/>
+ <node id="13480401255" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950199" lon="129.0090560"/>
+ <node id="13480401256" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950796" lon="129.0090569"/>
+ <node id="13480401257" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950805" lon="129.0089753"/>
+ <node id="13480401258" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951158" lon="129.0090818"/>
+ <node id="13480401259" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951245" lon="129.0091279"/>
+ <node id="13480401260" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950928" lon="129.0091369"/>
+ <node id="13480401261" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951123" lon="129.0092403"/>
+ <node id="13480401262" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951016" lon="129.0092479"/>
+ <node id="13480401263" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951087" lon="129.0092858"/>
+ <node id="13480401264" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949791" lon="129.0093224"/>
+ <node id="13480401265" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949712" lon="129.0092807"/>
+ <node id="13480401266" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949498" lon="129.0092867"/>
+ <node id="13480401267" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949343" lon="129.0092044"/>
+ <node id="13480401268" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949585" lon="129.0091976"/>
+ <node id="13480401269" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949508" lon="129.0091569"/>
+ <node id="13480401270" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950293" lon="129.0091348"/>
+ <node id="13480401271" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950241" lon="129.0091076"/>
+ <node id="13480401272" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945658" lon="129.0093238"/>
+ <node id="13480401273" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947276" lon="129.0092891"/>
+ <node id="13480401274" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947433" lon="129.0093986"/>
+ <node id="13480401275" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945815" lon="129.0094333"/>
+ <node id="13480401276" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947437" lon="129.0092755"/>
+ <node id="13480401277" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947795" lon="129.0092652"/>
+ <node id="13480401278" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947891" lon="129.0093150"/>
+ <node id="13480401279" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947534" lon="129.0093255"/>
+ <node id="13480401280" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947969" lon="129.0093547"/>
+ <node id="13480401281" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947612" lon="129.0093651"/>
+ <node id="13480401282" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945585" lon="129.0093436"/>
+ <node id="13480401283" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945036" lon="129.0093529"/>
+ <node id="13480401284" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945152" lon="129.0094547"/>
+ <node id="13480401285" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945701" lon="129.0094455"/>
+ <node id="13480401286" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946287" lon="129.0090980"/>
+ <node id="13480401287" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946451" lon="129.0091642"/>
+ <node id="13480401288" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945054" lon="129.0092161"/>
+ <node id="13480401289" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944890" lon="129.0091499"/>
+ <node id="13480401290" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944482" lon="129.0090244"/>
+ <node id="13480401291" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944736" lon="129.0091404"/>
+ <node id="13480401292" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945544" lon="129.0091140"/>
+ <node id="13480401293" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945290" lon="129.0089980"/>
+ <node id="13480401294" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0942937" lon="129.0086934"/>
+ <node id="13480401295" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0942936" lon="129.0087390"/>
+ <node id="13480401296" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943042" lon="129.0087390"/>
+ <node id="13480401297" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943042" lon="129.0087737"/>
+ <node id="13480401298" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943517" lon="129.0087739"/>
+ <node id="13480401299" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943519" lon="129.0086937"/>
+ <node id="13480401300" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943569" lon="129.0086902"/>
+ <node id="13480401301" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944330" lon="129.0086897"/>
+ <node id="13480401302" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0944328" lon="129.0086309"/>
+ <node id="13480401303" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943566" lon="129.0086314"/>
+ <node id="13480401304" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943507" lon="129.0086287"/>
+ <node id="13480401305" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943507" lon="129.0086886"/>
+ <node id="13480401306" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0942878" lon="129.0086909"/>
+ <node id="13480401307" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0942575" lon="129.0087055"/>
+ <node id="13480401308" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0942129" lon="129.0085634"/>
+ <node id="13480401309" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943070" lon="129.0085861"/>
+ <node id="13480401310" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0942985" lon="129.0086284"/>
+ <node id="13480401470" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0941216" lon="129.0089869"/>
+ <node id="13480401471" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0942129" lon="129.0089361"/>
+ <node id="13480401472" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0942636" lon="129.0089200"/>
+ <node id="13480401473" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943265" lon="129.0090318"/>
+ <node id="13480401474" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0941281" lon="129.0090656"/>
+ <node id="13480401475" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0942981" lon="129.0089762"/>
+ <node id="13480401476" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0943101" lon="129.0089734"/>
+ <node id="13480401491" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951800" lon="129.0092805"/>
+ <node id="13480401492" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0952008" lon="129.0093724"/>
+ <node id="13480401493" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0952474" lon="129.0093567"/>
+ <node id="13480401494" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0952266" lon="129.0092647"/>
+ <node id="13480401495" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951752" lon="129.0093967"/>
+ <node id="13480401496" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0952525" lon="129.0093686"/>
+ <node id="13480401497" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0952693" lon="129.0094378"/>
+ <node id="13480401498" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951921" lon="129.0094660"/>
+ <node id="13480401499" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951725" lon="129.0092814"/>
+ <node id="13480401500" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951166" lon="129.0093016"/>
+ <node id="13480401501" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951404" lon="129.0094000"/>
+ <node id="13480401502" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951963" lon="129.0093798"/>
+ <node id="13480401503" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950289" lon="129.0093377"/>
+ <node id="13480401504" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950877" lon="129.0093174"/>
+ <node id="13480401505" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951104" lon="129.0094150"/>
+ <node id="13480401506" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950333" lon="129.0094417"/>
+ <node id="13480401507" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950146" lon="129.0093609"/>
+ <node id="13480401508" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950328" lon="129.0093546"/>
+ <node id="13480401509" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949894" lon="129.0093540"/>
+ <node id="13480401510" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949507" lon="129.0093644"/>
+ <node id="13480401511" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949548" lon="129.0093877"/>
+ <node id="13480401512" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949279" lon="129.0093949"/>
+ <node id="13480401513" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949416" lon="129.0094718"/>
+ <node id="13480401514" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950073" lon="129.0094543"/>
+ <node id="13480401515" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0950735" lon="129.0094427"/>
+ <node id="13480401516" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0950132" lon="129.0094626"/>
+ <node id="13480401517" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0950295" lon="129.0095364"/>
+ <node id="13480401518" visible="true" version="2" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0950899" lon="129.0095164"/>
+ <node id="13480401519" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949872" lon="129.0094755"/>
+ <node id="13480401520" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949506" lon="129.0094870"/>
+ <node id="13480401521" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949636" lon="129.0095492"/>
+ <node id="13480401522" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0950002" lon="129.0095377"/>
+ <node id="13480401523" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949243" lon="129.0094809"/>
+ <node id="13480401524" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0949056" lon="129.0093826"/>
+ <node id="13480401525" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948475" lon="129.0093991"/>
+ <node id="13480401526" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948631" lon="129.0094811"/>
+ <node id="13480401527" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948828" lon="129.0094755"/>
+ <node id="13480401528" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948859" lon="129.0094918"/>
+ <node id="13480401529" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947547" lon="129.0094273"/>
+ <node id="13480401530" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947694" lon="129.0095297"/>
+ <node id="13480401531" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948446" lon="129.0095136"/>
+ <node id="13480401532" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948339" lon="129.0094391"/>
+ <node id="13480401533" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948214" lon="129.0094418"/>
+ <node id="13480401534" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0948174" lon="129.0094138"/>
+ <node id="13480401535" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947595" lon="129.0095370"/>
+ <node id="13480401536" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0947469" lon="129.0094303"/>
+ <node id="13480401537" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946769" lon="129.0094427"/>
+ <node id="13480401538" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946894" lon="129.0095493"/>
+ <node id="13480401539" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946679" lon="129.0094492"/>
+ <node id="13480401540" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946832" lon="129.0095574"/>
+ <node id="13480401541" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946177" lon="129.0095712"/>
+ <node id="13480401542" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946024" lon="129.0094630"/>
+ <node id="13480401543" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945224" lon="129.0094889"/>
+ <node id="13480401544" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945914" lon="129.0094737"/>
+ <node id="13480401545" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0946062" lon="129.0095743"/>
+ <node id="13480401546" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0945372" lon="129.0095895"/>
+ <node id="13480401547" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0952138" lon="129.0095576"/>
+ <node id="13480401548" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951612" lon="129.0095659"/>
+ <node id="13480401549" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0951702" lon="129.0096518"/>
+ <node id="13480401550" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934" lat="35.0952229" lon="129.0096436"/>
+ <node id="13480960064" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0948500" lon="129.0095819"/>
+ <node id="13480960065" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0947481" lon="129.0096057"/>
+ <node id="13480960066" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0947567" lon="129.0096557"/>
+ <node id="13480960067" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0948577" lon="129.0096321"/>
+ <node id="13480960078" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0949292" lon="129.0094974"/>
+ <node id="13480960079" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0949373" lon="129.0095525"/>
+ <node id="13480960080" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0947959" lon="129.0095834"/>
+ <node id="13480960081" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0947878" lon="129.0095283"/>
+ <node id="13480960082" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0947604" lon="129.0095445"/>
+ <node id="13480960083" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0947675" lon="129.0095883"/>
+ <node id="13480960084" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0946903" lon="129.0096070"/>
+ <node id="13480960085" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0946832" lon="129.0095632"/>
+ <node id="13480960086" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0946665" lon="129.0095731"/>
+ <node id="13480960087" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0946066" lon="129.0095860"/>
+ <node id="13480960088" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0946136" lon="129.0096346"/>
+ <node id="13480960089" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0946735" lon="129.0096216"/>
+ <node id="13480960090" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0948787" lon="129.0095923"/>
+ <node id="13480960091" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0948813" lon="129.0096385"/>
+ <node id="13480960092" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0949672" lon="129.0096313"/>
+ <node id="13480960093" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0949647" lon="129.0095851"/>
+ <node id="13480960094" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0954895" lon="129.0091704"/>
+ <node id="13480960095" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953815" lon="129.0095220"/>
+ <node id="13480960096" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953777" lon="129.0095724"/>
+ <node id="13480960097" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0954196" lon="129.0095771"/>
+ <node id="13480960098" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0954233" lon="129.0095267"/>
+ <node id="13480960099" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952659" lon="129.0093665"/>
+ <node id="13480960100" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952647" lon="129.0093924"/>
+ <node id="13480960101" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952790" lon="129.0093934"/>
+ <node id="13480960102" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952757" lon="129.0094626"/>
+ <node id="13480960103" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953518" lon="129.0094680"/>
+ <node id="13480960104" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953564" lon="129.0093729"/>
+ <node id="13480960105" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952754" lon="129.0093617"/>
+ <node id="13480960106" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953601" lon="129.0093701"/>
+ <node id="13480960107" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0953813" lon="129.0093110"/>
+ <node id="13480960108" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952777" lon="129.0093272"/>
+ <node id="13480960109" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0951536" lon="129.0095022"/>
+ <node id="13480960110" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952651" lon="129.0094596"/>
+ <node id="13480960111" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0952641" lon="129.0095286"/>
+ <node id="13480960112" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934" lat="35.0951655" lon="129.0095527"/>
+ <node id="13872633829" visible="true" version="1" changeset="183113189" timestamp="2026-05-24T15:19:11Z" user="LuxuryCoop_Import" uid="12611025" lat="35.0955653" lon="129.0090025">
+  <tag k="addr:housenumber" v="175"/>
+  <tag k="addr:street" v="감내1로"/>
+  <tag k="amenity" v="waste_basket"/>
+  <tag k="check_date" v="2025-11-11"/>
+  <tag k="operator" v="부산광역시 사하구청"/>
+  <tag k="operator:phone" v="+82 51 220 4434"/>
+  <tag k="operator:short" v="사하구청"/>
+  <tag k="operator:type" v="government"/>
+ </node>
+ <way id="165455063" visible="true" version="6" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856">
+  <nd ref="1769949184"/>
+  <nd ref="10673326107"/>
+  <nd ref="10673326108"/>
+  <nd ref="10674038571"/>
+  <nd ref="10674038572"/>
+  <nd ref="10673326146"/>
+  <nd ref="1769949255"/>
+  <nd ref="10673326145"/>
+  <nd ref="10680154992"/>
+  <nd ref="10673326144"/>
+  <nd ref="10680113928"/>
+  <nd ref="10674038573"/>
+  <nd ref="10680154969"/>
+  <nd ref="1769949249"/>
+  <nd ref="1769949215"/>
+  <nd ref="436863654"/>
+  <nd ref="10680113972"/>
+  <nd ref="10680113971"/>
+  <nd ref="10680113970"/>
+  <nd ref="10680113969"/>
+  <nd ref="10680113968"/>
+  <nd ref="10680113967"/>
+  <nd ref="10680113966"/>
+  <nd ref="10680113965"/>
+  <nd ref="10680133963"/>
+  <nd ref="10680113964"/>
+  <nd ref="10680113963"/>
+  <nd ref="10680113962"/>
+  <nd ref="10680113961"/>
+  <nd ref="10680113960"/>
+  <tag k="highway" v="residential"/>
+  <tag k="name" v="옥천로75번길"/>
+  <tag k="name:en" v="Okcheon-ro 75beon-gil"/>
+  <tag k="name:ko" v="옥천로75번길"/>
+ </way>
+ <way id="165455065" visible="true" version="11" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934">
+  <nd ref="436827940"/>
+  <nd ref="1769949199"/>
+  <nd ref="10673265886"/>
+  <nd ref="10673265885"/>
+  <nd ref="1769949173"/>
+  <nd ref="10678132282"/>
+  <nd ref="1769949245"/>
+  <nd ref="10673265887"/>
+  <nd ref="1769949187"/>
+  <nd ref="10673265888"/>
+  <nd ref="10673265889"/>
+  <nd ref="10673265890"/>
+  <nd ref="1769949243"/>
+  <nd ref="1769949218"/>
+  <nd ref="10674074745"/>
+  <nd ref="1769949250"/>
+  <nd ref="10673265891"/>
+  <nd ref="10673265893"/>
+  <nd ref="10673265892"/>
+  <nd ref="1769949236"/>
+  <nd ref="10673265894"/>
+  <nd ref="1769949174"/>
+  <nd ref="10674038526"/>
+  <nd ref="10673265896"/>
+  <nd ref="1769949240"/>
+  <nd ref="10673265895"/>
+  <nd ref="10673265897"/>
+  <nd ref="1769949263"/>
+  <nd ref="10673265899"/>
+  <nd ref="10680541146"/>
+  <nd ref="10673265898"/>
+  <nd ref="1769949171"/>
+  <nd ref="10678132293"/>
+  <nd ref="10673265900"/>
+  <nd ref="1769949234"/>
+  <nd ref="10673265901"/>
+  <nd ref="1769949167"/>
+  <nd ref="10673265902"/>
+  <nd ref="1769949264"/>
+  <nd ref="10673265903"/>
+  <nd ref="10673265904"/>
+  <nd ref="10666212933"/>
+  <nd ref="1769949256"/>
+  <nd ref="10679808967"/>
+  <nd ref="1769949252"/>
+  <nd ref="1769949205"/>
+  <nd ref="1769949253"/>
+  <nd ref="10673326105"/>
+  <nd ref="10673326106"/>
+  <nd ref="10674038570"/>
+  <nd ref="13480960094"/>
+  <nd ref="1769949186"/>
+  <nd ref="10674038557"/>
+  <nd ref="1769949184"/>
+  <nd ref="10673326147"/>
+  <nd ref="10673326148"/>
+  <nd ref="1769949246"/>
+  <nd ref="10673326149"/>
+  <nd ref="10673326150"/>
+  <nd ref="1769949251"/>
+  <nd ref="10680551161"/>
+  <nd ref="10673326151"/>
+  <nd ref="1769949172"/>
+  <nd ref="10673326152"/>
+  <nd ref="1769949175"/>
+  <nd ref="10673326153"/>
+  <nd ref="1769949233"/>
+  <nd ref="1769949266"/>
+  <nd ref="1769426556"/>
+  <tag k="highway" v="residential"/>
+  <tag k="name" v="감내1로"/>
+ </way>
+ <way id="1147081508" visible="true" version="8" changeset="180924161" timestamp="2026-04-06T05:04:28Z" user="Ruslan Fatih" uid="12875574">
+  <nd ref="10674038557"/>
+  <nd ref="10674038556"/>
+  <nd ref="10674038555"/>
+  <nd ref="10674038553"/>
+  <nd ref="10674038551"/>
+  <tag k="highway" v="service"/>
+  <tag k="path" v="alley"/>
+ </way>
+ <way id="1147081509" visible="true" version="2" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856">
+  <nd ref="10674038570"/>
+  <nd ref="10674038569"/>
+  <nd ref="10674038568"/>
+  <nd ref="10674038567"/>
+  <nd ref="10674038566"/>
+  <nd ref="10680116067"/>
+  <nd ref="10674038565"/>
+  <nd ref="10680116049"/>
+  <nd ref="10674038564"/>
+  <nd ref="10680116069"/>
+  <nd ref="10674038563"/>
+  <nd ref="10674038561"/>
+  <nd ref="10674038560"/>
+  <nd ref="10674038559"/>
+  <nd ref="10674038558"/>
+  <nd ref="10680116071"/>
+  <nd ref="10680116070"/>
+  <tag k="highway" v="service"/>
+ </way>
+ <way id="1147845859" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856">
+  <nd ref="10680116052"/>
+  <nd ref="10680116063"/>
+  <tag k="highway" v="service"/>
+ </way>
+ <way id="1147845860" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856">
+  <nd ref="10680116051"/>
+  <nd ref="10680116064"/>
+  <tag k="highway" v="service"/>
+ </way>
+ <way id="1147845862" visible="true" version="1" changeset="132779500" timestamp="2023-02-20T08:45:29Z" user="adreamy" uid="2750856">
+  <nd ref="10680116060"/>
+  <nd ref="10680116059"/>
+  <nd ref="10680116058"/>
+  <nd ref="10680116068"/>
+  <nd ref="10680116057"/>
+  <nd ref="10680116056"/>
+  <tag k="highway" v="service"/>
+ </way>
+ <way id="1147845863" visible="true" version="3" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934">
+  <nd ref="10680116067"/>
+  <nd ref="10680116066"/>
+  <nd ref="10680116065"/>
+  <nd ref="10680116064"/>
+  <nd ref="10680116063"/>
+  <nd ref="10680116060"/>
+  <nd ref="10680116061"/>
+  <tag k="highway" v="service"/>
+ </way>
+ <way id="1147849833" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856">
+  <nd ref="10680154988"/>
+  <nd ref="10680154975"/>
+  <tag k="highway" v="service"/>
+ </way>
+ <way id="1147849835" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856">
+  <nd ref="10680154983"/>
+  <nd ref="10680154984"/>
+  <nd ref="10680154985"/>
+  <nd ref="10680154986"/>
+  <tag k="highway" v="service"/>
+ </way>
+ <way id="1147849836" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856">
+  <nd ref="10680133949"/>
+  <nd ref="10680133950"/>
+  <nd ref="10680133951"/>
+  <nd ref="10680154976"/>
+  <nd ref="10680154977"/>
+  <nd ref="10680154978"/>
+  <nd ref="10680154979"/>
+  <nd ref="10680154980"/>
+  <nd ref="10680154981"/>
+  <nd ref="10680154982"/>
+  <nd ref="10680154986"/>
+  <nd ref="10680154987"/>
+  <nd ref="10680154988"/>
+  <nd ref="10680154989"/>
+  <nd ref="10680154992"/>
+  <tag k="highway" v="service"/>
+ </way>
+ <way id="1147849837" visible="true" version="1" changeset="132780258" timestamp="2023-02-20T09:02:59Z" user="adreamy" uid="2750856">
+  <nd ref="1769949266"/>
+  <nd ref="10680155001"/>
+  <nd ref="10680155000"/>
+  <nd ref="10680154999"/>
+  <nd ref="10680154998"/>
+  <nd ref="10680154997"/>
+  <nd ref="10680154996"/>
+  <nd ref="10680154995"/>
+  <nd ref="10680154994"/>
+  <nd ref="10680154993"/>
+  <tag k="highway" v="service"/>
+ </way>
+ <way id="1468551430" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934">
+  <nd ref="13468876787"/>
+  <nd ref="13468876788"/>
+  <nd ref="13468876789"/>
+  <nd ref="13468876790"/>
+  <nd ref="13468876791"/>
+  <nd ref="13468876792"/>
+  <nd ref="13468876793"/>
+  <nd ref="13468876794"/>
+  <nd ref="13468876795"/>
+  <nd ref="13468876796"/>
+  <nd ref="13468876787"/>
+  <tag k="amenity" v="parking"/>
+ </way>
+ <way id="1468551431" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934">
+  <nd ref="13468876797"/>
+  <nd ref="13468876798"/>
+  <nd ref="13468876799"/>
+  <nd ref="13468876800"/>
+  <nd ref="13468876797"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468551456" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934">
+  <nd ref="13468876886"/>
+  <nd ref="13468876887"/>
+  <nd ref="13468876888"/>
+  <nd ref="13468876889"/>
+  <nd ref="13468876886"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468551458" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934">
+  <nd ref="13468876899"/>
+  <nd ref="13468876900"/>
+  <nd ref="13468876901"/>
+  <nd ref="13468876902"/>
+  <nd ref="13468876899"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468551459" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934">
+  <nd ref="13468876903"/>
+  <nd ref="13468876904"/>
+  <nd ref="13468876905"/>
+  <nd ref="13468876906"/>
+  <nd ref="13468876907"/>
+  <nd ref="13468876903"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468551460" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934">
+  <nd ref="13468876908"/>
+  <nd ref="13468876909"/>
+  <nd ref="13468876910"/>
+  <nd ref="13468876911"/>
+  <nd ref="13468876908"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468551461" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934">
+  <nd ref="13468876909"/>
+  <nd ref="13468876912"/>
+  <nd ref="13468876913"/>
+  <nd ref="13468876908"/>
+  <nd ref="13468876909"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468551462" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934">
+  <nd ref="13468876914"/>
+  <nd ref="13468876915"/>
+  <nd ref="13468876916"/>
+  <nd ref="13468876917"/>
+  <nd ref="13468876914"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468551467" visible="true" version="1" changeset="177444215" timestamp="2026-01-19T18:47:30Z" user="Money Moustache" uid="12369934">
+  <nd ref="13468876936"/>
+  <nd ref="13468876937"/>
+  <nd ref="13468876938"/>
+  <nd ref="13468876939"/>
+  <nd ref="13468876940"/>
+  <nd ref="13468876936"/>
+  <tag k="landuse" v="forest"/>
+ </way>
+ <way id="1468579460" visible="true" version="2" changeset="184037921" timestamp="2026-06-13T01:38:38Z" user="adreamy" uid="2750856">
+  <nd ref="13469154127"/>
+  <nd ref="13469154128"/>
+  <nd ref="13469154129"/>
+  <nd ref="13469154130"/>
+  <nd ref="13469154131"/>
+  <nd ref="13469154132"/>
+  <nd ref="13469154133"/>
+  <nd ref="13469154134"/>
+  <nd ref="13469154135"/>
+  <nd ref="13469154136"/>
+  <nd ref="13469154137"/>
+  <nd ref="13469154138"/>
+  <nd ref="13469154139"/>
+  <nd ref="13469154140"/>
+  <nd ref="13469154141"/>
+  <nd ref="13469154142"/>
+  <nd ref="13469154143"/>
+  <nd ref="13469154144"/>
+  <nd ref="13469154145"/>
+  <nd ref="13469154146"/>
+  <nd ref="13469154147"/>
+  <nd ref="13469154148"/>
+  <nd ref="13469154149"/>
+  <nd ref="13469154150"/>
+  <nd ref="13469154151"/>
+  <nd ref="13469154152"/>
+  <nd ref="13469154153"/>
+  <nd ref="13469154154"/>
+  <nd ref="13469154155"/>
+  <nd ref="13469154156"/>
+  <nd ref="13469154157"/>
+  <nd ref="13469154158"/>
+  <nd ref="13469154159"/>
+  <nd ref="13469154160"/>
+  <nd ref="13469154161"/>
+  <nd ref="13469154127"/>
+  <tag k="natural" v="wood"/>
+ </way>
+ <way id="1468590614" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247087"/>
+  <nd ref="13469247088"/>
+  <nd ref="13469247089"/>
+  <nd ref="13469247090"/>
+  <nd ref="13469247091"/>
+  <nd ref="13469247092"/>
+  <nd ref="13469247093"/>
+  <nd ref="13469247094"/>
+  <nd ref="13469247087"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590615" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247095"/>
+  <nd ref="13469247096"/>
+  <nd ref="13469247097"/>
+  <nd ref="13469247098"/>
+  <nd ref="13469247099"/>
+  <nd ref="13469247100"/>
+  <nd ref="13469247095"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590616" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247101"/>
+  <nd ref="13469247102"/>
+  <nd ref="13469247103"/>
+  <nd ref="13469247104"/>
+  <nd ref="13469247105"/>
+  <nd ref="13469247106"/>
+  <nd ref="13469247101"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590617" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247107"/>
+  <nd ref="13469247108"/>
+  <nd ref="13469247109"/>
+  <nd ref="13469247110"/>
+  <nd ref="13469247107"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590618" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247111"/>
+  <nd ref="13469247112"/>
+  <nd ref="13469247113"/>
+  <nd ref="13469247114"/>
+  <nd ref="13469247115"/>
+  <nd ref="13469247116"/>
+  <nd ref="13469247111"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590619" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247117"/>
+  <nd ref="13469247118"/>
+  <nd ref="13469247119"/>
+  <nd ref="13469247120"/>
+  <nd ref="13469247121"/>
+  <nd ref="13469247117"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590620" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247122"/>
+  <nd ref="13469247123"/>
+  <nd ref="13469247124"/>
+  <nd ref="13469247125"/>
+  <nd ref="13469247122"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590621" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247126"/>
+  <nd ref="13469247127"/>
+  <nd ref="13469247128"/>
+  <nd ref="13469247129"/>
+  <nd ref="13469247126"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590622" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247130"/>
+  <nd ref="13469247131"/>
+  <nd ref="13469247132"/>
+  <nd ref="13469247133"/>
+  <nd ref="13469247130"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590623" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247134"/>
+  <nd ref="13469247135"/>
+  <nd ref="13469247136"/>
+  <nd ref="13469247137"/>
+  <nd ref="13469247134"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590624" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247138"/>
+  <nd ref="13469247139"/>
+  <nd ref="13469247140"/>
+  <nd ref="13469247141"/>
+  <nd ref="13469247138"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590625" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247142"/>
+  <nd ref="13469247143"/>
+  <nd ref="13469247144"/>
+  <nd ref="13469247145"/>
+  <nd ref="13469247146"/>
+  <nd ref="13469247147"/>
+  <nd ref="13469247142"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590626" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247148"/>
+  <nd ref="13469247149"/>
+  <nd ref="13469247150"/>
+  <nd ref="13469247151"/>
+  <nd ref="13469247152"/>
+  <nd ref="13469247153"/>
+  <nd ref="13469247154"/>
+  <nd ref="13469247148"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590627" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247155"/>
+  <nd ref="13469247156"/>
+  <nd ref="13469247157"/>
+  <nd ref="13469247158"/>
+  <nd ref="13469247155"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590628" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247159"/>
+  <nd ref="13469247160"/>
+  <nd ref="13469247161"/>
+  <nd ref="13469247162"/>
+  <nd ref="13469247163"/>
+  <nd ref="13469247164"/>
+  <nd ref="13469247159"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590629" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247165"/>
+  <nd ref="13469247166"/>
+  <nd ref="13469247167"/>
+  <nd ref="13469247168"/>
+  <nd ref="13469247165"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590630" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247169"/>
+  <nd ref="13469247170"/>
+  <nd ref="13469247171"/>
+  <nd ref="13469247172"/>
+  <nd ref="13469247169"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590631" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247169"/>
+  <nd ref="13469247173"/>
+  <nd ref="13469247174"/>
+  <nd ref="13469247172"/>
+  <nd ref="13469247169"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590633" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247179"/>
+  <nd ref="13469247180"/>
+  <nd ref="13469247181"/>
+  <nd ref="13469247182"/>
+  <nd ref="13469247183"/>
+  <nd ref="13469247179"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590634" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247184"/>
+  <nd ref="13469247185"/>
+  <nd ref="13469247186"/>
+  <nd ref="13469247187"/>
+  <nd ref="13469247188"/>
+  <nd ref="13469247184"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590635" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247189"/>
+  <nd ref="13469247190"/>
+  <nd ref="13469247191"/>
+  <nd ref="13469247192"/>
+  <nd ref="13469247189"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590636" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247193"/>
+  <nd ref="13469247194"/>
+  <nd ref="13469247195"/>
+  <nd ref="13469247196"/>
+  <nd ref="13469247197"/>
+  <nd ref="13469247198"/>
+  <nd ref="13469247199"/>
+  <nd ref="13469247193"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590641" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247218"/>
+  <nd ref="13469247219"/>
+  <nd ref="13469247220"/>
+  <nd ref="13469247221"/>
+  <nd ref="13469247218"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590642" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247222"/>
+  <nd ref="13469247223"/>
+  <nd ref="13469247224"/>
+  <nd ref="13469247225"/>
+  <nd ref="13469247226"/>
+  <nd ref="13469247227"/>
+  <nd ref="13469247222"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590643" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247228"/>
+  <nd ref="13469247229"/>
+  <nd ref="13469247230"/>
+  <nd ref="13469247231"/>
+  <nd ref="13469247228"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590644" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247232"/>
+  <nd ref="13469247233"/>
+  <nd ref="13469247234"/>
+  <nd ref="13469247235"/>
+  <nd ref="13469247232"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590645" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247236"/>
+  <nd ref="13469247237"/>
+  <nd ref="13469247238"/>
+  <nd ref="13469247239"/>
+  <nd ref="13469247236"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590685" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247367"/>
+  <nd ref="13469247368"/>
+  <nd ref="13469247369"/>
+  <nd ref="13469247370"/>
+  <nd ref="13469247367"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590686" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247371"/>
+  <nd ref="13469247372"/>
+  <nd ref="13469247373"/>
+  <nd ref="13469247374"/>
+  <nd ref="13469247371"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590687" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247375"/>
+  <nd ref="13469247376"/>
+  <nd ref="13469247377"/>
+  <nd ref="13469247378"/>
+  <nd ref="13469247375"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590688" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247379"/>
+  <nd ref="13469247380"/>
+  <nd ref="13469247381"/>
+  <nd ref="13469247382"/>
+  <nd ref="13469247383"/>
+  <nd ref="13469247384"/>
+  <nd ref="13469247385"/>
+  <nd ref="13469247386"/>
+  <nd ref="13469247379"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590690" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247391"/>
+  <nd ref="13469247392"/>
+  <nd ref="13469247393"/>
+  <nd ref="13469247394"/>
+  <nd ref="13469247391"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590691" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247395"/>
+  <nd ref="13469247396"/>
+  <nd ref="13469247397"/>
+  <nd ref="13469247398"/>
+  <nd ref="13469247395"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590692" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247399"/>
+  <nd ref="13469247400"/>
+  <nd ref="13469247401"/>
+  <nd ref="13469247402"/>
+  <nd ref="13469247399"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590693" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247403"/>
+  <nd ref="13469247404"/>
+  <nd ref="13469247405"/>
+  <nd ref="13469247406"/>
+  <nd ref="13469247407"/>
+  <nd ref="13469247403"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590694" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247408"/>
+  <nd ref="13469247409"/>
+  <nd ref="13469247410"/>
+  <nd ref="13469247411"/>
+  <nd ref="13469247408"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590695" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247412"/>
+  <nd ref="13469247413"/>
+  <nd ref="13469247414"/>
+  <nd ref="13469247415"/>
+  <nd ref="13469247412"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1468590696" visible="true" version="1" changeset="177451194" timestamp="2026-01-19T21:59:55Z" user="Money Moustache" uid="12369934">
+  <nd ref="13469247416"/>
+  <nd ref="13469247417"/>
+  <nd ref="13469247418"/>
+  <nd ref="13469247419"/>
+  <nd ref="13469247420"/>
+  <nd ref="13469247416"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906508" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401073"/>
+  <nd ref="13480401074"/>
+  <nd ref="13480401075"/>
+  <nd ref="13480401076"/>
+  <nd ref="13480401073"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906513" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401094"/>
+  <nd ref="13480401095"/>
+  <nd ref="13480401096"/>
+  <nd ref="13480401097"/>
+  <nd ref="13480401098"/>
+  <nd ref="13480401094"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906514" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401099"/>
+  <nd ref="13480401100"/>
+  <nd ref="13480401101"/>
+  <nd ref="13480401102"/>
+  <nd ref="13480401099"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906515" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401103"/>
+  <nd ref="13480401104"/>
+  <nd ref="13480401105"/>
+  <nd ref="13480401106"/>
+  <nd ref="13480401103"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906516" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401107"/>
+  <nd ref="13480401108"/>
+  <nd ref="13480401109"/>
+  <nd ref="13480401110"/>
+  <nd ref="13480401107"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906517" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401111"/>
+  <nd ref="13480401112"/>
+  <nd ref="13480401113"/>
+  <nd ref="13480401114"/>
+  <nd ref="13480401111"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906518" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401115"/>
+  <nd ref="13480401116"/>
+  <nd ref="13480401117"/>
+  <nd ref="13480401118"/>
+  <nd ref="13480401115"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906519" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401119"/>
+  <nd ref="13480401120"/>
+  <nd ref="13480401121"/>
+  <nd ref="13480401122"/>
+  <nd ref="13480401119"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906520" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401123"/>
+  <nd ref="13480401124"/>
+  <nd ref="13480401125"/>
+  <nd ref="13480401126"/>
+  <nd ref="13480401123"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906521" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401127"/>
+  <nd ref="13480401128"/>
+  <nd ref="13480401129"/>
+  <nd ref="13480401130"/>
+  <nd ref="13480401127"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906522" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401131"/>
+  <nd ref="13480401132"/>
+  <nd ref="13480401133"/>
+  <nd ref="13480401134"/>
+  <nd ref="13480401135"/>
+  <nd ref="13480401136"/>
+  <nd ref="13480401131"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906523" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401137"/>
+  <nd ref="13480401138"/>
+  <nd ref="13480401139"/>
+  <nd ref="13480401140"/>
+  <nd ref="13480401141"/>
+  <nd ref="13480401142"/>
+  <nd ref="13480401137"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906527" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401157"/>
+  <nd ref="13480401158"/>
+  <nd ref="13480401159"/>
+  <nd ref="13480401160"/>
+  <nd ref="13480401157"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906530" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401169"/>
+  <nd ref="13480401170"/>
+  <nd ref="13480401171"/>
+  <nd ref="13480401172"/>
+  <nd ref="13480401173"/>
+  <nd ref="13480401174"/>
+  <nd ref="13480401175"/>
+  <nd ref="13480401169"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906531" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401176"/>
+  <nd ref="13480401177"/>
+  <nd ref="13480401178"/>
+  <nd ref="13480401179"/>
+  <nd ref="13480401176"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906532" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401180"/>
+  <nd ref="13480401181"/>
+  <nd ref="13480401182"/>
+  <nd ref="13480401183"/>
+  <nd ref="13480401180"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906534" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401188"/>
+  <nd ref="13480401189"/>
+  <nd ref="13480401190"/>
+  <nd ref="13480401191"/>
+  <nd ref="13480401188"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906535" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401192"/>
+  <nd ref="13480401193"/>
+  <nd ref="13480401194"/>
+  <nd ref="13480401195"/>
+  <nd ref="13480401192"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906536" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401193"/>
+  <nd ref="13480401196"/>
+  <nd ref="13480401197"/>
+  <nd ref="13480401194"/>
+  <nd ref="13480401193"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906537" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401196"/>
+  <nd ref="13480401197"/>
+  <nd ref="13480401198"/>
+  <nd ref="13480401199"/>
+  <nd ref="13480401196"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906538" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401200"/>
+  <nd ref="13480401201"/>
+  <nd ref="13480401202"/>
+  <nd ref="13480401203"/>
+  <nd ref="13480401200"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906539" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401204"/>
+  <nd ref="13480401205"/>
+  <nd ref="13480401206"/>
+  <nd ref="13480401207"/>
+  <nd ref="13480401208"/>
+  <nd ref="13480401209"/>
+  <nd ref="13480401204"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906540" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401210"/>
+  <nd ref="13480401211"/>
+  <nd ref="13480401212"/>
+  <nd ref="13480401213"/>
+  <nd ref="13480401210"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906541" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401214"/>
+  <nd ref="13480401215"/>
+  <nd ref="13480401216"/>
+  <nd ref="13480401217"/>
+  <nd ref="13480401214"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906542" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401218"/>
+  <nd ref="13480401219"/>
+  <nd ref="13480401220"/>
+  <nd ref="13480401221"/>
+  <nd ref="13480401218"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906543" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401222"/>
+  <nd ref="13480401223"/>
+  <nd ref="13480401224"/>
+  <nd ref="13480401225"/>
+  <nd ref="13480401222"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906544" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401226"/>
+  <nd ref="13480401227"/>
+  <nd ref="13480401228"/>
+  <nd ref="13480401229"/>
+  <nd ref="13480401226"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906545" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401230"/>
+  <nd ref="13480401231"/>
+  <nd ref="13480401232"/>
+  <nd ref="13480401233"/>
+  <nd ref="13480401230"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906546" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401234"/>
+  <nd ref="13480401235"/>
+  <nd ref="13480401236"/>
+  <nd ref="13480401237"/>
+  <nd ref="13480401234"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906547" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401238"/>
+  <nd ref="13480401239"/>
+  <nd ref="13480401240"/>
+  <nd ref="13480401241"/>
+  <nd ref="13480401238"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906548" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401242"/>
+  <nd ref="13480401243"/>
+  <nd ref="13480401244"/>
+  <nd ref="13480401245"/>
+  <nd ref="13480401242"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906549" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401246"/>
+  <nd ref="13480401247"/>
+  <nd ref="13480401248"/>
+  <nd ref="13480401249"/>
+  <nd ref="13480401246"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906550" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401250"/>
+  <nd ref="13480401251"/>
+  <nd ref="13480401252"/>
+  <nd ref="13480401253"/>
+  <nd ref="13480401250"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906551" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401254"/>
+  <nd ref="13480401255"/>
+  <nd ref="13480401256"/>
+  <nd ref="13480401257"/>
+  <nd ref="13480401254"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906552" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401258"/>
+  <nd ref="13480401259"/>
+  <nd ref="13480401260"/>
+  <nd ref="13480401261"/>
+  <nd ref="13480401262"/>
+  <nd ref="13480401263"/>
+  <nd ref="13480401264"/>
+  <nd ref="13480401265"/>
+  <nd ref="13480401266"/>
+  <nd ref="13480401267"/>
+  <nd ref="13480401268"/>
+  <nd ref="13480401269"/>
+  <nd ref="13480401270"/>
+  <nd ref="13480401271"/>
+  <nd ref="13480401258"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906553" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401272"/>
+  <nd ref="13480401273"/>
+  <nd ref="13480401274"/>
+  <nd ref="13480401275"/>
+  <nd ref="13480401272"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906554" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401276"/>
+  <nd ref="13480401277"/>
+  <nd ref="13480401278"/>
+  <nd ref="13480401279"/>
+  <nd ref="13480401276"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906555" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401278"/>
+  <nd ref="13480401280"/>
+  <nd ref="13480401281"/>
+  <nd ref="13480401279"/>
+  <nd ref="13480401278"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906556" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401282"/>
+  <nd ref="13480401283"/>
+  <nd ref="13480401284"/>
+  <nd ref="13480401285"/>
+  <nd ref="13480401282"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906557" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401286"/>
+  <nd ref="13480401287"/>
+  <nd ref="13480401288"/>
+  <nd ref="13480401289"/>
+  <nd ref="13480401286"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906558" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401290"/>
+  <nd ref="13480401291"/>
+  <nd ref="13480401292"/>
+  <nd ref="13480401293"/>
+  <nd ref="13480401290"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906559" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401294"/>
+  <nd ref="13480401295"/>
+  <nd ref="13480401296"/>
+  <nd ref="13480401297"/>
+  <nd ref="13480401298"/>
+  <nd ref="13480401299"/>
+  <nd ref="13480401294"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906560" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401300"/>
+  <nd ref="13480401301"/>
+  <nd ref="13480401302"/>
+  <nd ref="13480401303"/>
+  <nd ref="13480401300"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906561" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401304"/>
+  <nd ref="13480401305"/>
+  <nd ref="13480401306"/>
+  <nd ref="13480401307"/>
+  <nd ref="13480401308"/>
+  <nd ref="13480401309"/>
+  <nd ref="13480401310"/>
+  <nd ref="13480401304"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906599" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401470"/>
+  <nd ref="13480401471"/>
+  <nd ref="13480401472"/>
+  <nd ref="13480401475"/>
+  <nd ref="13480401476"/>
+  <nd ref="13480401473"/>
+  <nd ref="13480401474"/>
+  <nd ref="13480401470"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906603" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401491"/>
+  <nd ref="13480401492"/>
+  <nd ref="13480401493"/>
+  <nd ref="13480401494"/>
+  <nd ref="13480401491"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906604" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401495"/>
+  <nd ref="13480401496"/>
+  <nd ref="13480401497"/>
+  <nd ref="13480401498"/>
+  <nd ref="13480401495"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906605" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401499"/>
+  <nd ref="13480401500"/>
+  <nd ref="13480401501"/>
+  <nd ref="13480401502"/>
+  <nd ref="13480401499"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906606" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401503"/>
+  <nd ref="13480401504"/>
+  <nd ref="13480401505"/>
+  <nd ref="13480401506"/>
+  <nd ref="13480401507"/>
+  <nd ref="13480401508"/>
+  <nd ref="13480401503"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906607" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401509"/>
+  <nd ref="13480401510"/>
+  <nd ref="13480401511"/>
+  <nd ref="13480401512"/>
+  <nd ref="13480401513"/>
+  <nd ref="13480401514"/>
+  <nd ref="13480401509"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906608" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401515"/>
+  <nd ref="13480401516"/>
+  <nd ref="13480401517"/>
+  <nd ref="13480401518"/>
+  <nd ref="13480401515"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906609" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401519"/>
+  <nd ref="13480401520"/>
+  <nd ref="13480401521"/>
+  <nd ref="13480401522"/>
+  <nd ref="13480401519"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906610" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401523"/>
+  <nd ref="13480401524"/>
+  <nd ref="13480401525"/>
+  <nd ref="13480401526"/>
+  <nd ref="13480401527"/>
+  <nd ref="13480401528"/>
+  <nd ref="13480401523"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906611" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401529"/>
+  <nd ref="13480401530"/>
+  <nd ref="13480401531"/>
+  <nd ref="13480401532"/>
+  <nd ref="13480401533"/>
+  <nd ref="13480401534"/>
+  <nd ref="13480401529"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906612" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401535"/>
+  <nd ref="13480401536"/>
+  <nd ref="13480401537"/>
+  <nd ref="13480401538"/>
+  <nd ref="13480401535"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906613" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401539"/>
+  <nd ref="13480401540"/>
+  <nd ref="13480401541"/>
+  <nd ref="13480401542"/>
+  <nd ref="13480401539"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906614" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401543"/>
+  <nd ref="13480401544"/>
+  <nd ref="13480401545"/>
+  <nd ref="13480401546"/>
+  <nd ref="13480401543"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469906615" visible="true" version="1" changeset="177628187" timestamp="2026-01-23T22:12:54Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480401547"/>
+  <nd ref="13480401548"/>
+  <nd ref="13480401549"/>
+  <nd ref="13480401550"/>
+  <nd ref="13480401547"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469944597" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480960064"/>
+  <nd ref="13480960065"/>
+  <nd ref="13480960066"/>
+  <nd ref="13480960067"/>
+  <nd ref="13480960064"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469944601" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480960078"/>
+  <nd ref="13480960079"/>
+  <nd ref="13480960080"/>
+  <nd ref="13480960081"/>
+  <nd ref="13480960078"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469944602" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480960082"/>
+  <nd ref="13480960083"/>
+  <nd ref="13480960084"/>
+  <nd ref="13480960085"/>
+  <nd ref="13480960082"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469944603" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480960086"/>
+  <nd ref="13480960087"/>
+  <nd ref="13480960088"/>
+  <nd ref="13480960089"/>
+  <nd ref="13480960086"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469944604" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480960090"/>
+  <nd ref="13480960091"/>
+  <nd ref="13480960092"/>
+  <nd ref="13480960093"/>
+  <nd ref="13480960090"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469944605" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480960095"/>
+  <nd ref="13480960096"/>
+  <nd ref="13480960097"/>
+  <nd ref="13480960098"/>
+  <nd ref="13480960095"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469944606" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480960099"/>
+  <nd ref="13480960100"/>
+  <nd ref="13480960101"/>
+  <nd ref="13480960102"/>
+  <nd ref="13480960103"/>
+  <nd ref="13480960104"/>
+  <nd ref="13480960099"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469944607" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480960105"/>
+  <nd ref="13480960106"/>
+  <nd ref="13480960107"/>
+  <nd ref="13480960108"/>
+  <nd ref="13480960105"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1469944608" visible="true" version="1" changeset="177631051" timestamp="2026-01-24T00:32:01Z" user="Money Moustache" uid="12369934">
+  <nd ref="13480960109"/>
+  <nd ref="13480960110"/>
+  <nd ref="13480960111"/>
+  <nd ref="13480960112"/>
+  <nd ref="13480960109"/>
+  <tag k="building" v="yes"/>
+ </way>
+ <way id="1496857838" visible="true" version="1" changeset="180924161" timestamp="2026-04-06T05:04:28Z" user="Ruslan Fatih" uid="12875574">
+  <nd ref="10674038551"/>
+  <nd ref="10674038550"/>
+  <nd ref="10674038549"/>
+  <nd ref="10674038547"/>
+  <nd ref="10674038546"/>
+  <nd ref="10674038545"/>
+  <nd ref="10674038544"/>
+  <nd ref="2449241334"/>
+  <nd ref="10674038543"/>
+  <nd ref="10680551171"/>
+  <nd ref="10674038542"/>
+  <nd ref="10666212935"/>
+  <tag k="highway" v="footway"/>
+  <tag k="path" v="alley"/>
+ </way>
+</osm>

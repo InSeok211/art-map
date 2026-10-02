@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>감내1로 건물별 건축 시각화 시안</title>
+  <style>
+    :root { font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; color: #233333; background: #e9ebe5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    header { background: #173f3a; color: #fffdf5; padding: 46px max(5vw, 28px) 42px; }
+    .eyebrow { color: #b7d6c2; letter-spacing: .22em; font-size: 12px; font-weight: 800; }
+    h1 { font-size: clamp(28px, 4vw, 52px); letter-spacing: -.05em; margin: 12px 0 10px; }
+    header p { max-width: 900px; color: #d9e8de; line-height: 1.75; margin: 0; }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 25px; }
+    .pill { border: 1px solid #7ba396; padding: 8px 13px; border-radius: 30px; font-size: 12px; }
+    main { max-width: 1540px; margin: auto; padding: 34px max(3vw, 22px) 80px; }
+    .intro { margin: 0 0 24px; line-height: 1.7; color: #52635d; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 22px; }
+    article { background: #fffefa; box-shadow: 0 8px 28px #1d35231c; border: 1px solid #d8ded5; border-radius: 18px; overflow: hidden; }
+    .head { display: flex; justify-content: space-between; gap: 14px; align-items: start; padding: 22px 24px 15px; }
+    .num { font-weight: 900; font-size: 32px; letter-spacing: -.05em; color: #164940; }
+    .name { font-weight: 800; font-size: 17px; margin-top: 2px; }
+    .badge { white-space: nowrap; padding: 6px 10px; border-radius: 99px; background: #def0e6; color: #24634d; font-size: 12px; font-weight: 800; }
+    .badge.provisional { background: #fff0d5; color: #9b6623; }
+    .visual { display: grid; grid-template-columns: 43% 57%; height: 365px; background: #e7ede7; }
+    .visual img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+    .visual img:last-child { object-fit: contain; background: #c9c5c3; }
+    .visual svg { width: 100%; height: 100%; background: #f4f2eb; }
+    .details { padding: 18px 24px 24px; font-size: 13px; line-height: 1.65; }
+    .details p { margin: 5px 0; }
+    .details b { color: #244b42; }
+    .sources { margin-top: 11px; color: #72827b; font-size: 11px; }
+    .sources a { color: #2c6c66; }
+    footer { margin-top: 28px; background: #f9f8f2; border-left: 4px solid #77a89b; padding: 18px 21px; line-height: 1.7; font-size: 13px; }
+    @media(max-width: 850px) { .grid { grid-template-columns: 1fr; } }
+    @media(max-width: 500px) { .visual { height: 240px; } .num { font-size: 26px; } }
+    @media print { header { print-color-adjust: exact; } .grid { gap: 10px; } article { break-inside: avoid; box-shadow: none; } }
+  </style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">GAMCHEON 2-DONG · BUILDING STUDIES / 02</div>
+  <h1>감내1로 건물별 3D 디자인 시안 · 두 번째 버전</h1>
+  <p>직접 촬영한 거리 사진·영상을 참고해 건물별 3D 이미지 시안을 생성했습니다. 왼쪽은 촬영 원본, 오른쪽은 지붕·전면·측면을 함께 볼 수 있는 건물별 이미지 시안입니다. 실제 모델링 전에 외관과 방향을 고르는 자료로 봐주세요.</p>
+  <div class="legend"><span class="pill">주소 확인 4동</span><span class="pill">주소 대조 필요 2동</span><span class="pill">작가님 공방 180번은 기준 건물로 별도 유지</span></div>
+</header>
+<main>
+  <p class="intro">생성 이미지에는 원본에 없는 소품이나 창·차양 디테일이 포함될 수 있습니다. 지붕 깊이와 보이지 않는 측면도 추정입니다. 주소와 실측 치수까지 확정한 완성 3D 모델은 아닙니다.</p>
+  <div class="grid" id="grid"></div>
+  <footer>
+    <b>주소 판정 기준</b> · 173번과 174번은 촬영 간판을 공개 주소 자료와 대조했습니다. 175번은 사진의 번호판과 카카오맵 장소·주소 검색 결과가 일치합니다. 176번은 촬영 사진에 번호판이 보입니다. FOFOS와 분홍 건물은 외관과 촬영 순서는 확인되지만 주소 연결은 보류했습니다. 카카오 스카이뷰와 2025년 11월 로드뷰를 보조 자료로 살폈습니다. 오른쪽 이미지들은 실제 건물의 정확한 복원이 아닌 생성형 디자인 초안입니다.
+  </footer>
+</main>
+<script>
+const buildings = [
+  { no:'173', name:'감천한우사골소머리곰탕', state:'주소 확인', kind:'soup', photo:'building-references/173-soup.jpg', locate:'거리 끝 교차로의 정면 건물', features:'붉은 벽돌 3층, 좌우로 반복되는 흰 창틀, 1층 긴 식당 간판과 전면 유리.', model:'교차로에서 보이는 정면을 넓게 잡고 벽돌 줄눈·간판·1층 유리 밝기를 분리.', sources:'촬영 175824962 · 공개 음식점 주소', sourceUrl:'https://www.tripadvisor.co.kr/Restaurant_Review-g297884-d25243278-Reviews-Gamcheon_Beef_Bone_Soup-Busan.html' },
+  { no:'174', name:'문화반점', state:'주소 확인', kind:'chinese', photo:'building-references/174-chinese.jpg', locate:'176번 별지음 바로 옆', features:'붉은 벽돌 3층, 흰 알루미늄 창틀, 붉은 간판과 청록색 처마.', model:'상층의 넓은 벽돌 면과 가게 앞 돌출 차양을 각각 독립 입체로 제작.', sources:'촬영 193420050_03 · 공개 음식점 주소', sourceUrl:'https://www.diningcode.com/profile.php?rid=SYhH9pgxqkQb' },
+  { no:'175', name:'서원탑마트', state:'주소 확인', kind:'mart', photo:'building-references/175-mart.jpg', locate:'교차로에서 북쪽으로 굽는 길의 안쪽', features:'선명한 연두색 3층 외벽, 짙은 수평 창띠, 1층 파란 차양과 가게 입구.', model:'높은 연두색 매스를 강조하고 층간 수평띠·모서리 창·파란 차양을 구분.', sources:'촬영 193420050 · 번호판 175 · 카카오맵' },
+  { no:'176', name:'별지음 · 핸드메이드 샵', state:'주소 확인', kind:'handmade', photo:'building-references/176-handmade.jpg', locate:'문화반점 옆, 공방으로 가는 굽은 길 초입', features:'흰 벽돌, 옅은 녹색 창틀, 초록 줄무늬 차양, 고양이 그림과 기념품 간판.', model:'다른 건물보다 밝은 흰 매스에 창틀·줄무늬 차양·간판 그래픽을 층별로 제작.', sources:'촬영 193420050_05 · 번호판 176' },
+  { no:'임시 A', name:'FOFOS GALLERY SHOP', state:'주소 대조 필요', kind:'fofos', photo:'building-references/tmp-fofos.jpg', locate:'직선 거리 왼쪽, 교차로에 가까운 목재 외관', features:'갈색 목재 패널, 큰 통창, 경사진 차양, 밝은 지붕 가장자리와 흰 난간.', model:'목재 결의 방향과 돌출된 지붕·차양이 알아보이도록 지붕선과 창 깊이를 강조.', sources:'촬영 175824349 · 193420050_02' },
+  { no:'임시 B', name:'분홍색 모퉁이 건물', state:'주소 대조 필요', kind:'pink', photo:'building-references/tmp-pink.jpg', locate:'작가님 공방 바로 남쪽 갈림길', features:'연분홍 2층 외벽, 회색 경사지붕, 큰 상층 창, 1층 흰 미닫이문·에어컨.', model:'공방과 맞닿는 골목의 모퉁이 위치와 낮은 지붕을 살려 모델링. 사진에 24 번호판이 보이지만 도로명 귀속은 재확인.', sources:'촬영 175826884 · 193426308' }
+];
+function svg(b) {
+ const cfg = {
+  soup:['#8d4940','#6d3b36','#a9705b','#d7e5e1'], chinese:['#9e504a','#783e3b','#a96b60','#d5e4e0'],
+  mart:['#aad138','#82a92b','#bdd94c','#29494b'], handmade:['#f2f2e9','#d3d7c9','#f8f8f1','#b9d6c9'],
+  fofos:['#9c6b47','#704b35','#c19262','#a9c0bd'], pink:['#d49d98','#aa7776','#e4b9ae','#c8dcda']
+ }[b.kind];
+ let [front, side, roof, glass] = cfg;
+ let three = ['mart','soup','chinese'].includes(b.kind); let levels=three?3:2;
+ let win='';
+ for(let level=0;level<levels;level++) {
+   let y=98+level*(three?44:61);
+   for(let col=0;col<(b.kind==='soup'?3:2);col++) {
+     let x=91+col*(b.kind==='soup'?42:63);
+     if(level===levels-1 && b.kind==='fofos') continue;
+     win+=`<rect x="${x}" y="${y}" width="${b.kind==='soup'?29:40}" height="${three?27:39}" rx="2" fill="${glass}" stroke="#e8e9dc" stroke-width="4"/><path d="M${x+19} ${y+2}v${three?23:35}" stroke="#d8e4df" stroke-width="2"/>`;
+   }
+ }
+ let ground='';
+ if(b.kind==='soup') ground='<rect x="82" y="215" width="138" height="25" fill="#efe8d9"/><text x="151" y="232" text-anchor="middle" font-size="11" font-weight="800" fill="#5e3931">사골 소머리곰탕</text><rect x="85" y="241" width="132" height="35" fill="#536c6e"/><path d="M150 241v35" stroke="#dde6df" stroke-width="3"/>';
+ if(b.kind==='chinese') ground='<path d="M79 218h145l-13 17H91z" fill="#2b7d72"/><rect x="96" y="198" width="111" height="24" fill="#a52633"/><text x="151" y="215" text-anchor="middle" font-size="14" font-weight="800" fill="#fff2cf">문화반점</text><rect x="90" y="236" width="122" height="41" fill="#394b47"/>';
+ if(b.kind==='mart') ground='<path d="M78 228h150l-14 18H88z" fill="#316b9a"/><rect x="91" y="246" width="120" height="31" fill="#385556"/><text x="151" y="243" text-anchor="middle" font-size="10" font-weight="800" fill="#fdf9e8">서원탑마트</text>';
+ if(b.kind==='handmade') ground='<path d="M78 219h150l-14 20H90z" fill="#3d805d"/><path d="M92 219l9 19m8-19 9 19m8-19 9 19m8-19 9 19m8-19 9 19m8-19 9 19m8-19 9 19m8-19 9 19" stroke="#f4f1df" stroke-width="6"/><rect x="92" y="239" width="118" height="38" fill="#b2d1c3"/><text x="151" y="211" text-anchor="middle" font-size="12" font-weight="800" fill="#3b704f">별지음</text>';
+ if(b.kind==='fofos') ground='<path d="M80 194h144l-11 26H90z" fill="#71462e"/><rect x="92" y="220" width="118" height="57" fill="#a5c8c5"/><text x="151" y="212" text-anchor="middle" font-size="11" font-weight="900" fill="#fff4dd">FOFOS GALLERY</text>';
+ if(b.kind==='pink') ground='<rect x="102" y="217" width="89" height="61" fill="#dce5dc" stroke="#f3ece4" stroke-width="5"/><path d="M147 219v57" stroke="#f4f2e8" stroke-width="3"/><rect x="200" y="219" width="18" height="14" rx="2" fill="#d4d4ca"/>';
+ const roofShape=b.kind==='pink'?`<path d="M74 88l81-31 78 31-19 15-60-23-60 23z" fill="#666d6e"/>`:`<path d="M75 90l54-31h95l-54 31z" fill="${roof}"/><path d="M224 59l24 23-25 16-53-8z" fill="${side}"/>`;
+ return `<svg viewBox="0 0 320 305" role="img" aria-label="${b.name} 지도용 건물 모델링 시안"><defs><pattern id="brick-${b.kind}" width="14" height="9" patternUnits="userSpaceOnUse"><path d="M0 0H14M0 9H14M7 0V4M0 4H14M0 4V9M14 4V9" fill="none" stroke="#ffffff" stroke-opacity=".19" stroke-width=".7"/></pattern></defs><rect width="320" height="305" fill="#f3f1e9"/><ellipse cx="164" cy="283" rx="117" ry="12" fill="#c8d3ca"/>${roofShape}<path d="M75 90h149v188H75z" fill="${front}"/><path d="M224 90l24-15v190l-24 13z" fill="${side}"/><path d="M75 90h149v188H75z" fill="url(#brick-${b.kind})"/>${win}${ground}<path d="M227 126l17-10v38l-17 8zM227 181l17-10v36l-17 8z" fill="${glass}" stroke="#e4e5d9" stroke-width="2"/><path d="M75 278h149l24-13" fill="none" stroke="#566e65" stroke-width="3"/><text x="20" y="289" font-size="9" fill="#6d8277" letter-spacing="1.3">MASSING / FACADE STUDY</text></svg>`;
+}
+const generated = {soup:'173-soup.png', chinese:'174-chinese.png', mart:'175-mart.png', handmade:'176-handmade.png', fofos:'tmp-fofos.png', pink:'tmp-pink.png'};
+document.getElementById('grid').innerHTML=buildings.map(b=>`<article><div class="head"><div><div class="num">${b.no}</div><div class="name">${b.name}</div></div><span class="badge ${b.state==='주소 확인'?'':'provisional'}">${b.state}</span></div><div class="visual"><img src="${b.photo}" alt="${b.name} 직접 촬영 사진"/><img src="generated-concepts/v2/${generated[b.kind]}" alt="${b.name} AI 생성 3D 디자인 시안"/></div><div class="details"><p><b>위치</b> ${b.locate}</p><p><b>관찰한 외관</b> ${b.features}</p><p><b>지도 모델 제안</b> ${b.model}</p><div class="sources">근거: ${b.sources}${b.sourceUrl?` · <a href="${b.sourceUrl}" target="_blank" rel="noopener noreferrer">주소 자료 보기</a>`:''}</div></div></article>`).join('');
+</script>
+</body>
+</html>
+
