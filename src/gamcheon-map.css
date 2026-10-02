@@ -337,6 +337,7 @@
   color: #39594b;
   font-size: 11px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .gamcheon-map__area-badge span { width: 6px; height: 6px; background: #529a70; }
@@ -356,6 +357,17 @@
 }
 
 .gamcheon-map__map-tools button:hover { background: #f2f8f1; }
+.gamcheon-map__map-tools .gamcheon-map__street-focus {
+  width: auto;
+  padding: 0 13px;
+  white-space: nowrap;
+  background: #265d56;
+  border-color: #265d56;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+.gamcheon-map__map-tools .gamcheon-map__street-focus:hover { background: #347a70; }
 .gamcheon-map__map-tools button.is-active { border-color: #e78349; background: #fdf0e6; color: #c0612b; }
 .gamcheon-map__map-tools button:disabled { cursor: default; opacity: .7; }
 .gamcheon-map__map-tools svg { width: 20px; height: 20px; }
@@ -372,6 +384,81 @@
 
 .gamcheon-map__marker--shop { background: #247d72; }
 .gamcheon-map__marker.is-active { width: 23px; height: 23px; border-width: 3px; }
+.gamcheon-map__scene-status {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  z-index: 4;
+  margin: 0;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(31, 75, 67, .88);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.gamcheon-map__featured-marker {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.gamcheon-map__featured-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px 6px 8px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #e2733b;
+  box-shadow: 0 4px 14px rgba(120, 52, 16, .35);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  white-space: nowrap;
+}
+.gamcheon-map__featured-label svg { width: 15px; height: 15px; color: #ffe2c9; }
+/* 이름표에서 건물로 내려오는 짧은 줄기와, 건물 위치에서 퍼지는 고리 */
+.gamcheon-map__featured-pin {
+  position: relative;
+  width: 3px;
+  height: 22px;
+  background: linear-gradient(#e2733b, #e2733b 70%, rgba(226, 115, 59, 0));
+}
+.gamcheon-map__featured-pin::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #e2733b;
+  transform: translateX(-50%);
+  animation: gamcheon-featured-pulse 2.4s ease-out infinite;
+}
+@keyframes gamcheon-featured-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(226, 115, 59, .55); }
+  70% { box-shadow: 0 0 0 14px rgba(226, 115, 59, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(226, 115, 59, 0); }
+}
+.gamcheon-map__featured-marker:hover .gamcheon-map__featured-label,
+.gamcheon-map__featured-marker.is-active .gamcheon-map__featured-label { background: #c95e28; }
+.gamcheon-map__featured-marker:focus-visible { outline: none; }
+.gamcheon-map__featured-marker:focus-visible .gamcheon-map__featured-label { outline: 3px solid #1f5f55; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .gamcheon-map__featured-pin::after { animation: none; }
+}
 .gamcheon-map.is-editing .maplibregl-canvas { cursor: crosshair; }
 .gamcheon-map__edit-toolbar { display: flex; gap: 8px; padding: 11px 17px 15px; border-top: 1px solid var(--gm-line); }
 .gamcheon-map__edit-toolbar button,
@@ -417,5 +504,40 @@
   .gamcheon-map__map-tools { top: 13px; right: 12px; }
   .gamcheon-map__area-badge { height: 34px; font-size: 10px; }
   .gamcheon-map__map-tools button { width: 34px; height: 34px; padding: 7px; }
+  .gamcheon-map__map-tools .gamcheon-map__street-focus { padding: 0 9px; font-size: 10px; }
   .gamcheon-map .maplibregl-ctrl-bottom-right { top: 64px; right: 12px; bottom: auto; }
 }
+
+/* 좁은 화면에서는 지도 도구 버튼이 한 줄에 들어가도록 지역 표시를 숨깁니다(패널 제목에 같은 정보가 있습니다). */
+@media (max-width: 600px) {
+  .gamcheon-map__area-badge { display: none; }
+}
+
+/* 길찾기 */
+.gamcheon-map__route-fields { position: relative; display: grid; gap: 8px; padding-right: 42px; }
+.gamcheon-map__route-fields label { display: grid; grid-template-columns: 14px 32px 1fr; align-items: center; gap: 6px; color: #39594b; font-size: 12px; font-weight: 800; }
+.gamcheon-map__route-fields select { min-width: 0; height: 36px; padding: 0 10px; border: 1px solid #dce9df; border-radius: 9px; background: #fff; color: #23463c; font: inherit; font-size: 12px; font-weight: 600; }
+.gamcheon-map__route-dot { width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, .15); }
+.gamcheon-map__route-dot--origin { background: #2f9b6a; }
+.gamcheon-map__route-dot--destination { background: #e2733b; }
+.gamcheon-map__route-swap { position: absolute; top: 50%; right: 0; width: 34px; height: 34px; border: 1px solid #dce9df; border-radius: 9px; background: #fff; color: #2f6fd6; font-size: 16px; font-weight: 800; cursor: pointer; transform: translateY(-50%); }
+.gamcheon-map__route-picking { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0 0; padding: 8px 10px; border-radius: 9px; background: #eaf1fd; color: #24519e; font-size: 12px; font-weight: 700; }
+.gamcheon-map__route-picking button { border: 0; background: none; color: #24519e; font: inherit; text-decoration: underline; cursor: pointer; }
+.gamcheon-map__route-option { display: flex; align-items: center; gap: 7px; margin: 12px 0 0; color: #39594b; font-size: 12px; font-weight: 700; }
+.gamcheon-map__route-accuracy { margin: 8px 0 0; color: #6a7f76; font-size: 11px; }
+.gamcheon-map__route-arrived { margin: 10px 0 0; padding: 8px 10px; border-radius: 9px; background: #fdf0e6; color: #b5521f; font-size: 12px; font-weight: 800; }
+.gamcheon-map__route-result { margin-top: 14px; border: 1px solid #e3eae3; border-radius: 12px; background: #fff; }
+.gamcheon-map__route-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 12px 14px; border-bottom: 1px solid #eef3ee; }
+.gamcheon-map__route-summary strong { color: #2f6fd6; font-size: 20px; }
+.gamcheon-map__route-summary span { color: #4f665c; font-size: 12px; font-weight: 700; }
+.gamcheon-map__route-summary button { margin-left: auto; padding: 5px 9px; border: 1px solid #dce9df; border-radius: 8px; background: #fff; color: #2f6fd6; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.gamcheon-map__route-steps { margin: 0; padding: 6px 0; list-style: none; }
+.gamcheon-map__route-steps li { display: grid; grid-template-columns: 22px 1fr; gap: 6px; padding: 7px 14px; color: #2c463d; font-size: 12px; line-height: 1.45; }
+.gamcheon-map__route-steps li span { color: #2f6fd6; font-weight: 800; text-align: center; }
+.gamcheon-map__route-steps li.is-steps span { color: #b5521f; }
+.gamcheon-map__route-steps li.is-arrive span { color: #e2733b; }
+.gamcheon-map__route-pin { width: 22px; height: 22px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; box-shadow: 0 3px 10px rgba(20, 40, 60, .35); transform: rotate(-45deg); }
+.gamcheon-map__route-pin--origin { background: #2f9b6a; }
+.gamcheon-map__route-pin--destination { background: #e2733b; }
+.gamcheon-map__my-location { width: 16px; height: 16px; border: 3px solid #fff; border-radius: 50%; background: #2f6fd6; box-shadow: 0 0 0 6px rgba(47, 111, 214, .22), 0 2px 6px rgba(0, 0, 0, .3); }
+

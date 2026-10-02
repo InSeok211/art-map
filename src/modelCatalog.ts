@@ -1,4 +1,4 @@
-function modelUrl(style: 'rounded' | 'angular', name: string): string {
+function modelUrl(style: 'rounded' | 'angular' | 'custom', name: string): string {
   const relativePath = `./assets/models/${style}/${name}`
   return new URL(relativePath, import.meta.url).href
 }
@@ -25,6 +25,7 @@ export interface MapModel {
 }
 
 export const BUILTIN_MODELS: ModelAsset[] = [
+  { id: 'artist-workshop', name: '작가님 공방 · 옥천로101번길 23', style: 'rounded', category: 'building', url: modelUrl('custom', 'artist-workshop-180.glb'), defaultWidth: 15.5 },
   { id: 'rounded-house', name: '작은 주택', style: 'rounded', category: 'building', url: modelUrl('rounded', 'common-buildings-small-family-house-compact-normal.glb'), defaultWidth: 18 },
   { id: 'rounded-shop', name: '골목 가게', style: 'rounded', category: 'building', url: modelUrl('rounded', 'common-buildings-corner-retail-shell-compact-normal.glb'), defaultWidth: 18 },
   { id: 'rounded-cafe', name: '카페', style: 'rounded', category: 'building', url: modelUrl('rounded', 'restaurant-pancake-cafe-building-cottage-normal.glb'), defaultWidth: 18 },
@@ -41,6 +42,13 @@ export const BUILTIN_MODELS: ModelAsset[] = [
   { id: 'angular-flower', name: '수국 덤불', style: 'angular', category: 'nature', url: modelUrl('angular', 'angular-common-nature-flowering-hydrangea-bush-cottage-normal.glb'), defaultWidth: 5 },
   { id: 'angular-lamp', name: '가로등', style: 'angular', category: 'street', url: modelUrl('angular', 'angular-common-infrastructure-street-lamp-column-civic-normal.glb'), defaultWidth: 3 },
 ]
+
+// These generic sample buildings do not represent verified Gamcheon houses.
+// Keep the workshop and any user-imported GLB models when cleaning a preview.
+export const GENERIC_BUILDING_ASSET_IDS = new Set(
+  BUILTIN_MODELS.filter((asset) => asset.category === 'building' && asset.id !== 'artist-workshop')
+    .map((asset) => asset.id),
+)
 
 export function sanitizeModels(value: unknown, assets?: readonly ModelAsset[]): MapModel[] {
   if (!Array.isArray(value)) return []

@@ -1,12 +1,25 @@
 import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { GamcheonMap } from './GamcheonMap'
-import { sanitizeModels } from './modelCatalog'
+import { GENERIC_BUILDING_ASSET_IDS, sanitizeModels } from './modelCatalog'
 import type { MapModel } from './modelCatalog'
+import { ARTIST_WORKSHOP_MODEL, refineArtistWorkshopPlace, removeUntouchedWorkshopModel, seedArtistWorkshopPlace } from './artistWorkshop'
 import { sanitizeAlleys } from './alleys'
 import type { Alley } from './alleys'
 import type { Place } from './types'
 import './demo.css'
+import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings } from './streetSceneData'
+
+// Survey links open the same map at the building being reviewed.
+const reviewId = new URLSearchParams(window.location.search).get('building')
+const reviewBuilding = reviewId ? getPhotographedStreetBuildings().find(building => building.id === Number(reviewId)) : undefined
+const reviewView = Number(reviewId) === ARTIST_WORKSHOP_FOOTPRINT_ID ? {
+  center: [ARTIST_WORKSHOP_MODEL.longitude, ARTIST_WORKSHOP_MODEL.latitude] as [number, number],
+  zoom: 21.1, pitch: 62, bearing: 135,
+} : reviewBuilding ? {
+  center: [0, 1].map(axis => reviewBuilding.outline.reduce((sum, point) => sum + point[axis], 0) / reviewBuilding.outline.length) as [number, number],
+  zoom: 20.4, pitch: 56, bearing: 45,
+} : undefined
 
 // 컴포넌트 동작을 확인하기 위한 미리보기 데이터입니다. 실제 장소 목록은 추후 연결합니다.
 const demoPlaces: Place[] = [
@@ -23,6 +36,7 @@ const demoPlaces: Place[] = [
 
 const STORAGE_KEY = 'gamcheon-map-places-v1'
 const MODELS_STORAGE_KEY = 'gamcheon-map-models-v1'
+const WORKSHOP_PLACE_SEEDED_KEY = 'gamcheon-map-workshop-place-180-seeded-v1'
 const ALLEYS_STORAGE_KEY = 'gamcheon-map-alleys-v1'
 
 function loadAlleys(): Alley[] {
@@ -34,22 +48,25 @@ function loadAlleys(): Alley[] {
   }
 }
 
-// 배치 흐름을 보여 주는 시연용 모델입니다. 실제 건물 위치를 뜻하지 않습니다.
-const demoModels: MapModel[] = [
-  { id: 'demo-house-1', assetId: 'rounded-house', longitude: 129.0096, latitude: 35.0966, widthMeters: 22, rotation: 22, altitudeMeters: 0 },
-  { id: 'demo-house-2', assetId: 'angular-house', longitude: 129.0103, latitude: 35.0963, widthMeters: 20, rotation: 342, altitudeMeters: 0 },
-  { id: 'demo-shop', assetId: 'rounded-shop', longitude: 129.0108, latitude: 35.0968, widthMeters: 22, rotation: 15, altitudeMeters: 0 },
-  { id: 'demo-cafe', assetId: 'rounded-cafe', longitude: 129.0115, latitude: 35.0972, widthMeters: 20, rotation: 340, altitudeMeters: 0 },
-  { id: 'demo-tree-1', assetId: 'rounded-pine', longitude: 129.0086, latitude: 35.0972, widthMeters: 10, rotation: 0, altitudeMeters: 0 },
-  { id: 'demo-tree-2', assetId: 'angular-pine', longitude: 129.0089, latitude: 35.0974, widthMeters: 10, rotation: 40, altitudeMeters: 0 },
-  { id: 'demo-tree-3', assetId: 'rounded-fruit', longitude: 129.0119, latitude: 35.0977, widthMeters: 9, rotation: 0, altitudeMeters: 0 },
-  { id: 'demo-flower', assetId: 'rounded-flower', longitude: 129.0109, latitude: 35.0974, widthMeters: 7, rotation: 0, altitudeMeters: 0 },
-]
+// Older previews placed sample houses and decorations on unrelated parcels.
+// Remove only those known sample IDs; user-placed models remain untouched.
+const DEMO_MODEL_IDS = new Set([
+  'demo-house-1', 'demo-house-2', 'demo-shop', 'demo-cafe',
+  'demo-tree-1', 'demo-tree-2', 'demo-tree-3', 'demo-flower',
+])
+const demoModels: MapModel[] = []
 
 function loadModels(): MapModel[] {
   try {
     const stored = localStorage.getItem(MODELS_STORAGE_KEY)
-    return stored === null ? demoModels : sanitizeModels(JSON.parse(stored))
+    const savedModels = stored === null ? demoModels : sanitizeModels(JSON.parse(stored))
+    const models = savedModels.filter((model) =>
+      !DEMO_MODEL_IDS.has(model.id) && !GENERIC_BUILDING_ASSET_IDS.has(model.assetId))
+    const next = removeUntouchedWorkshopModel(models)
+    if (next !== models || models.length !== savedModels.length) {
+      localStorage.setItem(MODELS_STORAGE_KEY, JSON.stringify(next))
+    }
+    return next
   } catch {
     return demoModels
   }
@@ -58,19 +75,25 @@ function loadModels(): MapModel[] {
 function loadPlaces(): Place[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === null) return demoPlaces
-    const value: unknown = JSON.parse(stored)
-    if (!Array.isArray(value) || !value.every((item: unknown) => {
+    const value: unknown = stored === null ? demoPlaces : JSON.parse(stored)
+    const valid = Array.isArray(value) && value.every((item: unknown) => {
       if (typeof item !== 'object' || item === null) return false
       const place = item as Record<string, unknown>
       return typeof place.id === 'string' && typeof place.name === 'string'
         && (place.category === 'shop' || place.category === 'attraction')
         && typeof place.latitude === 'number' && Number.isFinite(place.latitude)
         && typeof place.longitude === 'number' && Number.isFinite(place.longitude)
-    })) return demoPlaces
-    return value as Place[]
+    })
+    const places = valid ? value as Place[] : demoPlaces
+    const seeded = stored !== null && localStorage.getItem(WORKSHOP_PLACE_SEEDED_KEY) === '1'
+    const next = refineArtistWorkshopPlace(seedArtistWorkshopPlace(places, seeded))
+    if (!seeded || next !== places) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      localStorage.setItem(WORKSHOP_PLACE_SEEDED_KEY, '1')
+    }
+    return next
   } catch {
-    return demoPlaces
+    return seedArtistWorkshopPlace(demoPlaces, false)
   }
 }
 
@@ -105,9 +128,9 @@ function Demo() {
         <div className="demo-status"><span /> {selectedName ? `${selectedName} 선택됨` : '리액트 지도 컴포넌트 미리보기'}</div>
       </header>
       <main className="demo-main">
-        <GamcheonMap places={places} models={models} editable onPlacesChange={updatePlaces} onModelsChange={updateModels} alleys={alleys} onAlleysChange={updateAlleys}onPlaceSelect={(place) => setSelectedName(place.name)} />
+        <GamcheonMap initialView={reviewView} places={places} models={models} editable onPlacesChange={updatePlaces} onModelsChange={updateModels} alleys={alleys} onAlleysChange={updateAlleys}onPlaceSelect={(place) => setSelectedName(place.name)} />
       </main>
-      <div className="demo-note">장소·3D 배치·골목길은 이 브라우저에 자동 저장됩니다. 초기 배치는 실제 건물 위치가 아닌 시연용입니다. 3D 에셋: dogfooter.</div>
+      <div className="demo-note">장소·3D 배치·골목길은 이 브라우저에 자동 저장됩니다. 영상·로드뷰에서 확인한 건물 외관을 반영하고, 주변 지붕은 항공사진과 건물 윤곽을 대조해 색을 입혔습니다. 확인되지 않은 외벽과 판독이 어려운 지붕은 중립색 임시 모델입니다.</div>
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { ROAD_LAYER_IDS } from './mapStyle'
 import type { MapModel, ModelAsset } from './modelCatalog'
 import { boundingBox, convexHull, lineCrossesPolygon, shrinkPolygon } from './occlusion'
 import type { Point } from './occlusion'
+import { addSceneLights, aimSun, bakeShadowMap, configureRenderer, createShadowCatcher, fitShadowCatcher } from './threeShadows'
 
 const ORIGIN: [number, number] = [129.0086, 35.0945]
 export const SEE_THROUGH_OPACITY = 0.35
@@ -61,19 +62,22 @@ export class ModelLayer implements CustomLayerInterface {
   private checkedMatrix: number[] = []
   private occlusionTimer: ReturnType<typeof setTimeout> | null = null
   private removed = false
+  private sun: THREE.DirectionalLight
+  private shadowCatcher = createShadowCatcher()
+  private shadowsDirty = true
 
   constructor(private onAssetError?: (name: string) => void) {
-    this.scene.add(new THREE.AmbientLight(0xffffff, 2.1))
-    const sun = new THREE.DirectionalLight(0xffffff, 2.4)
-    sun.position.set(-150, 250, -90)
-    this.scene.add(sun)
-    this.scene.add(this.objects)
+    // 거리 장면(StreetSceneLayer)과 같은 태양·하늘빛·톤을 써서 공방 모델이 주변 건물과 어울리게 합니다.
+    this.sun = addSceneLights(this.scene, [0, 0], 40, 2048)
+    this.scene.add(this.objects, this.shadowCatcher)
   }
 
   onAdd(map: Map, gl: WebGL2RenderingContext) {
+    // 그래픽 연결이 끊겼다가 다시 붙을 때 같은 층을 다시 추가하므로, 지웠던 상태를 되돌리고 모델을 다시 불러옵니다.
+    this.removed = false
     this.map = map
     this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true })
-    this.renderer.autoClear = false
+    configureRenderer(this.renderer)
     map.on('idle', this.handleIdle)
     this.sync()
   }
@@ -131,9 +135,23 @@ export class ModelLayer implements CustomLayerInterface {
       instance.userData = { itemId: item.id, assetId: asset.id }
       const opacity = this.forcedOpacity < 1 ? this.forcedOpacity : this.occluding.has(item.id) ? SEE_THROUGH_OPACITY : 1
       if (opacity < 1) this.clonedMaterials.push(...makeSeeThrough(instance, opacity))
+      instance.traverse((object) => { object.castShadow = true; object.receiveShadow = true })
       this.objects.add(instance)
     }
+    this.fitShadows()
     this.map?.triggerRepaint()
+  }
+
+  // 배치된 모델을 감싸는 범위에만 그림자를 계산해, 모델이 몇 개뿐일 때도 선명하게 합니다.
+  private fitShadows() {
+    this.shadowsDirty = true
+    if (this.objects.children.length === 0) return
+    const box = new THREE.Box3().setFromObject(this.objects)
+    const padding = Math.max(8, (box.max.y - box.min.y) * 2)
+    const minX = box.min.x - padding, maxX = box.max.x + padding
+    const minZ = box.min.z - padding, maxZ = box.max.z + padding
+    aimSun(this.sun, [(minX + maxX) / 2, (minZ + maxZ) / 2], Math.max(maxX - minX, maxZ - minZ) / 2)
+    fitShadowCatcher(this.shadowCatcher, minX, maxX, minZ, maxZ, 0.04)
   }
 
   private load(asset: ModelAsset) {
@@ -178,6 +196,9 @@ export class ModelLayer implements CustomLayerInterface {
 
     for (const instance of this.objects.children) {
       const { itemId, assetId } = instance.userData as { itemId: string; assetId: string }
+      // The photographed workshop is the destination landmark. Keep its
+      // glazing and brick facade readable beside the street surface.
+      if (assetId === 'artist-workshop') continue
       const local = this.localBoxes.get(assetId)
       if (!local) continue
       instance.updateMatrixWorld(true)
@@ -217,6 +238,11 @@ export class ModelLayer implements CustomLayerInterface {
     this.camera.projectionMatrix.fromArray(options.defaultProjectionData.mainMatrix)
     this.camera.projectionMatrix.multiply(transform)
     this.renderer.resetState()
+    if (this.shadowsDirty) {
+      bakeShadowMap(this.renderer, this.scene, this.camera, _gl)
+      this.shadowsDirty = false
+    }
+    this.renderer.setViewport(0, 0, _gl.drawingBufferWidth, _gl.drawingBufferHeight)
     this.renderer.render(this.scene, this.camera)
 
     // 카메라나 배치가 바뀐 뒤에만 가림 판정을 예약해, 멈춰 있을 때 반복해서 다시 그리지 않습니다.
@@ -232,6 +258,8 @@ export class ModelLayer implements CustomLayerInterface {
     if (this.occlusionTimer) clearTimeout(this.occlusionTimer)
     this.map?.off('idle', this.handleIdle)
     this.clonedMaterials.forEach((material) => material.dispose())
+    this.shadowCatcher.geometry.dispose()
+    ;(this.shadowCatcher.material as THREE.Material).dispose()
     this.renderer?.dispose()
     this.renderer = null
     this.map = null

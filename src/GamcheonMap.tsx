@@ -1,28 +1,35 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Map, Marker, NavigationControl, setWorkerUrl } from 'maplibre-gl'
-import type { GeoJSONSource, MapMouseEvent, StyleSpecification } from 'maplibre-gl'
+import type { MapMouseEvent, StyleSpecification } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './gamcheon-map.css'
 import { filterPlaces } from './filterPlaces'
-import { GAMCHEON_MAP_PAN_BOUNDS, isInsideGamcheonMap } from './gamcheonBoundary'
-import { ALLEY_DRAFT_SOURCE_ID, ALLEY_SOURCE_ID, BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle } from './mapStyle'
+import { GAMCHEON_MAP_BOUNDS, isInsideGamcheon2, isInsideGamcheonMap } from './gamcheonBoundary'
+import { BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle, ROUTE_LAYER_IDS } from './mapStyle'
 import { AlleyEditor } from './AlleyEditor'
-import { ALLEY_WIDTH_RANGE, alleysToGeoJSON, draftToGeoJSON } from './alleys'
-import type { Alley, LngLat } from './alleys'
+import type { Alley } from './alleys'
+import { useAlleyEditing } from './useAlleyEditing'
 import { ModelLayer, SEE_THROUGH_OPACITY } from './ModelLayer'
+import { StreetSceneLayer } from './StreetSceneLayer'
+import { RoutePanel } from './RoutePanel'
+import { useRouteFinder } from './useRouteFinder'
 import { ModelEditor } from './ModelEditor'
+import { PlaceBrowser, PlaceForm } from './PlacePanel'
+import type { PlaceDraft } from './PlacePanel'
 import { BUILTIN_MODELS } from './modelCatalog'
+import { ARTIST_WORKSHOP_MODEL, ARTIST_WORKSHOP_PLACE } from './artistWorkshop'
 import type { MapModel, ModelAsset, ModelStyle } from './modelCatalog'
 import { loadCustomModels, saveCustomModel } from './modelAssetStore'
+import { newId, replaceById } from './listUtils'
 import baseStyle from './positron-style.json'
 import type { CategoryFilter, Place } from './types'
 
-const CENTER: [number, number] = [129.0086, 35.0945]
-const ZOOM = 14.5
-const PITCH = 45
-const BEARING = -25
+const CENTER: [number, number] = [129.00905, 35.09512]
+const ZOOM = 18.2
+const PITCH = 61
+const BEARING = -8
 const EMPTY_PLACES: Place[] = []
 const EMPTY_MODELS: MapModel[] = []
 const EMPTY_ALLEYS: Alley[] = []
@@ -34,32 +41,9 @@ function mapPadding(element: HTMLElement) {
     : { top: 0, right: 0, bottom: 0, left: 420 }
 }
 
-interface PlaceDraft {
-  id?: string
-  name: string
-  category: Place['category']
-  latitude: number | null
-  longitude: number | null
-  address: string
-  description: string
-}
-
 setWorkerUrl(workerUrl)
 
-type EditMode = 'places' | 'models' | 'alleys'
-
-interface AlleyRenderState {
-  alleys: Alley[]
-  selectedId: string | null
-  draft: LngLat[]
-}
-
-function renderAlleys(map: Map, { alleys, selectedId, draft }: AlleyRenderState) {
-  map.getSource<GeoJSONSource>(ALLEY_SOURCE_ID)?.setData(alleysToGeoJSON(alleys, selectedId))
-  map.getSource<GeoJSONSource>(ALLEY_DRAFT_SOURCE_ID)?.setData(draftToGeoJSON(draft))
-}
-
-const newId = (prefix: string) => globalThis.crypto?.randomUUID?.() ?? `${prefix}-${Date.now()}`
+type EditMode = 'places' | 'models' | 'alleys' | 'route'
 
 function applyBuildingVisibility(map: Map, visible: boolean) {
   for (const id of BUILDING_FOOTPRINT_LAYER_IDS) {
@@ -68,6 +52,7 @@ function applyBuildingVisibility(map: Map, visible: boolean) {
 }
 
 export interface GamcheonMapProps {
+  initialView?: { center: [number, number]; zoom?: number; pitch?: number; bearing?: number }
   places?: Place[]
   onPlaceSelect?: (place: Place) => void
   editable?: boolean
@@ -80,12 +65,6 @@ export interface GamcheonMapProps {
   style?: CSSProperties
 }
 
-const categories: { value: CategoryFilter; label: string }[] = [
-  { value: 'all', label: '전체' },
-  { value: 'attraction', label: '명소' },
-  { value: 'shop', label: '가게' },
-]
-
 export function GamcheonMap({
   places = EMPTY_PLACES,
   onPlaceSelect,
@@ -97,6 +76,7 @@ export function GamcheonMap({
   onAlleysChange,
   className = '',
   style,
+  initialView,
 }: GamcheonMapProps) {
   const mapElementRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<Map | null>(null)
@@ -121,26 +101,30 @@ export function GamcheonMap({
   const [movingModelId, setMovingModelId] = useState<string | null>(null)
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const [modelError, setModelError] = useState('')
+  // 3D 거리 장면 상태: 만드는 중(loading), 그래픽 연결이 끊김(lost), 정상(ready)
+  const [sceneStatus, setSceneStatus] = useState<'loading' | 'lost' | 'ready'>('loading')
   const [showBuildings, setShowBuildings] = useState(false)
   const showBuildingsRef = useRef(showBuildings)
   const [translucentModels, setTranslucentModels] = useState(false)
-  const [localAlleys, setLocalAlleys] = useState<Alley[]>(alleys)
-  const [selectedAlleyId, setSelectedAlleyId] = useState<string | null>(null)
-  const [drawingAlley, setDrawingAlley] = useState(false)
-  const [draftPoints, setDraftPoints] = useState<LngLat[]>([])
-  const [alleyError, setAlleyError] = useState('')
-  const alleyRenderRef = useRef<AlleyRenderState>({ alleys, selectedId: null, draft: [] })
+  // 작가님 공방만 남기고 나머지 3D 건물을 숨깁니다(도로·바닥·나무는 그대로).
+  const [workshopOnly, setWorkshopOnly] = useState(false)
+  const workshopOnlyRef = useRef(workshopOnly)
+  const streetLayerRef = useRef<StreetSceneLayer | null>(null)
+  const alley = useAlleyEditing(mapRef, mode === 'alleys', alleys, onAlleysChange)
+  const routeFinder = useRouteFinder(mapRef, mode === 'route',
+    localPlaces.filter((place) => isInsideGamcheonMap(place.longitude, place.latitude)),
+    alley.editorProps.alleys, ARTIST_WORKSHOP_PLACE.id)
   const assets = useMemo(() => [...BUILTIN_MODELS, ...customAssets], [customAssets])
   const selectedPlace = localPlaces.find((place) => place.id === selectedId && isInsideGamcheonMap(place.longitude, place.latitude))
 
   const visiblePlaces = useMemo(
-    () => filterPlaces(localPlaces.filter((place) => isInsideGamcheonMap(place.longitude, place.latitude)), { query, category }),
+    () => filterPlaces(localPlaces.filter((place) => isInsideGamcheonMap(place.longitude, place.latitude)), { query, category })
+      .sort((a, b) => Number(b.id === ARTIST_WORKSHOP_PLACE.id) - Number(a.id === ARTIST_WORKSHOP_PLACE.id)),
     [localPlaces, query, category],
   )
 
   useEffect(() => setLocalPlaces(places), [places])
   useEffect(() => setLocalModels(models), [models])
-  useEffect(() => setLocalAlleys(alleys), [alleys])
 
   useEffect(() => {
     let cancelled = false
@@ -167,14 +151,14 @@ export function GamcheonMap({
     const map = new Map({
       container: element,
       style: MAP_STYLE,
-      center: CENTER,
-      zoom: ZOOM,
-      pitch: PITCH,
-      bearing: BEARING,
+      center: initialView?.center ?? CENTER,
+      zoom: initialView?.zoom ?? ZOOM,
+      pitch: initialView?.pitch ?? PITCH,
+      bearing: initialView?.bearing ?? BEARING,
       minZoom: 12,
-      maxZoom: 19,
+      maxZoom: 22,
       maxPitch: 80,
-      maxBounds: GAMCHEON_MAP_PAN_BOUNDS,
+      maxBounds: GAMCHEON_MAP_BOUNDS,
       scrollZoom: true,
       dragRotate: true,
       pitchWithRotate: true,
@@ -183,12 +167,49 @@ export function GamcheonMap({
 
     const modelLayer = new ModelLayer((name) => setModelError(`${name} 모델을 불러오지 못했습니다.`))
     modelLayerRef.current = modelLayer
+    // 3D 거리 장면은 만드는 데 몇 초가 걸리므로, 바탕 지도를 먼저 그린 뒤에 만들어 빈 화면으로 기다리지 않게 합니다.
+    let streetLayer: StreetSceneLayer | null = null
+    let disposed = false
+    const addStreetLayer = () => {
+      if (!streetLayer || map.getLayer(streetLayer.id)) return
+      // 거리 장면은 사용자 GLB 모델 아래에 그립니다.
+      map.addLayer(streetLayer, map.getLayer(modelLayer.id) ? modelLayer.id : undefined)
+      raiseRoute()
+    }
+    const buildStreetLayer = () => window.setTimeout(() => {
+      if (disposed || streetLayer) return
+      streetLayer = new StreetSceneLayer()
+      streetLayer.setOtherBuildingsHidden(workshopOnlyRef.current, false)
+      streetLayerRef.current = streetLayer
+      addStreetLayer()
+      setSceneStatus('ready')
+    }, 0)
+    // 길찾기 경로 선은 3D 건물에 가리지 않도록 3D 층보다 위에 둡니다.
+    const raiseRoute = () => { for (const id of ROUTE_LAYER_IDS) if (map.getLayer(id)) map.moveLayer(id) }
     const addModelLayer = () => {
       if (!map.getLayer(modelLayer.id)) map.addLayer(modelLayer)
+      addStreetLayer()
+      raiseRoute()
       applyBuildingVisibility(map, showBuildingsRef.current)
-      renderAlleys(map, alleyRenderRef.current)
+      alley.renderOnto(map)
     }
     map.on('style.load', addModelLayer)
+    map.once('idle', buildStreetLayer)
+    // 휴대폰에서 메모리가 모자라면 그래픽(WebGL) 연결이 끊길 수 있습니다. 다시 연결되면 3D 층을 새로 붙입니다.
+    const handleContextLost = () => setSceneStatus('lost')
+    // MapLibre는 연결이 끊길 때 사용자 정의 3D 층을 스스로 떼어 내므로, 스타일이 다시 준비되면 붙입니다.
+    const handleContextRestored = () => {
+      if (disposed) return
+      if (!map.isStyleLoaded()) {
+        map.once('styledata', handleContextRestored)
+        return
+      }
+      addModelLayer()
+      setSceneStatus(streetLayer ? 'ready' : 'loading')
+      map.triggerRepaint()
+    }
+    map.on('webglcontextlost', handleContextLost)
+    map.on('webglcontextrestored', handleContextRestored)
 
     map.setPadding(mapPadding(element))
     map.addControl(new NavigationControl({ showCompass: true, visualizePitch: true }), 'bottom-right')
@@ -208,12 +229,22 @@ export function GamcheonMap({
       markersRef.current = []
       modelMarkersRef.current.forEach((marker) => marker.remove())
       modelMarkersRef.current = []
+      disposed = true
+      streetLayerRef.current = null
       map.off('style.load', addModelLayer)
+      map.off('idle', buildStreetLayer)
+      map.off('webglcontextlost', handleContextLost)
+      map.off('webglcontextrestored', handleContextRestored)
       modelLayerRef.current = null
       mapRef.current = null
       map.remove()
     }
   }, [])
+
+  useEffect(() => {
+    workshopOnlyRef.current = workshopOnly
+    streetLayerRef.current?.setOtherBuildingsHidden(workshopOnly)
+  }, [workshopOnly])
 
   useEffect(() => {
     showBuildingsRef.current = showBuildings
@@ -227,92 +258,8 @@ export function GamcheonMap({
   }, [modelsSeeThrough])
 
   useEffect(() => {
-    const state = {
-      alleys: localAlleys,
-      selectedId: mode === 'alleys' ? selectedAlleyId : null,
-      draft: drawingAlley ? draftPoints : [],
-    }
-    alleyRenderRef.current = state
-    if (mapRef.current) renderAlleys(mapRef.current, state)
-  }, [localAlleys, selectedAlleyId, mode, drawingAlley, draftPoints])
-
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !drawingAlley) return
-    const addPoint = (event: MapMouseEvent) => {
-      const { lng, lat } = event.lngLat
-      if (!isInsideGamcheonMap(lng, lat)) {
-        setAlleyError('사각형 지도 안쪽을 클릭해 주세요.')
-        return
-      }
-      setAlleyError('')
-      setDraftPoints((current) => [...current, [lng, lat]])
-    }
-    map.on('click', addPoint)
-    return () => { map.off('click', addPoint) }
-  }, [drawingAlley])
-
-  // 선택한 골목길의 꼭짓점(드래그·더블클릭 삭제)과 구간 중간점(클릭 시 점 추가) 핸들입니다.
-  useEffect(() => {
-    const map = mapRef.current
-    const alley = localAlleys.find((item) => item.id === selectedAlleyId)
-    if (!map || mode !== 'alleys' || drawingAlley || !alley) return
-    const handles: Marker[] = []
-    const commit = (coordinates: LngLat[]) => commitAlleys(localAlleys.map((item) => item.id === alley.id ? { ...item, coordinates } : item))
-
-    alley.coordinates.forEach((point, index) => {
-      const element = document.createElement('div')
-      element.className = 'gamcheon-map__alley-vertex'
-      element.title = '드래그해 옮기기 · 더블클릭해 지우기'
-      element.addEventListener('dblclick', (event) => {
-        event.stopPropagation()
-        if (alley.coordinates.length <= 2) return setAlleyError('골목길에는 점이 두 개 이상 필요합니다.')
-        setAlleyError('')
-        commit(alley.coordinates.filter((_, other) => other !== index))
-      })
-      const marker = new Marker({ element, draggable: true }).setLngLat(point).addTo(map)
-      const moved = (): LngLat[] => {
-        const { lng, lat } = marker.getLngLat()
-        return alley.coordinates.map((current, other) => other === index ? [lng, lat] : current)
-      }
-      marker.on('drag', () => renderAlleys(map, {
-        ...alleyRenderRef.current,
-        alleys: localAlleys.map((item) => item.id === alley.id ? { ...item, coordinates: moved() } : item),
-      }))
-      marker.on('dragend', () => {
-        const { lng, lat } = marker.getLngLat()
-        if (!isInsideGamcheonMap(lng, lat)) {
-          marker.setLngLat(point)
-          renderAlleys(map, alleyRenderRef.current)
-          return setAlleyError('사각형 지도 안쪽으로 옮겨 주세요.')
-        }
-        setAlleyError('')
-        commit(moved())
-      })
-      handles.push(marker)
-    })
-
-    alley.coordinates.slice(1).forEach((point, index) => {
-      const previous = alley.coordinates[index]
-      const middle: LngLat = [(previous[0] + point[0]) / 2, (previous[1] + point[1]) / 2]
-      const element = document.createElement('button')
-      element.type = 'button'
-      element.className = 'gamcheon-map__alley-midpoint'
-      element.textContent = '+'
-      element.setAttribute('aria-label', '이 구간에 점 추가')
-      element.addEventListener('click', (event) => {
-        event.stopPropagation()
-        commit([...alley.coordinates.slice(0, index + 1), middle, ...alley.coordinates.slice(index + 1)])
-      })
-      handles.push(new Marker({ element }).setLngLat(middle).addTo(map))
-    })
-
-    return () => handles.forEach((marker) => marker.remove())
-  }, [mode, drawingAlley, localAlleys, selectedAlleyId])
-
-  useEffect(() => {
     modelLayerRef.current?.setAssets(assets)
-    modelLayerRef.current?.setItems(localModels.filter((item) => isInsideGamcheonMap(item.longitude, item.latitude)))
+    modelLayerRef.current?.setItems(localModels.filter((item) => isInsideGamcheon2(item.longitude, item.latitude)))
   }, [assets, localModels])
 
   useEffect(() => {
@@ -344,16 +291,29 @@ export function GamcheonMap({
       if (!Number.isFinite(place.latitude) || !Number.isFinite(place.longitude)) return
 
       const active = selectedId === place.id
+      // 작가님 공방은 지도에서 바로 찾을 수 있도록 이름표가 달린 큰 표식으로 그립니다.
+      const featured = place.id === ARTIST_WORKSHOP_PLACE.id
       const element = document.createElement('button')
       element.type = 'button'
-      element.className = `gamcheon-map__marker gamcheon-map__marker--${place.category}${active ? ' is-active' : ''}`
+      element.className = featured
+        ? `gamcheon-map__featured-marker${active ? ' is-active' : ''}`
+        : `gamcheon-map__marker gamcheon-map__marker--${place.category}${active ? ' is-active' : ''}`
       element.setAttribute('aria-label', place.name)
       element.title = place.name
+      if (featured) {
+        const label = document.createElement('span')
+        label.className = 'gamcheon-map__featured-label'
+        label.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.7-.7 1.7-1.5 0-.4-.2-.8-.4-1.1-.3-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5h1.8A4.8 4.8 0 0 0 21 11c0-4.4-4-8-9-8Z" fill="currentColor"/><circle cx="7.5" cy="11" r="1.4" fill="#fff"/><circle cx="10.5" cy="7.2" r="1.4" fill="#fff"/><circle cx="15" cy="7.4" r="1.4" fill="#fff"/></svg>'
+        label.append(place.name)
+        const pin = document.createElement('span')
+        pin.className = 'gamcheon-map__featured-pin'
+        element.append(label, pin)
+      }
       element.addEventListener('click', () => {
         setSelectedId(place.id)
         onPlaceSelectRef.current?.(place)
       })
-      const marker = new Marker({ element, anchor: 'center' })
+      const marker = new Marker({ element, anchor: featured ? 'bottom' : 'center' })
         .setLngLat([place.longitude, place.latitude])
         .addTo(map)
       markersRef.current.push(marker)
@@ -368,7 +328,7 @@ export function GamcheonMap({
     if (!sceneMode) return
 
     localModels.forEach((item, index) => {
-      if (!isInsideGamcheonMap(item.longitude, item.latitude)) return
+      if (!isInsideGamcheon2(item.longitude, item.latitude)) return
       const asset = assets.find((candidate) => candidate.id === item.assetId)
       const element = document.createElement('button')
       element.type = 'button'
@@ -385,14 +345,12 @@ export function GamcheonMap({
       if (selectedModelId === item.id) {
         marker.on('dragend', () => {
           const { lng, lat } = marker.getLngLat()
-          if (!isInsideGamcheonMap(lng, lat)) {
+          if (!isInsideGamcheon2(lng, lat)) {
             marker.setLngLat([item.longitude, item.latitude])
-            setModelError('사각형 지도 안쪽으로 옮겨 주세요.')
+            setModelError('감천2동 경계 안쪽으로 옮겨 주세요.')
             return
           }
-          const next = localModels.map((model) => model.id === item.id ? { ...model, longitude: lng, latitude: lat } : model)
-          setLocalModels(next)
-          onModelsChange?.(next)
+          commitModels(replaceById(localModels, item.id, { longitude: lng, latitude: lat }))
         })
       }
       modelMarkersRef.current.push(marker)
@@ -408,21 +366,19 @@ export function GamcheonMap({
     if (!map || !sceneMode || (!placingAssetId && !movingModelId)) return
     const handleClick = (event: MapMouseEvent) => {
       const { lng, lat } = event.lngLat
-      if (!isInsideGamcheonMap(lng, lat)) {
-        setModelError('사각형 지도 안쪽을 클릭해 주세요.')
+      if (!isInsideGamcheon2(lng, lat)) {
+        setModelError('감천2동 경계 안쪽을 클릭해 주세요.')
         return
       }
       setModelError('')
       if (movingModelId) {
-        const next = localModels.map((model) => model.id === movingModelId ? { ...model, longitude: lng, latitude: lat } : model)
-        setLocalModels(next)
-        onModelsChange?.(next)
+        commitModels(replaceById(localModels, movingModelId, { longitude: lng, latitude: lat }))
         setMovingModelId(null)
       } else {
         const asset = assets.find((candidate) => candidate.id === placingAssetId)
         if (!asset) return
         const item: MapModel = {
-          id: globalThis.crypto?.randomUUID?.() ?? `model-${Date.now()}`,
+          id: newId('model'),
           assetId: asset.id,
           longitude: lng,
           latitude: lat,
@@ -430,9 +386,7 @@ export function GamcheonMap({
           rotation: 0,
           altitudeMeters: 0,
         }
-        const next = [...localModels, item]
-        setLocalModels(next)
-        onModelsChange?.(next)
+        commitModels([...localModels, item])
         setSelectedModelId(item.id)
         setPlacingAssetId(null)
       }
@@ -441,28 +395,12 @@ export function GamcheonMap({
     return () => { map.off('click', handleClick) }
   }, [sceneMode, placingAssetId, movingModelId, localModels, assets, onModelsChange])
 
-  function commitAlleys(next: Alley[]) {
-    setLocalAlleys(next)
-    onAlleysChange?.(next)
-  }
-
-  function finishAlley() {
-    if (draftPoints.length < 2) return
-    const alley: Alley = { id: newId('alley'), coordinates: draftPoints, widthMeters: ALLEY_WIDTH_RANGE.default }
-    commitAlleys([...localAlleys, alley])
-    setSelectedAlleyId(alley.id)
-    setDrawingAlley(false)
-    setDraftPoints([])
-  }
-
   function switchMode(next: EditMode) {
     setMode(next)
     setEditor(null)
     setPlacingAssetId(null)
     setMovingModelId(null)
-    setDrawingAlley(false)
-    setDraftPoints([])
-    setAlleyError('')
+    alley.stopDrawing()
   }
 
   function commitModels(next: MapModel[]) {
@@ -470,15 +408,11 @@ export function GamcheonMap({
     onModelsChange?.(next)
   }
 
-  function updateModel(id: string, patch: Partial<MapModel>) {
-    commitModels(localModels.map((item) => item.id === id ? { ...item, ...patch } : item))
-  }
-
   function duplicateModel(id: string) {
     const original = localModels.find((item) => item.id === id)
     if (!original) return
-    const copy = { ...original, id: globalThis.crypto?.randomUUID?.() ?? `model-${Date.now()}`, longitude: original.longitude + 0.00018, latitude: original.latitude + 0.0001 }
-    if (!isInsideGamcheonMap(copy.longitude, copy.latitude)) return setModelError('경계에 가까워 복제할 공간이 없습니다.')
+    const copy = { ...original, id: newId('model'), longitude: original.longitude + 0.00018, latitude: original.latitude + 0.0001 }
+    if (!isInsideGamcheon2(copy.longitude, copy.latitude)) return setModelError('경계에 가까워 복제할 공간이 없습니다.')
     commitModels([...localModels, copy])
     setSelectedModelId(copy.id)
   }
@@ -503,7 +437,11 @@ export function GamcheonMap({
     setSelectedId(place.id)
     if (Number.isFinite(place.latitude) && Number.isFinite(place.longitude)) {
       const map = mapRef.current
-      map?.flyTo({ center: [place.longitude, place.latitude], zoom: Math.max(map.getZoom(), 17) })
+      if (place.id === ARTIST_WORKSHOP_PLACE.id) {
+        map?.flyTo({ center: [ARTIST_WORKSHOP_MODEL.longitude, ARTIST_WORKSHOP_MODEL.latitude], zoom: 19, pitch: 63, bearing: 35 })
+      } else {
+        map?.flyTo({ center: [place.longitude, place.latitude], zoom: Math.max(map.getZoom(), 17) })
+      }
     }
     onPlaceSelectRef.current?.(place)
   }
@@ -513,14 +451,33 @@ export function GamcheonMap({
     setSelectedId(null)
   }
 
-  function startNewPlace() {
-    setLocationError('')
-    setEditor({ name: '', category: 'shop', latitude: null, longitude: null, address: '', description: '' })
+  function showPhotographedStreet() {
+    mapRef.current?.flyTo({ center: [129.00886, 35.09483], zoom: 19.25, pitch: 74, bearing: -4, duration: 1000 })
   }
 
-  function startEditingPlace(place: Place) {
+  function showConceptBuildings() {
+    mapRef.current?.flyTo({ center: [129.00905, 35.09549], zoom: 20.05, pitch: 48, bearing: -24, duration: 1000 })
+  }
+
+  function showWholeMap() {
+    const map = mapRef.current
+    if (!map) return
+    map.fitBounds(GAMCHEON_MAP_BOUNDS, {
+      padding: { top: 85, bottom: 40, left: map.getContainer().clientWidth > 800 ? 420 : 40, right: 40 },
+      pitch: 38, bearing: 0, duration: 1000,
+    })
+  }
+
+  function startEditingPlace(place?: Place) {
     setLocationError('')
-    setEditor({ ...place, address: place.address ?? '', description: place.description ?? '' })
+    setEditor(place
+      ? { ...place, address: place.address ?? '', description: place.description ?? '' }
+      : { name: '', category: 'shop', latitude: null, longitude: null, address: '', description: '' })
+  }
+
+  function commitPlaces(next: Place[]) {
+    setLocalPlaces(next)
+    onPlacesChange?.(next)
   }
 
   function savePlace() {
@@ -530,7 +487,7 @@ export function GamcheonMap({
       return
     }
     const place: Place = {
-      id: editor.id ?? globalThis.crypto?.randomUUID?.() ?? `place-${Date.now()}`,
+      id: editor.id ?? newId('place'),
       name: editor.name.trim(),
       category: editor.category,
       latitude: editor.latitude,
@@ -538,11 +495,7 @@ export function GamcheonMap({
       address: editor.address.trim(),
       description: editor.description.trim(),
     }
-    const next = editor.id
-      ? localPlaces.map((item) => item.id === editor.id ? place : item)
-      : [...localPlaces, place]
-    setLocalPlaces(next)
-    onPlacesChange?.(next)
+    commitPlaces(editor.id ? localPlaces.map((item) => item.id === editor.id ? place : item) : [...localPlaces, place])
     setQuery('')
     setCategory('all')
     setSelectedId(place.id)
@@ -551,55 +504,36 @@ export function GamcheonMap({
 
   function deletePlace() {
     if (!editor?.id || !window.confirm(`'${editor.name}' 장소를 삭제할까요?`)) return
-    const next = localPlaces.filter((place) => place.id !== editor.id)
-    setLocalPlaces(next)
-    onPlacesChange?.(next)
+    commitPlaces(localPlaces.filter((place) => place.id !== editor.id))
     setSelectedId(null)
     setEditor(null)
   }
 
   return (
-    <section className={`gamcheon-map ${editor || drawingAlley ? 'is-editing' : ''} ${className}`.trim()} style={style} aria-label="감천2동 지도">
+    <section className={`gamcheon-map ${editor || alley.drawing ? 'is-editing' : ''} ${className}`.trim()} style={style} aria-label="감천2동 지도">
       <div ref={mapElementRef} className="gamcheon-map__canvas" aria-label="OpenStreetMap 지도" />
+      {sceneStatus !== 'ready' && <p className="gamcheon-map__scene-status" role="status">
+        {sceneStatus === 'lost' ? '그래픽 연결이 끊겨 3D 지도를 다시 불러오는 중입니다.' : '3D 거리를 불러오는 중입니다.'}
+      </p>}
 
-      <aside className={`gamcheon-map__panel${editor ? ' is-editing' : ''}`} aria-label={mode === 'alleys' ? '골목길 편집' : sceneMode ? '3D 모델 편집' : '장소 탐색'}>
+      <aside className={`gamcheon-map__panel${editor ? ' is-editing' : ''}`} aria-label={mode === 'route' ? '길찾기' : mode === 'alleys' ? '골목길 편집' : sceneMode ? '3D 모델 편집' : '장소 탐색'}>
         <div className="gamcheon-map__intro">
           <div className="gamcheon-map__eyebrow"><span className="gamcheon-map__eyebrow-dot" /> BUSAN · GAMCHEON 2-DONG</div>
           <h1>감천 골목지도<span className="gamcheon-map__title-dot">.</span></h1>
-          <p>가고 싶은 가게와 명소를 한눈에 찾아보세요.</p>
+          <p>작가님 공방을 중심으로 골목의 가게와 명소를 찾아보세요.</p>
         </div>
 
-        {editable && <div className="gamcheon-map__mode-tabs" role="group" aria-label="지도 편집 모드">
+        {/* 길찾기는 보기 전용 지도에서도 쓰므로 탭을 늘 보이고, 편집 탭(3D 배치·골목길)은 편집할 수 있을 때만 보입니다. */}
+        <div className="gamcheon-map__mode-tabs" role="group" aria-label="지도 모드">
           <button type="button" className={mode === 'places' ? 'is-active' : ''} onClick={() => switchMode('places')}>장소</button>
-          <button type="button" className={mode === 'models' ? 'is-active' : ''} onClick={() => switchMode('models')}>3D 배치</button>
-          <button type="button" className={mode === 'alleys' ? 'is-active' : ''} onClick={() => switchMode('alleys')}>골목길</button>
-        </div>}
+          {editable && <button type="button" className={mode === 'models' ? 'is-active' : ''} onClick={() => switchMode('models')}>3D 배치</button>}
+          {editable && <button type="button" className={mode === 'alleys' ? 'is-active' : ''} onClick={() => switchMode('alleys')}>골목길</button>}
+          <button type="button" className={mode === 'route' ? 'is-active' : ''} onClick={() => switchMode('route')}>길찾기</button>
+        </div>
 
-        {mode === 'alleys' ? <AlleyEditor
-          alleys={localAlleys}
-          selectedId={selectedAlleyId}
-          drawing={drawingAlley}
-          draftCount={draftPoints.length}
-          error={alleyError}
-          onStartDrawing={() => { setDrawingAlley(true); setDraftPoints([]); setSelectedAlleyId(null); setAlleyError('') }}
-          onUndoPoint={() => setDraftPoints((current) => current.slice(0, -1))}
-          onFinishDrawing={finishAlley}
-          onCancelDrawing={() => { setDrawingAlley(false); setDraftPoints([]); setAlleyError('') }}
-          onSelect={(id) => {
-            setSelectedAlleyId(id)
-            setAlleyError('')
-            const alley = localAlleys.find((item) => item.id === id)
-            const map = mapRef.current
-            if (alley && map) {
-              const [lng, lat] = alley.coordinates[Math.floor(alley.coordinates.length / 2)]
-              map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 17) })
-            }
-          }}
-          onUpdate={(id, patch) => commitAlleys(localAlleys.map((item) => item.id === id ? { ...item, ...patch } : item))}
-          onDelete={(id) => { commitAlleys(localAlleys.filter((item) => item.id !== id)); setSelectedAlleyId(null) }}
-        /> : sceneMode ? <ModelEditor
+        {mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : mode === 'alleys' ? <AlleyEditor {...alley.editorProps} /> : sceneMode ? <ModelEditor
           assets={assets}
-          models={localModels}
+          models={localModels.filter((item) => isInsideGamcheon2(item.longitude, item.latitude))}
           selectedId={selectedModelId}
           chosenAssetId={chosenAssetId}
           movingId={movingModelId}
@@ -613,101 +547,33 @@ export function GamcheonMap({
             setPlacingAssetId(null)
             setMovingModelId(null)
             const item = localModels.find((model) => model.id === id)
-            if (item) mapRef.current?.flyTo({ center: [item.longitude, item.latitude], zoom: Math.max(mapRef.current.getZoom(), 17.5) })
+            if (item) mapRef.current?.flyTo({ center: [item.longitude, item.latitude], zoom: Math.max(mapRef.current.getZoom(), item.assetId === ARTIST_WORKSHOP_MODEL.assetId ? 19 : 17.5) })
           }}
-          onUpdate={updateModel}
+          onUpdate={(id, patch) => commitModels(replaceById(localModels, id, patch))}
           onMove={(id) => { setMovingModelId(id); setPlacingAssetId(null); setModelError('지도에서 새 위치를 클릭하거나 번호 표시를 드래그하세요.') }}
           onDuplicate={duplicateModel}
           onDelete={(id) => { commitModels(localModels.filter((item) => item.id !== id)); setSelectedModelId(null) }}
           onImport={importModels}
-        /> : <>
-        {!editor && <><div className="gamcheon-map__search-wrap">
-          <svg className="gamcheon-map__search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="10.8" cy="10.8" r="6.4" stroke="currentColor" strokeWidth="2" />
-            <path d="m16 16 4.2 4.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <input
-            aria-label="장소 검색"
-            type="search"
-            placeholder="장소 이름이나 주소 검색"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <span className="gamcheon-map__search-shortcut">⌕</span>
-        </div>
-
-        <div className="gamcheon-map__categories" role="group" aria-label="장소 분류">
-          {categories.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              aria-pressed={category === item.value}
-              className={category === item.value ? 'gamcheon-map__category is-active' : 'gamcheon-map__category'}
-              onClick={() => setCategory(item.value)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div></>}
-
-        <div className="gamcheon-map__results-head">
-          <span>{editor ? (editor.id ? '장소 수정' : '장소 추가') : '장소 목록'}</span>
-          {!editor && <strong>{visiblePlaces.length}곳</strong>}
-        </div>
-
-        {editor ? (
-          <div className="gamcheon-map__editor">
-            <p className="gamcheon-map__editor-hint">표시된 사각형 지도 안쪽에서 장소 위치를 클릭하세요. 다시 클릭하면 위치가 바뀝니다.</p>
-            {locationError && <p className="gamcheon-map__editor-error" role="alert">{locationError}</p>}
-            <div className="gamcheon-map__editor-location">
-              {editor.latitude === null || editor.longitude === null
-                ? '위치를 선택해 주세요'
-                : `위치 선택됨 · ${editor.latitude.toFixed(5)}, ${editor.longitude.toFixed(5)}`}
-            </div>
-            <label>장소 이름<input aria-label="장소 이름" value={editor.name} maxLength={80} onChange={(event) => setEditor({ ...editor, name: event.target.value })} placeholder="예: 골목 카페" /></label>
-            <label>분류<select aria-label="장소 분류 선택" value={editor.category} onChange={(event) => setEditor({ ...editor, category: event.target.value as Place['category'] })}><option value="shop">가게</option><option value="attraction">명소</option></select></label>
-            <label>주소<input aria-label="주소" value={editor.address} maxLength={160} onChange={(event) => setEditor({ ...editor, address: event.target.value })} placeholder="주소를 입력하세요" /></label>
-            <label>설명<textarea aria-label="설명" value={editor.description} maxLength={500} onChange={(event) => setEditor({ ...editor, description: event.target.value })} placeholder="장소를 소개해 주세요" rows={3} /></label>
-            <div className="gamcheon-map__editor-actions">
-              <button type="button" className="gamcheon-map__editor-save" onClick={savePlace} disabled={!editor.name.trim() || editor.latitude === null || editor.longitude === null}>저장</button>
-              <button type="button" onClick={() => setEditor(null)}>취소</button>
-              {editor.id && <button type="button" className="gamcheon-map__editor-delete" onClick={deletePlace}>삭제</button>}
-            </div>
-          </div>
-        ) : <><div className="gamcheon-map__results" aria-live="polite">
-          {visiblePlaces.length > 0 ? (
-            visiblePlaces.map((place, index) => (
-              <button
-                key={place.id}
-                type="button"
-                className={selectedId === place.id ? 'gamcheon-map__place is-selected' : 'gamcheon-map__place'}
-                onClick={() => selectPlace(place)}
-              >
-                <span className={`gamcheon-map__place-icon gamcheon-map__place-icon--${place.category}`} aria-hidden="true">
-                  {place.category === 'attraction' ? '✦' : '⌂'}
-                </span>
-                <span className="gamcheon-map__place-body">
-                  <span className="gamcheon-map__place-meta">{place.category === 'attraction' ? '명소' : '가게'} <span>·</span> {String(index + 1).padStart(2, '0')}</span>
-                  <strong>{place.name}</strong>
-                  {place.address && <span className="gamcheon-map__place-address">{place.address}</span>}
-                  {place.description && <span className="gamcheon-map__place-description">{place.description}</span>}
-                </span>
-                <span className="gamcheon-map__place-arrow" aria-hidden="true">↗</span>
-              </button>
-            ))
-          ) : (
-            <div className="gamcheon-map__empty">
-              <span className="gamcheon-map__empty-icon" aria-hidden="true">⌕</span>
-              <strong>{localPlaces.length === 0 ? '아직 등록된 장소가 없어요' : '검색 결과가 없어요'}</strong>
-              <span>{localPlaces.length === 0 ? '장소를 추가해 보세요.' : '다른 검색어나 분류를 선택해 보세요.'}</span>
-            </div>
-          )}
-        </div>
-        {editable && <div className="gamcheon-map__edit-toolbar">
-          <button type="button" onClick={startNewPlace}>＋ 장소 추가</button>
-          {selectedPlace && <button type="button" onClick={() => startEditingPlace(selectedPlace)}>선택 장소 수정</button>}
-        </div>}</>}
-        </>}
+        /> : editor ? <PlaceForm
+          draft={editor}
+          onChange={setEditor}
+          locationError={locationError}
+          onSave={savePlace}
+          onCancel={() => setEditor(null)}
+          onDelete={deletePlace}
+        /> : <PlaceBrowser
+          query={query}
+          onQueryChange={setQuery}
+          category={category}
+          onCategoryChange={setCategory}
+          places={visiblePlaces}
+          hasAnyPlace={localPlaces.length > 0}
+          selectedId={selectedId}
+          onSelect={selectPlace}
+          editable={editable}
+          onAdd={() => startEditingPlace()}
+          onEditSelected={selectedPlace && (() => startEditingPlace(selectedPlace))}
+        />}
 
         <div className="gamcheon-map__panel-footer">
           <span className="gamcheon-map__footer-mark">G</span>
@@ -717,6 +583,9 @@ export function GamcheonMap({
 
       <div className="gamcheon-map__map-tools">
         <span className="gamcheon-map__area-badge"><span /> 부산 사하구 · 감천2동</span>
+        <button type="button" className="gamcheon-map__street-focus" onClick={showWholeMap} title="지도 전체 보기">전체 지도 보기</button>
+        <button type="button" className="gamcheon-map__street-focus" onClick={showPhotographedStreet} title="촬영한 거리 보기">촬영 거리 보기</button>
+        <button type="button" className="gamcheon-map__street-focus" onClick={showConceptBuildings} title="시안 건물 보기">시안 건물 보기</button>
         <button
           type="button"
           className={modelsSeeThrough ? 'is-active' : ''}
@@ -743,7 +612,21 @@ export function GamcheonMap({
             <path d="M4 20V9l6-4v15M10 20V11h6v9M16 20v-6h4v6M2.5 20h19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <button type="button" onClick={resetMap} aria-label="감천2동 중심으로 이동" title="감천2동 중심으로 이동">
+        <button
+          type="button"
+          className={workshopOnly ? 'is-active' : ''}
+          onClick={() => setWorkshopOnly((current) => !current)}
+          aria-pressed={workshopOnly}
+          aria-label={workshopOnly ? '다른 건물 다시 보기' : '작가님 공방만 보기'}
+          title={workshopOnly ? '다른 건물 다시 보기' : '작가님 공방만 보기 (다른 3D 건물 숨기기)'}
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M8.5 20v-7.5L12 10l3.5 2.5V20" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <path d="M3 20v-5.5L5.5 13M21 20v-5.5L18.5 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="1.8 2" />
+            <path d="M2 20h20M12 4v2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+        <button type="button" onClick={resetMap} aria-label="촬영 거리 중심으로 이동" title="촬영 거리 중심으로 이동">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 2v3m0 14v3M2 12h3m14 0h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             <circle cx="12" cy="12" r="6" stroke="currentColor" strokeWidth="1.8" />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GAMCHEON2_BOUNDS, GAMCHEON_MAP_BOUNDS, gamcheonBoundaryFeature, gamcheonOutsideFeature, isInsideGamcheon2, isInsideGamcheonMap } from './gamcheonBoundary'
+import { GAMCHEON2_BOUNDS, GAMCHEON_MAP_BOUNDS, gamcheonBoundaryFeature, gamcheonOutsideFeature, isBuildingInsideGamcheon2, isInsideGamcheon2, isInsideGamcheonMap } from './gamcheonBoundary'
 
 describe('Gamcheon 2-dong boundary', () => {
   it('keeps the source polygon closed and within its recorded bounds', () => {
@@ -26,5 +26,16 @@ describe('Gamcheon 2-dong boundary', () => {
     expect(isInsideGamcheon2(129.011, 35.098)).toBe(false)
     expect(isInsideGamcheonMap(129.011, 35.098)).toBe(true)
     expect(isInsideGamcheonMap(129.01, 35.08)).toBe(false)
+  })
+
+  it('classifies building footprints by their centroid, including a closed ring', () => {
+    expect(isBuildingInsideGamcheon2([
+      [129.0102, 35.0974], [129.0104, 35.0974],
+      [129.0104, 35.0976], [129.0102, 35.0976], [129.0102, 35.0974],
+    ])).toBe(true)
+    expect(isBuildingInsideGamcheon2([
+      [129.0109, 35.0979], [129.0111, 35.0979],
+      [129.0111, 35.0981], [129.0109, 35.0981],
+    ])).toBe(false)
   })
 })

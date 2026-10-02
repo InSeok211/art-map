@@ -1,5 +1,12 @@
-import { gamcheonMapAreaFeature, gamcheonOutsideFeature } from './gamcheonBoundary'
+import { gamcheonMapAreaFeature, gamcheonOutsideFeature, isBuildingInsideGamcheon2 } from './gamcheonBoundary'
 import gamcheonBuildings from './gamcheon-buildings.json'
+import { PHOTOGRAPHED_STREET_GEOJSON } from './streetSceneData'
+
+const localBuildingFootprints = {
+  ...gamcheonBuildings,
+  features: gamcheonBuildings.features.filter((feature) =>
+    feature.geometry.type === 'Polygon' && isBuildingInsideGamcheon2(feature.geometry.coordinates[0])),
+}
 
 // 사용자가 그린 골목길(alleys.ts)의 폭입니다. 배경지도의 도로는 실제보다 굵게 그려지므로
 // 실제 미터 대신 기본 폭 3m가 배경지도 골목(highway_minor)과 같은 굵기가 되도록 비례시킵니다.
@@ -11,6 +18,9 @@ const alleyCasingWidth = ['interpolate', ['linear'], ['zoom'], 13, scaled(3.5), 
 
 export const ALLEY_SOURCE_ID = 'gamcheonAlleys'
 export const ALLEY_DRAFT_SOURCE_ID = 'gamcheonAlleyDraft'
+// 길찾기 경로 선입니다. 3D 층 위에 보이도록 GamcheonMap이 3D 층을 붙인 뒤 맨 위로 올립니다(ROUTE_LAYER_IDS).
+export const ROUTE_SOURCE_ID = 'gamcheonRoute'
+export const ROUTE_LAYER_IDS = ['route-casing', 'route-line']
 // 3D 모델이 가리면 모델을 반투명하게 만드는 길 레이어입니다(ModelLayer).
 export const ROAD_LAYER_IDS = [
   'highway_path', 'highway_minor', 'highway_major_inner',
@@ -28,14 +38,14 @@ export interface StyleWithLayers {
 export const BUILDING_FOOTPRINT_LAYER_IDS = ['building-footprint-fill', 'building-footprint-line'] as const
 
 const paintOverrides: Record<string, Record<string, unknown>> = {
-  background: { 'background-color': '#f7f3e8' },
+  background: { 'background-color': '#eef5ee' },
   park: { 'fill-color': '#d8e9c2', 'fill-outline-color': '#c5d9b5' },
   water: { 'fill-color': '#73c7b8', 'fill-outline-color': '#56b4a8' },
-  landuse_residential: { 'fill-color': '#eee4d5', 'fill-opacity': 0.7 },
+  landuse_residential: { 'fill-color': '#e7f0e8', 'fill-opacity': 0.7 },
   landcover_wood: { 'fill-color': '#9ac7a4', 'fill-outline-color': '#87b896' },
   waterway: { 'line-color': '#69bdaf' },
-  road_area_pier: { 'fill-color': '#f7f3e8' },
-  road_pier: { 'line-color': '#f7f3e8' },
+  road_area_pier: { 'fill-color': '#eef5ee' },
+  road_pier: { 'line-color': '#eef5ee' },
   highway_path: { 'line-color': '#d4b681', 'line-opacity': 0.9 },
   highway_minor: { 'line-color': '#fffaf0', 'line-opacity': 1 },
   highway_major_casing: { 'line-color': '#ccbda7' },
@@ -95,6 +105,22 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
 
   layers.push(
     {
+      id: 'photographed-street-casing',
+      type: 'line',
+      source: 'photographedStreet',
+      minzoom: 16,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#c5a967', 'line-width': ['interpolate', ['linear'], ['zoom'], 16, 2.5, 17, 6, 18, 13, 19, 27] },
+    },
+    {
+      id: 'photographed-street-paving',
+      type: 'line',
+      source: 'photographedStreet',
+      minzoom: 16,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#98a9a8', 'line-width': ['interpolate', ['linear'], ['zoom'], 16, 2, 17, 4.5, 18, 10.5, 19, 23] },
+    },
+    {
       id: 'building-footprint-fill',
       type: 'fill',
       source: 'gamcheonBuildings',
@@ -124,6 +150,20 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       paint: { 'circle-radius': 5, 'circle-color': '#fff', 'circle-stroke-color': '#e78349', 'circle-stroke-width': 2.5 },
     },
     {
+      id: 'route-casing',
+      type: 'line',
+      source: ROUTE_SOURCE_ID,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#ffffff', 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 5, 18, 11, 21, 18] },
+    },
+    {
+      id: 'route-line',
+      type: 'line',
+      source: ROUTE_SOURCE_ID,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#2f6fd6', 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 3, 18, 7, 21, 12] },
+    },
+    {
       id: 'gamcheon-outside',
       type: 'fill',
       source: 'gamcheonOutside',
@@ -149,9 +189,11 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       ...style.sources,
       gamcheonMapArea: { type: 'geojson', data: gamcheonMapAreaFeature },
       gamcheonOutside: { type: 'geojson', data: gamcheonOutsideFeature },
-      gamcheonBuildings: { type: 'geojson', data: gamcheonBuildings },
+      gamcheonBuildings: { type: 'geojson', data: localBuildingFootprints },
+      photographedStreet: { type: 'geojson', data: PHOTOGRAPHED_STREET_GEOJSON },
       [ALLEY_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
       [ALLEY_DRAFT_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
+      [ROUTE_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
     },
     layers,
   } as T
