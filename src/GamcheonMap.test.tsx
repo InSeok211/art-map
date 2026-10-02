@@ -2,12 +2,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { GamcheonMap } from './GamcheonMap'
+import { ARTIST_WORKSHOP_MODEL, ARTIST_WORKSHOP_PLACE } from './artistWorkshop'
 import { ModelLayer } from './ModelLayer'
 import type { Place } from './types'
 
 const mapOptions = vi.hoisted(() => [] as unknown[])
+const mapFlyTo = vi.hoisted(() => [] as unknown[])
 const layerVisibility = vi.hoisted(() => ({} as Record<string, unknown>))
 const mapClick = vi.hoisted(() => ({ current: null as null | ((event: { lngLat: { lng: number; lat: number } }) => void) }))
+
+// These tests exercise map controls against a mocked MapLibre canvas. Real
+// district geometry is checked separately and in the browser.
+vi.mock('./StreetSceneLayer', () => ({ StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d' } }))
 
 vi.mock('maplibre-gl', () => ({
   Map: class {
@@ -16,7 +22,9 @@ vi.mock('maplibre-gl', () => ({
     resize() {}
     setPadding() {}
     remove() {}
-    flyTo() {}
+    flyTo(options: unknown) { mapFlyTo.push(options) }
+    fitBounds(bounds: unknown, options: unknown) { mapFlyTo.push({ bounds, ...(options as object) }) }
+    getContainer() { return { clientWidth: 1280 } }
     getZoom() { return 15 }
     triggerRepaint() {}
     getLayer() { return {} }
@@ -24,6 +32,7 @@ vi.mock('maplibre-gl', () => ({
     setLayoutProperty(id: string, _name: string, value: unknown) { layerVisibility[id] = value }
     on(event: string, listener: typeof mapClick.current) { if (event === 'click') mapClick.current = listener }
     off(event: string) { if (event === 'click') mapClick.current = null }
+    once() { return this }
   },
   Marker: class {
     setLngLat() { return this }
@@ -33,6 +42,7 @@ vi.mock('maplibre-gl', () => ({
     remove() {}
   },
   NavigationControl: class {},
+  LngLatBounds: class { extend() { return this } },
   MercatorCoordinate: { fromLngLat: () => ({ x: 0, y: 0, z: 0, meterInMercatorCoordinateUnits: () => 1 }) },
   setWorkerUrl() {},
 }))
@@ -44,6 +54,7 @@ const places: Place[] = [
 
 beforeEach(() => {
   mapOptions.length = 0
+  mapFlyTo.length = 0
   mapClick.current = null
   for (const key of Object.keys(layerVisibility)) delete layerVisibility[key]
   vi.stubGlobal('ResizeObserver', class {
@@ -58,6 +69,38 @@ afterEach(() => {
 })
 
 describe('GamcheonMap', () => {
+  it('offers an overview of the entire map', () => {
+    render(<GamcheonMap />)
+    fireEvent.click(screen.getByRole('button', { name: '전체 지도 보기' }))
+    expect(mapFlyTo.at(-1)).toMatchObject({ pitch: 38, bearing: 0, padding: { left: 420 } })
+  })
+  it('zooms close enough to inspect the artist workshop from the place list', () => {
+    render(<GamcheonMap places={[ARTIST_WORKSHOP_PLACE]} />)
+    fireEvent.click(screen.getByRole('button', { name: /작가님 공방.*옥천로101번길 23/ }))
+    expect(mapFlyTo.at(-1)).toMatchObject({
+      center: [ARTIST_WORKSHOP_MODEL.longitude, ARTIST_WORKSHOP_MODEL.latitude],
+      zoom: 19,
+      pitch: 63,
+    })
+  })
+
+  it('zooms close enough to inspect the artist workshop from the 3D editor', () => {
+    render(<GamcheonMap models={[ARTIST_WORKSHOP_MODEL]} editable />)
+    fireEvent.click(screen.getByRole('button', { name: '3D 배치' }))
+    fireEvent.click(screen.getByRole('button', { name: /01작가님 공방/ }))
+    expect(mapFlyTo.at(-1)).toMatchObject({ zoom: 19 })
+  })
+
+  it('shows only models inside Gamcheon 2-dong even when the map rectangle is wider', () => {
+    const setItems = vi.spyOn(ModelLayer.prototype, 'setItems')
+    const outside = { ...ARTIST_WORKSHOP_MODEL, id: 'outside-dong', longitude: 129.011, latitude: 35.098 }
+    render(<GamcheonMap models={[ARTIST_WORKSHOP_MODEL, outside]} editable />)
+    expect(setItems).toHaveBeenLastCalledWith([ARTIST_WORKSHOP_MODEL])
+    fireEvent.click(screen.getByRole('button', { name: '3D 배치' }))
+    expect(screen.queryByText('outside-dong')).toBeNull()
+    setItems.mockRestore()
+  })
+
   it('toggles the real building footprints on and off', () => {
     render(<GamcheonMap />)
 
@@ -139,10 +182,56 @@ describe('GamcheonMap', () => {
     expect(onModelsChange).toHaveBeenLastCalledWith([expect.objectContaining({ longitude: 129.0107, latitude: 35.0976 })])
   })
 
+  it('tells the user while the 3D street is still being built after the base map', () => {
+    render(<GamcheonMap />)
+    // 바탕 지도가 다 그려진 뒤(idle)에야 3D 거리를 만들기 시작하므로, 그 전에는 안내 문구가 보입니다.
+    expect(screen.getByRole('status').textContent).toContain('3D 거리를 불러오는 중')
+  })
+
+  it('toggles a workshop-only view that hides the other 3D buildings', () => {
+    render(<GamcheonMap />)
+    const button = screen.getByRole('button', { name: '작가님 공방만 보기' })
+    expect(button.getAttribute('aria-pressed')).toBe('false')
+    fireEvent.click(button)
+    expect(screen.getByRole('button', { name: '다른 건물 다시 보기' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('finds a walking route from the current GPS position to the artist workshop', () => {
+    let report: ((position: { coords: { longitude: number; latitude: number; accuracy: number } }) => void) | undefined
+    const clearWatch = vi.fn()
+    vi.stubGlobal('navigator', { ...navigator, geolocation: {
+      watchPosition: (success: typeof report) => { report = success; return 7 },
+      clearWatch,
+    } })
+    render(<GamcheonMap places={[ARTIST_WORKSHOP_PLACE]} />)
+    fireEvent.click(screen.getByRole('button', { name: '길찾기' }))
+    expect((screen.getByLabelText('출발지') as HTMLSelectElement).value).toBe('gps')
+    expect((screen.getByLabelText('도착지') as HTMLSelectElement).value).toBe(`place:${ARTIST_WORKSHOP_PLACE.id}`)
+    expect(screen.getByText('내 위치를 찾는 중입니다…')).toBeTruthy()
+    // 촬영 거리 남쪽 끝에 있다고 알려 줍니다.
+    act(() => report!({ coords: { longitude: 129.00884, latitude: 35.0943657, accuracy: 8 } }))
+    const result = screen.getByRole('region', { name: '찾은 길' })
+    expect(result.textContent).toMatch(/\d+분/)
+    expect(result.textContent).toContain('목적지')
+    // 길찾기 탭을 떠나면 위치 추적을 멈춥니다.
+    fireEvent.click(screen.getByRole('button', { name: '장소' }))
+    expect(clearWatch).toHaveBeenCalledWith(7)
+  })
+
   it('opens at an angled 3D view that the user can rotate', () => {
     render(<GamcheonMap />)
 
-    expect(mapOptions[0]).toMatchObject({ pitch: 45, bearing: -25, dragRotate: true, pitchWithRotate: true, maxBounds: expect.any(Array) })
+    expect(mapOptions[0]).toMatchObject({
+      pitch: 61,
+      bearing: -8,
+      dragRotate: true,
+      pitchWithRotate: true,
+    })
+    const bounds = (mapOptions[0] as { maxBounds: number[][] }).maxBounds
+    expect(bounds[0][0]).toBeCloseTo(128.9998058, 7)
+    expect(bounds[0][1]).toBeCloseTo(35.0867957, 7)
+    expect(bounds[1][0]).toBeCloseTo(129.0173734, 7)
+    expect(bounds[1][1]).toBeCloseTo(35.1022347, 7)
   })
 
   it('filters the list by category and search text', () => {

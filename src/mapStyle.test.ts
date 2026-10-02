@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import baseStyle from './positron-style.json'
 import { BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle } from './mapStyle'
+import { isBuildingInsideGamcheon2 } from './gamcheonBoundary'
 
 describe('createMinimalStyle', () => {
   it('removes base building shapes and all base map labels', () => {
@@ -19,6 +20,9 @@ describe('createMinimalStyle', () => {
     // 줌에 따라 사라지지 않도록 벡터 타일이 아닌 저장된 GeoJSON을 쓰고 줌 제한을 두지 않습니다.
     expect(footprints.every((layer) => layer.minzoom === undefined)).toBe(true)
     expect(style.sources).toMatchObject({ gamcheonBuildings: { type: 'geojson' } })
+    const source = (style.sources as Record<string, unknown>).gamcheonBuildings as { data: { features: { geometry: { coordinates: number[][][] } }[] } }
+    expect(source.data.features.length).toBeGreaterThan(0)
+    expect(source.data.features.every((feature) => isBuildingInsideGamcheon2(feature.geometry.coordinates[0]))).toBe(true)
   })
 
   it('keeps roads, water, and parks for orientation', () => {
@@ -30,12 +34,12 @@ describe('createMinimalStyle', () => {
     expect(ids).toContain('highway_minor')
   })
 
-  it('uses a warm illustrated palette and outlines local streets', () => {
+  it('uses a light green illustrated palette and outlines local streets', () => {
     const style = createMinimalStyle(baseStyle)
     const paint = (id: string) => style.layers.find((layer) => layer.id === id)?.paint as Record<string, unknown>
     const ids = style.layers.map((layer) => layer.id)
 
-    expect(paint('background')['background-color']).toBe('#f7f3e8')
+    expect(paint('background')['background-color']).toBe('#eef5ee')
     expect(paint('water')['fill-color']).toBe('#73c7b8')
     expect(paint('landcover_wood')['fill-color']).toBe('#9ac7a4')
     expect(paint('highway_minor')['line-color']).toBe('#fffaf0')

@@ -20,11 +20,6 @@ export const GAMCHEON_MAP_BOUNDS: [Position, Position] = [
   [GAMCHEON2_BOUNDS[1][0] + 0.003, GAMCHEON2_BOUNDS[1][1] + 0.0025],
 ]
 
-export const GAMCHEON_MAP_PAN_BOUNDS: [Position, Position] = [
-  [GAMCHEON_MAP_BOUNDS[0][0] - 0.02, GAMCHEON_MAP_BOUNDS[0][1] - 0.02],
-  [GAMCHEON_MAP_BOUNDS[1][0] + 0.02, GAMCHEON_MAP_BOUNDS[1][1] + 0.02],
-]
-
 const [[west, south], [east, north]] = GAMCHEON_MAP_BOUNDS
 const mapAreaRing: Position[] = [[west, south], [east, south], [east, north], [west, north], [west, south]]
 
@@ -73,4 +68,30 @@ export function isInsideGamcheon2(longitude: number, latitude: number): boolean 
   }
 
   return inside
+}
+
+// Classify a building by its area centroid so a wall crossing the dong line
+// does not cause the whole building to flicker in or out at the border.
+export function isBuildingInsideGamcheon2(outline: number[][]): boolean {
+  const points = outline.length > 1 && outline[0][0] === outline.at(-1)?.[0]
+    && outline[0][1] === outline.at(-1)?.[1] ? outline.slice(0, -1) : outline
+  if (points.length < 3) return false
+  const [originLongitude, originLatitude] = points[0]
+  let twiceArea = 0
+  let longitudeSum = 0
+  let latitudeSum = 0
+  for (let index = 0; index < points.length; index++) {
+    const [longitude1, latitude1] = points[index]
+    const [longitude2, latitude2] = points[(index + 1) % points.length]
+    const x1 = longitude1 - originLongitude
+    const y1 = latitude1 - originLatitude
+    const x2 = longitude2 - originLongitude
+    const y2 = latitude2 - originLatitude
+    const cross = x1 * y2 - x2 * y1
+    twiceArea += cross
+    longitudeSum += (x1 + x2) * cross
+    latitudeSum += (y1 + y2) * cross
+  }
+  if (Math.abs(twiceArea) < 1e-14) return false
+  return isInsideGamcheon2(originLongitude + longitudeSum / (3 * twiceArea), originLatitude + latitudeSum / (3 * twiceArea))
 }

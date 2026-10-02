@@ -18,11 +18,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json && node scripts/copy-model-assets.mjs",
-    "build:demo": "tsc --noEmit && vite build",
-    "test": "vitest run"
+    "build:demo": "tsc --noEmit && vite build && node scripts/copy-model-assets.mjs --demo",
+    "test": "vitest run",
+    "build:road-ground": "node scripts/build-road-ground.mjs"
   },
   "dependencies": {
     "maplibre-gl": "^6.11.2",
+    "polygon-clipping": "^0.15.7",
     "three": "^0.186.1"
   },
   "peerDependencies": {
@@ -31,6 +33,7 @@
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.6.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/three": "^0.186.0",
