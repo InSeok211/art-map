@@ -1,19 +1,22 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { GamcheonMap } from './GamcheonMap'
+import { GamcheonMap, STREET_LAYER_FALLBACK_MS } from './GamcheonMap'
 import { ARTIST_WORKSHOP_MODEL, ARTIST_WORKSHOP_PLACE } from './artistWorkshop'
 import { ModelLayer } from './ModelLayer'
 import type { Place } from './types'
 
 const mapOptions = vi.hoisted(() => [] as unknown[])
 const mapFlyTo = vi.hoisted(() => [] as unknown[])
+const mapEaseTo = vi.hoisted(() => [] as unknown[])
+const styleLoad = vi.hoisted(() => ({ current: null as null | (() => void) }))
+const markerRotations = vi.hoisted(() => [] as number[])
 const layerVisibility = vi.hoisted(() => ({} as Record<string, unknown>))
-const mapClick = vi.hoisted(() => ({ current: null as null | ((event: { lngLat: { lng: number; lat: number } }) => void) }))
+const mapClick = vi.hoisted(() => ({ current: null as null | ((event: { lngLat: { lng: number; lat: number }; originalEvent?: { target: unknown } }) => void) }))
 
 // These tests exercise map controls against a mocked MapLibre canvas. Real
 // district geometry is checked separately and in the browser.
-vi.mock('./StreetSceneLayer', () => ({ StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d' } }))
+vi.mock('./StreetSceneLayer', () => ({ StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d'; setOtherBuildingsHidden() {}; setBuildingOpacity() {} } }))
 
 vi.mock('maplibre-gl', () => ({
   Map: class {
@@ -23,6 +26,9 @@ vi.mock('maplibre-gl', () => ({
     setPadding() {}
     remove() {}
     flyTo(options: unknown) { mapFlyTo.push(options) }
+    easeTo(options: unknown) { mapEaseTo.push(options) }
+    moveLayer() {}
+    addLayer() {}
     fitBounds(bounds: unknown, options: unknown) { mapFlyTo.push({ bounds, ...(options as object) }) }
     getContainer() { return { clientWidth: 1280 } }
     getZoom() { return 15 }
@@ -30,12 +36,15 @@ vi.mock('maplibre-gl', () => ({
     getLayer() { return {} }
     getSource() { return { setData() {} } }
     setLayoutProperty(id: string, _name: string, value: unknown) { layerVisibility[id] = value }
-    on(event: string, listener: typeof mapClick.current) { if (event === 'click') mapClick.current = listener }
+    on(event: string, listener: typeof mapClick.current) { if (event === 'click') mapClick.current = listener; if (event === 'style.load') styleLoad.current = listener as unknown as () => void }
     off(event: string) { if (event === 'click') mapClick.current = null }
     once() { return this }
   },
   Marker: class {
+    element = document.createElement('div')
     setLngLat() { return this }
+    setRotation(degrees: number) { markerRotations.push(degrees); return this }
+    getElement() { return this.element }
     addTo() { return this }
     on() { return this }
     getLngLat() { return { lng: 129.01, lat: 35.097 } }
@@ -197,25 +206,66 @@ describe('GamcheonMap', () => {
   })
 
   it('finds a walking route from the current GPS position to the artist workshop', () => {
-    let report: ((position: { coords: { longitude: number; latitude: number; accuracy: number } }) => void) | undefined
+    let report: ((position: { coords: { longitude: number; latitude: number; accuracy: number; heading: number | null; speed: number | null } }) => void) | undefined
     const clearWatch = vi.fn()
     vi.stubGlobal('navigator', { ...navigator, geolocation: {
       watchPosition: (success: typeof report) => { report = success; return 7 },
       clearWatch,
     } })
-    render(<GamcheonMap places={[ARTIST_WORKSHOP_PLACE]} />)
+    const { unmount } = render(<GamcheonMap places={[ARTIST_WORKSHOP_PLACE]} />)
+    // 지도를 열자마자 위치 추적을 시작합니다(길찾기 탭을 열지 않아도).
+    expect(report).toBeDefined()
     fireEvent.click(screen.getByRole('button', { name: '길찾기' }))
     expect((screen.getByLabelText('출발지') as HTMLSelectElement).value).toBe('gps')
     expect((screen.getByLabelText('도착지') as HTMLSelectElement).value).toBe(`place:${ARTIST_WORKSHOP_PLACE.id}`)
     expect(screen.getByText('내 위치를 찾는 중입니다…')).toBeTruthy()
     // 촬영 거리 남쪽 끝에 있다고 알려 줍니다.
-    act(() => report!({ coords: { longitude: 129.00884, latitude: 35.0943657, accuracy: 8 } }))
+    act(() => report!({ coords: { longitude: 129.00884, latitude: 35.0943657, accuracy: 8, heading: null, speed: null } }))
     const result = screen.getByRole('region', { name: '찾은 길' })
     expect(result.textContent).toMatch(/\d+분/)
     expect(result.textContent).toContain('목적지')
-    // 길찾기 탭을 떠나면 위치 추적을 멈춥니다.
+    expect(screen.getByRole('button', { name: '내 위치를 따라가는 중' }).getAttribute('aria-pressed')).toBe('true')
+    // 북쪽으로 약 10m 걸으면 지도가 따라오고, 화살표가 북쪽(0도 근처)을 가리킵니다.
+    const easeCount = mapEaseTo.length
+    act(() => report!({ coords: { longitude: 129.00884, latitude: 35.0944557, accuracy: 8, heading: null, speed: null } }))
+    expect(mapEaseTo.length).toBeGreaterThan(easeCount)
+    expect(mapEaseTo.at(-1)).toMatchObject({ center: [129.00884, 35.0944557] })
+    const heading = markerRotations.at(-1)!
+    expect(Math.min(heading, 360 - heading)).toBeLessThan(5)
+    // 다른 탭으로 가도 내 위치는 계속 보이고, 지도를 닫으면 추적을 멈춥니다.
     fireEvent.click(screen.getByRole('button', { name: '장소' }))
+    expect(clearWatch).not.toHaveBeenCalled()
+    unmount()
     expect(clearWatch).toHaveBeenCalledWith(7)
+  })
+
+  it('lets a host page select a place and pick a location on the map (embedded mode)', () => {
+    const onMapClick = vi.fn()
+    const { rerender } = render(<GamcheonMap compact places={places} onMapClick={onMapClick} />)
+    act(() => mapClick.current!({ lngLat: { lng: 129.0103, lat: 35.0975 }, originalEvent: { target: document.body } }))
+    expect(onMapClick).toHaveBeenCalledWith(129.0103, 35.0975)
+    // 표식을 누른 것은 지도 클릭으로 알리지 않습니다.
+    const marker = document.createElement('button')
+    marker.className = 'gamcheon-map__marker'
+    act(() => mapClick.current!({ lngLat: { lng: 129.0104, lat: 35.0976 }, originalEvent: { target: marker } }))
+    expect(onMapClick).toHaveBeenCalledTimes(1)
+
+    rerender(<GamcheonMap compact places={places} onMapClick={onMapClick} selectedPlaceId="cafe" />)
+    expect(mapFlyTo.at(-1)).toMatchObject({ center: [129.0105, 35.0978] })
+  })
+
+  it('builds the 3D street even if the base map never finishes loading its tiles', () => {
+    vi.useFakeTimers()
+    try {
+      render(<GamcheonMap />)
+      expect(screen.getByRole('status').textContent).toContain('3D 거리를 불러오는 중')
+      // 스타일은 준비됐지만 타일이 오지 않아 'idle'이 끝내 오지 않는 경우
+      act(() => styleLoad.current!())
+      act(() => { vi.advanceTimersByTime(STREET_LAYER_FALLBACK_MS + 10) })
+      expect(screen.queryByText('3D 거리를 불러오는 중입니다.')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('opens at an angled 3D view that the user can rotate', () => {

@@ -11,6 +11,9 @@ import { distanceToRoad } from './streetRoadGeometry'
 import { conceptTexture } from './streetTextures'
 import roadGroundCache from './generated/road-ground.json'
 import type { RoadGround } from './roadGround'
+import { buildRoadRuns } from './roadGround'
+import { findRoadOccluders, RoadIndex } from './streetOcclusion'
+import type { Occluder } from './streetOcclusion'
 import { buildArtistWorkshopModel } from './artistWorkshopModel'
 import type { WorkshopFinish } from './artistWorkshopModel'
 import type { ConceptSurface } from './streetTextures'
@@ -18,30 +21,63 @@ import { addSceneLights, bakeShadowMap, configureRenderer, createShadowCatcher, 
 import { distanceToSegment, facingRotation, outlineCenter, polygonArea } from './planGeometry'
 
 type StreetBuilding = ReturnType<typeof getPhotographedStreetBuildings>[number]
-type MaterialSlot = { material: THREE.MeshStandardMaterial; geometries: THREE.BufferGeometry[]; ground: boolean; parent: THREE.Object3D }
+type SlotMaterial = THREE.MeshStandardMaterial | THREE.MeshLambertMaterial
+// plain: 고리 묶음(공방 밖 건물)에서 비치지 않는 건물을 그리는 재질. 점무늬 셰이더(discard)가 없어 GPU가
+// 가려진 픽셀을 미리 건너뛸 수 있습니다. material은 길을 가려 비치게 그릴 건물에 씁니다.
+// flushed: 이 재질로 이미 만든 메시들. 먼 동네를 나눠 만드는 동안 여러 개가 생기므로, 다 만든 뒤 하나로 합칩니다.
+type MaterialSlot = {
+  material: SlotMaterial; plain?: SlotMaterial; geometries: THREE.BufferGeometry[]; ground: boolean; parent: THREE.Object3D
+  flushed: { geometry: THREE.BufferGeometry; meshes: THREE.Mesh[]; split?: FadeSplit }[]
+}
+// 고리 메시 하나를 '비치지 않는 건물'과 '비치는 건물' 두 메시로 나눠 그리기 위한 정보입니다. 두 메시는 꼭짓점을
+// 함께 쓰고, 한 인덱스 버퍼의 앞부분(plain)과 뒷부분(fade)을 그립니다. runs: [건물 번호, 첫 꼭짓점, 꼭짓점 수]
+type FadeSplit = { runs: Int32Array; index: THREE.BufferAttribute; plain: THREE.Mesh; fade: THREE.Mesh; state: Uint8Array }
 type SurfaceFinish = WorkshopFinish
 type FacadeKind = NonNullable<StreetBuilding['concept']>
-function facadeUrl(name: string) {
-  const relativePath = `./assets/facades/${name}`
-  return new URL(relativePath, import.meta.url).href
-}
 // 그림자를 계산하는 사각 범위(장면 미터). 첫 화면인 촬영 거리와 공방 주변에 해상도를 집중합니다.
 const SHADOW_CENTER: [number, number] = [20, -40]
 const SHADOW_EXTENT = 260
 
-const FACADE_URLS: Record<FacadeKind, string> = {
-  soup: facadeUrl('173-soup.png'),
-  chinese: facadeUrl('174-chinese.png'),
-  mart: facadeUrl('175-mart.png'),
-  handmade: facadeUrl('176-handmade.png'),
-  fofos: facadeUrl('tmp-fofos.png'),
-  pink: facadeUrl('tmp-pink.png'),
-}
-
 
 const ROAD_GROUND = roadGroundCache as unknown as RoadGround
-const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1).toNonIndexed()
+// 기둥·난간처럼 기울어 놓이는 막대는 끝면이 보일 수 있어 여섯 면을 모두 둡니다(복사해 쓰려고 미리 만듦).
+const UNIT_BEAM = new THREE.BoxGeometry(1, 1, 1).toNonIndexed()
+// 상자의 아랫면은 위에서 내려다보는 지도에서 보이지 않으므로 빼 둡니다(삼각형 1/6 절약).
+// BoxGeometry의 면 순서는 +x, -x, +y, -y, +z, -z이고 면마다 꼭짓점 6개입니다.
+const UNIT_BOX = (() => {
+  const full = new THREE.BoxGeometry(1, 1, 1).toNonIndexed()
+  const keep = (attribute: THREE.BufferAttribute) => {
+    const size = attribute.itemSize
+    const array = attribute.array as Float32Array
+    return new THREE.Float32BufferAttribute([...array.slice(0, 18 * size), ...array.slice(24 * size)], size)
+  }
+  const box = new THREE.BufferGeometry()
+  for (const name of ['position', 'normal', 'uv']) box.setAttribute(name, keep(full.getAttribute(name) as THREE.BufferAttribute))
+  full.dispose()
+  return box
+})()
+// 합친 도형의 건물 번호 속성에서 같은 건물이 이어지는 구간을 [번호, 첫 꼭짓점, 꼭짓점 수]로 모읍니다.
+// 건물마다 도형을 이어서 넣으므로 한 건물은 한 메시 안에서 대개 한 구간입니다.
+export function buildingRuns(attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute) {
+  const runs: number[] = []
+  for (let vertex = 0; vertex < attribute.count; vertex++) {
+    const building = attribute.getX(vertex)
+    if (runs.length && runs[runs.length - 3] === building) runs[runs.length - 1]++
+    else runs.push(building, vertex, 1)
+  }
+  return Int32Array.from(runs)
+}
+
 export const SCENE_BUILD_MEASURE = 'gamcheon-map:street-scene-build'
+const isTouchDevice = () => typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
+  && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+// 먼 동네 벽 텍스처 한 칸(창 하나와 층 띠)의 크기(m)
+const DISTRICT_BAY_WIDTH = 3.1
+const DISTRICT_FLOOR_HEIGHT = 2.65
+// 건물별 비침 정도를 담는 텍스처 한 변의 크기(64×64 = 건물 4096동까지)
+const FADE_TEXTURE_SIZE = 64
+// 길을 가리는 거리 건물이 남기는 픽셀 비율(형태는 알아보되 뒤의 길이 보이도록)
+export const STREET_FADE_OPACITY = 0.45
 // 건물 숨기기 애니메이션: 공방 중심에서의 거리(m)로 나눈 고리, 고리 하나가 움직이는 시간과 고리 사이 간격
 const BUILDING_RINGS = [45, 100, 180, 300, Infinity]
 const RISE_DURATION_MS = 650
@@ -67,11 +103,16 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private scene = new THREE.Scene()
   private slots = new globalThis.Map<string, MaterialSlot>()
   private meshes: THREE.Mesh[] = []
+  private fadeSplits: FadeSplit[] = []
+  // 고리마다 메시는 따로 두되 재질은 함께 씁니다. 같은 재질을 잇달아 그리면 three.js가 재질·조명 값을 다시
+  // 올리지 않아 그리기 호출마다 드는 CPU 시간이 줄어듭니다. order: 같은 재질끼리 이어 그리게 하는 그리기 순서
+  private sharedMaterials = new globalThis.Map<string, { material: SlotMaterial; plain?: SlotMaterial }>()
+  private materialOrder = new globalThis.Map<THREE.Material, number>()
+  // 공방·시안 건물처럼 안쪽 면이나 뒤집힌 면이 보일 수 있는 도형은 양면으로 그립니다(나머지는 바깥 면만).
+  private doubleSided = false
   private signMeshes: THREE.Mesh[] = []
   private signTextures: THREE.CanvasTexture[] = []
   private conceptTextures = new globalThis.Map<ConceptSurface, THREE.DataTexture>()
-  private facadeMeshes: { kind: FacadeKind; mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> }[] = []
-  private facadeTextures: THREE.Texture[] = []
   private shadowCatcher: THREE.Mesh | null = null
   private shadowsBaked = false
   // 공방을 뺀 건물(벽·지붕·간판·사진 외관)은 이 묶음에 넣어 한꺼번에 숨기거나 보일 수 있게 합니다.
@@ -82,6 +123,20 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private ringRise = BUILDING_RINGS.map(() => 1)
   private ringDepth = BUILDING_RINGS.map(() => 0)
   private riseAnimation = 0
+  // 길을 가리는 건물만 점무늬로 비치게 하는 자동 반투명. 건물마다 번호(buildingIndex 정점 속성)를 붙이고,
+  // 번호별 비침 정도를 작은 텍스처(fadeTexture)에 담아 셰이더가 읽습니다.
+  private occluders: Occluder[] = []
+  private buildingContext: Occluder | null = null
+  private currentBuilding = -1
+  private readonly fadeData = new Uint8Array(FADE_TEXTURE_SIZE * FADE_TEXTURE_SIZE * 4).fill(255)
+  private readonly fadeTexture = new THREE.DataTexture(this.fadeData, FADE_TEXTURE_SIZE, FADE_TEXTURE_SIZE, THREE.RGBAFormat)
+  private readonly fadeUniform = { value: this.fadeTexture }
+  private roadIndex: RoadIndex | null = null
+  private autoSeeThrough = true
+  private occlusionTimer: ReturnType<typeof setTimeout> | null = null
+  private occluding = new Set<number>()
+  // 공방을 뺀 건물의 불투명도(1: 불투명). '3D 건물 모두 반투명하게'와 골목길 편집 중에 낮춥니다.
+  private buildingOpacity = 1
   // 고리 안에서 그림자를 드리우는 메시(애니메이션 중에만 잠시 그림자를 끕니다)
   private ringShadowCasters: THREE.Mesh[] = []
   private group: 'scene' | number = 'scene'
@@ -90,7 +145,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
 
   constructor() {
     const started = performance.now()
-    addSceneLights(this.scene, SHADOW_CENTER, SHADOW_EXTENT, 4096)
+    // 휴대폰·태블릿(터치 화면)은 그림자 지도를 2048로 줄여 그래픽 메모리와 그리기 부담을 덜어 줍니다.
+    addSceneLights(this.scene, SHADOW_CENTER, SHADOW_EXTENT, isTouchDevice() ? 2048 : 4096)
     this.buildingRings.forEach((ring) => this.scene.add(ring))
     this.build()
     // 성능 예산 확인용: 브라우저 개발자 도구의 Performance 탭이나 performance.getEntriesByName으로 볼 수 있습니다.
@@ -101,8 +157,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.scene.add(this.shadowCatcher)
   }
 
-  private material(color: number, glass = false, surface?: ConceptSurface) {
-    const key = `${this.group}|${color}-${glass}-${surface ?? ''}`
+  // 색은 꼭짓점 색(vertex color)으로 넣고 재질은 질감·유리 여부로만 나눕니다. 색마다 재질을 만들면 그리기
+  // 호출이 1천 개를 넘어 휴대폰에서 끊기므로, 같은 질감의 도형을 색이 달라도 한 번에 그립니다.
+  private material(glass = false, surface?: ConceptSurface) {
+    const doubleSided = this.doubleSided || glass
+    const key = `${this.group}|${glass}-${surface ?? ''}${doubleSided ? '|both' : ''}`
     let slot = this.slots.get(key)
     if (!slot) {
       let map: THREE.DataTexture | undefined
@@ -113,21 +172,17 @@ export class StreetSceneLayer implements CustomLayerInterface {
           this.conceptTextures.set(surface, map)
         }
       }
-      slot = {
-        material: new THREE.MeshStandardMaterial({
-          color, roughness: glass ? 0.22 : 0.86, metalness: glass ? 0.2 : 0,
-          // 그림자와 하늘빛이 명암을 만들므로 자체 발광은 아주 약하게만 남깁니다.
-          emissive: !glass && !surface ? color : 0x000000,
-          emissiveIntensity: !glass && !surface ? 0.04 : 0,
-          side: THREE.DoubleSide, ...(map ? { map,
-            ...((surface === 'workshop-brick' || surface === 'lane-brick')
-              ? { bumpMap: map, bumpScale: surface === 'workshop-brick' ? 0.018 : 0.009 } : {}),
-          } : {}),
-        }),
-        geometries: [],
-        ground: surface?.startsWith('ground-') ?? false,
-        parent: this.currentParent(),
-      }
+      const side = doubleSided ? THREE.DoubleSide : THREE.FrontSide
+      const textures = map ? { map,
+        ...((surface === 'workshop-brick' || surface === 'lane-brick')
+          ? { bumpMap: map, bumpScale: surface === 'workshop-brick' ? 0.018 : 0.009 } : {}),
+      } : {}
+      // 벽·지붕은 거의 반사가 없으므로(거칠기 0.86) 픽셀 계산이 가벼운 Lambert로 그립니다. 휴대폰에서 프레임을
+      // 가장 많이 잡아먹는 것이 픽셀 계산이라 차이가 큽니다. 반짝임이 보이는 유리만 PBR(Standard)로 둡니다.
+      const shared = this.sharedMaterial(key, () => glass
+        ? new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.22, metalness: 0.2, side, ...textures })
+        : new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, side, ...textures }))
+      slot = { ...shared, geometries: [], ground: surface?.startsWith('ground-') ?? false, parent: this.currentParent(), flushed: [] }
       this.slots.set(key, slot)
     }
     return slot
@@ -139,22 +194,43 @@ export class StreetSceneLayer implements CustomLayerInterface {
     if (!slot) {
       const transparent = finish === 'clear-glass' || finish === 'halo'
       slot = {
-        material: new THREE.MeshStandardMaterial({
+        ...this.sharedMaterial(key, () => new THREE.MeshStandardMaterial({
           color, side: THREE.DoubleSide,
           roughness: finish === 'clear-glass' ? 0.08 : 0.7, metalness: finish === 'clear-glass' ? 0.1 : 0,
           emissive: finish === 'clear-glass' ? 0x000000 : color,
           emissiveIntensity: finish === 'glow' ? 1.1 : finish === 'halo' ? 0.55 : finish === 'lit' ? 0.32 : 0,
           transparent, opacity: finish === 'clear-glass' ? 0.3 : finish === 'halo' ? 0.72 : 1,
           depthWrite: !transparent,
-        }),
+          // 비치는 양면 재질을 three.js는 뒷면·앞면 두 번 그리며 매 프레임 셰이더를 다시 고릅니다. 얇은 면이라 한 번이면 됩니다.
+          forceSinglePass: true,
+        })),
         geometries: [],
         // 유리와 바닥 띠는 그림자를 드리우지 않습니다.
         ground: transparent,
         parent: this.currentParent(),
+        flushed: [],
       }
       this.slots.set(key, slot)
     }
     return slot
+  }
+
+  // 슬롯 키(고리 번호|…)에서 고리 번호를 뺀 이름으로 재질을 함께 씁니다. 고리 묶음의 재질은 점무늬 없는
+  // 복사본(plain)을 먼저 떠 두고, 원본에 점무늬 셰이더를 붙입니다.
+  private sharedMaterial(slotKey: string, create: () => SlotMaterial) {
+    const ring = this.group !== 'scene'
+    const key = `${ring ? 'ring' : 'scene'}|${slotKey.slice(slotKey.indexOf('|') + 1)}`
+    let shared = this.sharedMaterials.get(key)
+    if (!shared) {
+      const material = create()
+      shared = { material }
+      if (ring) {
+        shared.plain = material.clone()
+        this.patchFade(material)
+      }
+      this.sharedMaterials.set(key, shared)
+    }
+    return shared
   }
 
   private currentParent(): THREE.Object3D {
@@ -181,8 +257,44 @@ export class StreetSceneLayer implements CustomLayerInterface {
   // 그림자 지도(4096px)를 매 프레임 다시 계산하면 프레임이 크게 떨어지므로, 움직이는 동안에는 숨기는 건물의
   // 그림자를 잠시 끄고 시작과 끝에 한 번씩만 계산합니다.
   private setRingShadows(cast: boolean) {
-    for (const mesh of this.ringShadowCasters) mesh.castShadow = cast
+    // 반투명 상태에서는 애니메이션이 끝나도 그림자를 다시 켜지 않습니다.
+    for (const mesh of this.ringShadowCasters) mesh.castShadow = cast && this.buildingOpacity >= 1
     this.shadowsBaked = false
+  }
+
+  // 공방을 뺀 건물을 반투명하게 하거나 되돌립니다. 길이 비쳐 보이도록 깊이 기록을 끄고 섞어 그립니다.
+  setBuildingOpacity(opacity: number) {
+    if (this.buildingOpacity === opacity) return
+    this.buildingOpacity = opacity
+    for (const ring of this.buildingRings) ring.traverse((object) => {
+      if (object instanceof THREE.Mesh) this.applyBuildingOpacity(object)
+    })
+    // 반투명할 때는 건물 그림자가 길을 어둡게 가리지 않도록 그림자도 끕니다.
+    this.setRingShadows(opacity >= 1)
+    // 모두 반투명일 때는 건물별 점무늬를 풀고, 되돌리면 다시 길을 가리는 건물을 고릅니다.
+    this.scheduleOcclusion()
+    this.map?.triggerRepaint()
+  }
+
+  private applyBuildingOpacity(mesh: THREE.Mesh) {
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const material of materials as THREE.Material[]) {
+      // 처음 값을 기억해 두었다가 불투명으로 돌아갈 때 되돌립니다(유리·간판처럼 원래 투명한 재질 포함).
+      const base = (material.userData.base ??= { opacity: material.opacity, transparent: material.transparent, depthWrite: material.depthWrite, side: material.side })
+      const seeThrough = this.buildingOpacity < 1
+      const transparent = seeThrough || base.transparent
+      if (material.transparent !== transparent) material.needsUpdate = true
+      material.transparent = transparent
+      material.opacity = base.opacity * this.buildingOpacity
+      material.depthWrite = seeThrough ? false : base.depthWrite
+      // 벽 안쪽 면까지 겹쳐 칠해지면 탁하게 어두워지므로, 반투명할 때는 바깥 면만 그립니다(원래 투명한 간판 등은 그대로).
+      const side = seeThrough && !base.transparent ? THREE.FrontSide : base.side
+      if (material.side !== side) { material.side = side; material.needsUpdate = true }
+    }
+    // 섞어 그릴 때는 재질별 순서 대신 멀리 있는 것부터 그리도록(three.js 기본 정렬) 순서를 비웁니다.
+    mesh.userData.baseOrder ??= mesh.renderOrder
+    const wasTransparent = materials.some((material) => (material as THREE.Material).userData.base.transparent)
+    mesh.renderOrder = this.buildingOpacity < 1 && !wasTransparent ? 0 : mesh.userData.baseOrder
   }
 
   // 공방을 뺀 건물을 숨기거나 다시 보입니다. 숨길 때는 땅으로 꺼지고, 보일 때는 땅에서 솟아오릅니다.
@@ -221,13 +333,130 @@ export class StreetSceneLayer implements CustomLayerInterface {
     if (!finish) return this.addGeometry(color, geometry)
     const plain = geometry.index ? geometry.toNonIndexed() : geometry
     if (plain !== geometry) geometry.dispose()
+    this.tagBuilding(plain)
     this.finishedMaterial(color, finish).geometries.push(plain)
   }
 
   private addGeometry(color: number, geometry: THREE.BufferGeometry, glass = false, surface?: ConceptSurface) {
     const plain = geometry.index ? geometry.toNonIndexed() : geometry
     if (plain !== geometry) geometry.dispose()
-    this.material(color, glass, surface).geometries.push(plain)
+    this.tagBuilding(plain)
+    // 꼭짓점 색은 0~255 정수로 담아 메모리를 줄입니다(선형 색 공간 값).
+    const linear = new THREE.Color(color)
+    const count = plain.getAttribute('position').count
+    const colors = new Uint8Array(count * 3)
+    const rgb = [Math.round(linear.r * 255), Math.round(linear.g * 255), Math.round(linear.b * 255)]
+    for (let index = 0; index < count; index++) colors.set(rgb, index * 3)
+    plain.setAttribute('color', new THREE.BufferAttribute(colors, 3, true))
+    this.material(glass, surface).geometries.push(plain)
+  }
+
+  // 지금 만드는 건물의 번호를 도형의 모든 꼭짓점에 붙입니다(고리 묶음의 건물만). 첫 도형에서 번호를 받습니다.
+  private tagBuilding(geometry: THREE.BufferGeometry) {
+    if (this.group === 'scene') return
+    if (this.currentBuilding < 0 && this.buildingContext && this.occluders.length < FADE_TEXTURE_SIZE * FADE_TEXTURE_SIZE) {
+      this.currentBuilding = this.occluders.push(this.buildingContext) - 1
+    }
+    const index = Math.max(0, this.currentBuilding)
+    geometry.setAttribute('buildingIndex', new THREE.Float32BufferAttribute(new Float32Array(geometry.getAttribute('position').count).fill(index), 1))
+  }
+
+  // 길을 가리는 건물은 4×4 베이어 점무늬로 픽셀을 걸러 비치게 합니다. 섞어 그리지 않아 겹친 건물끼리
+  // 그리는 순서가 꼬이지 않고, 지도 캔버스의 알파를 건드리지 않아 바탕이 하얗게 비치지도 않습니다.
+  private patchFade(material: THREE.Material) {
+    const size = `${FADE_TEXTURE_SIZE}.0`
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.buildingFade = this.fadeUniform
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float buildingIndex;\nvarying float vBuildingIndex;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBuildingIndex = buildingIndex;')
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform sampler2D buildingFade;\nvarying float vBuildingIndex;')
+        .replace('void main() {', [
+          'void main() {',
+          '  float fadeIndex = floor(vBuildingIndex + 0.5);',
+          `  float fade = texture2D(buildingFade, vec2((mod(fadeIndex, ${size}) + 0.5) / ${size}, (floor(fadeIndex / ${size}) + 0.5) / ${size})).r;`,
+          '  if (fade < 0.999) {',
+          '    ivec2 cell = ivec2(mod(gl_FragCoord.xy, 4.0));',
+          '    int bayer[16] = int[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);',
+          '    if ((float(bayer[cell.y * 4 + cell.x]) + 0.5) / 16.0 > fade) discard;',
+          '  }',
+        ].join('\n'))
+    }
+    material.customProgramCacheKey = () => 'building-fade'
+  }
+
+  // 간판·사진 외관처럼 따로 만드는 메시도 같은 건물과 함께 비치게 합니다.
+  private fadeWithBuilding(mesh: THREE.Mesh) {
+    if (this.group === 'scene') return
+    this.tagBuilding(mesh.geometry)
+    this.patchFade(mesh.material as THREE.Material)
+  }
+
+  // 카메라가 멈추면 길을 가리는 건물을 다시 고릅니다.
+  private readonly scheduleOcclusion = () => {
+    if (this.occlusionTimer) clearTimeout(this.occlusionTimer)
+    this.occlusionTimer = setTimeout(() => this.updateOcclusion(), 120)
+  }
+
+  private updateOcclusion() {
+    this.occlusionTimer = null
+    const map = this.map
+    if (!map) return
+    // 모두 반투명하게 했거나 자동 반투명을 끈 경우에는 건물별로 고르지 않습니다.
+    let next = new Set<number>()
+    if (this.autoSeeThrough && this.buildingOpacity >= 1) {
+      this.roadIndex ??= new RoadIndex(buildRoadRuns(getStreetSceneBounds()).roadRuns)
+      // 화면 긴 변만큼의 땅(지도 중심 기준 반경)에 있는 건물만 봅니다. 기울이면 위쪽이 더 멀리 보이므로 넉넉히 잡습니다.
+      const center = map.getCenter()
+      const metersPerPixel = 40075016.686 * Math.cos(center.lat * Math.PI / 180) / (512 * 2 ** map.getZoom())
+      const canvas = map.getCanvas()
+      const [x, z] = streetMeters([center.lng, center.lat])
+      const radius = Math.max(canvas.clientWidth, canvas.clientHeight) * metersPerPixel * (1 + map.getPitch() / 60)
+      next = findRoadOccluders(this.occluders, this.roadIndex, map.getBearing(), map.getPitch(), { x, z, radius })
+    }
+    const changed = next.size !== this.occluding.size || [...next].some((index) => !this.occluding.has(index))
+    if (!changed) return
+    this.occluding = next
+    const fade = Math.round(STREET_FADE_OPACITY * 255)
+    for (let index = 0; index < this.occluders.length; index++) this.fadeData[index * 4] = next.has(index) ? fade : 255
+    this.fadeTexture.needsUpdate = true
+    for (const split of this.fadeSplits) this.partition(split)
+    map.triggerRepaint()
+  }
+
+  // 비치는 건물이 바뀐 메시만 인덱스를 다시 채웁니다: 앞쪽은 비치지 않는 건물, 뒤쪽은 비치는 건물.
+  private partition(split: FadeSplit, force = false) {
+    const { runs, state } = split
+    let changed = force
+    for (let run = 0; run < state.length; run++) {
+      const fading = this.occluding.has(runs[run * 3]) ? 1 : 0
+      if (state[run] !== fading) { state[run] = fading; changed = true }
+    }
+    if (!changed) return
+    const array = split.index.array as Uint32Array
+    let cursor = 0
+    let plainCount = 0
+    for (const wanted of [0, 1]) {
+      if (wanted === 1) plainCount = cursor
+      for (let run = 0; run < state.length; run++) {
+        if (state[run] !== wanted) continue
+        const start = runs[run * 3 + 1], end = start + runs[run * 3 + 2]
+        for (let vertex = start; vertex < end; vertex++) array[cursor++] = vertex
+      }
+    }
+    split.plain.geometry.setDrawRange(0, plainCount)
+    split.fade.geometry.setDrawRange(plainCount, cursor - plainCount)
+    // 그릴 것이 없는 쪽은 숨겨 빈 그리기 호출(재질·상태 전환)을 아낍니다.
+    split.plain.visible = plainCount > 0
+    split.fade.visible = cursor > plainCount
+    split.index.needsUpdate = true
+  }
+
+  // 켜져 있으면 지금 카메라에서 길을 가리는 거리 건물만 반투명하게 그립니다.
+  setAutoSeeThrough(enabled: boolean) {
+    this.autoSeeThrough = enabled
+    this.scheduleOcclusion()
   }
 
   private box(color: number, width: number, height: number, depth: number, x: number, y: number, z: number, rotation = 0, glass = false, surface?: ConceptSurface) {
@@ -238,9 +467,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
     geometry.scale(width, height, depth)
     // Keep brick courses at a physical scale rather than stretching one
     // texture over every facade, regardless of the building's dimensions.
-    if (surface === 'lane-brick' || surface === 'workshop-brick' || surface === 'wood') {
+    if (surface === 'lane-brick' || surface === 'workshop-brick' || surface === 'wood' || surface === 'district-facade') {
       const [tileWidth, tileHeight] = surface === 'lane-brick' ? [2.4, 1.2]
-        : surface === 'wood' ? [1.2, 1.2] : [1.44, 1.44]
+        : surface === 'wood' ? [1.2, 1.2] : surface === 'district-facade' ? [DISTRICT_BAY_WIDTH, DISTRICT_FLOOR_HEIGHT] : [1.44, 1.44]
       const uv = geometry.getAttribute('uv'), normal = geometry.getAttribute('normal')
       for (let i = 0; i < uv.count; i++) {
         const side = Math.abs(normal.getX(i)) > 0.5
@@ -287,12 +516,52 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
   }
 
-  private quad(color: number, corners: [number, number, number][], surface?: ConceptSurface) {
+  // 바깥 면만 그리므로 면 방향을 맞춥니다: 눕거나 기운 면(지붕·바닥)은 위를, 선 면(창·박공 끝)은 지금 만드는
+  // 건물의 바깥을 향하게 합니다. 아래에서 올려다볼 수 있는 면(차양)은 doubleSided로 양면을 그립니다.
+  private quad(color: number, corners: [number, number, number][], surface?: ConceptSurface, doubleSided = false) {
     const [a, b, c, d] = corners
+    const ab = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2])
+    const normal = ab.cross(new THREE.Vector3(c[0] - a[0], c[1] - a[1], c[2] - a[2]))
+    let flip = false
+    if (Math.abs(normal.y) > 0.3 * normal.length()) flip = normal.y < 0
+    else if (this.buildingContext) {
+      const [cx, cz] = outlineCenter(this.buildingContext.outline)
+      const mx = (a[0] + b[0] + c[0] + d[0]) / 4, mz = (a[2] + b[2] + c[2] + d[2]) / 4
+      flip = normal.x * (mx - cx) + normal.z * (mz - cz) < 0
+    }
     const geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...b, ...c, ...a, ...c, ...d], 3))
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], 2))
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(flip
+      ? [...a, ...c, ...b, ...a, ...d, ...c] : [...a, ...b, ...c, ...a, ...c, ...d], 3))
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(flip
+      ? [0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1] : [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], 2))
     geometry.computeVertexNormals()
+    const previous = this.doubleSided
+    this.doubleSided ||= doubleSided
+    this.addGeometry(color, geometry, false, surface)
+    this.doubleSided = previous
+  }
+
+  // 벽 한 변을 바깥쪽으로 향한 얇은 면 하나(삼각형 2개)로 그립니다. 두께 있는 상자(삼각형 10개)와 달리
+  // 안쪽·위·옆면이 없어 먼 동네처럼 벽 두께가 보이지 않는 곳에 씁니다. 질감 UV는 box()와 같은 실제 축척입니다.
+  private wallFace(color: number, [ax, az]: [number, number], [bx, bz]: [number, number], nx: number, nz: number,
+    offset: number, bottom: number, top: number, surface?: ConceptSurface) {
+    const length = Math.hypot(bx - ax, bz - az)
+    if (length <= 0 || top <= bottom) return
+    const [tileWidth, tileHeight] = surface === 'lane-brick' ? [2.4, 1.2] : surface === 'wood' ? [1.2, 1.2]
+      : surface === 'district-facade' ? [DISTRICT_BAY_WIDTH, DISTRICT_FLOOR_HEIGHT] : [0, 0]
+    const u = tileWidth ? length / tileWidth : 1
+    const [v0, v1] = tileHeight ? [bottom / tileHeight, top / tileHeight] : [0, 1]
+    const ox = nx * offset, oz = nz * offset
+    // 바깥(n) 쪽에서 볼 때 반시계 방향이 되도록 a→b가 n의 오른쪽으로 가게 맞춥니다.
+    const flip = (bx - ax) * nz - (bz - az) * nx < 0
+    const [p, q] = flip ? [[bx, bz], [ax, az]] : [[ax, az], [bx, bz]]
+    const [u0, u1] = flip ? [u, 0] : [0, u]
+    const geometry = new THREE.BufferGeometry()
+    const a = [p[0] + ox, bottom, p[1] + oz], b = [q[0] + ox, bottom, q[1] + oz]
+    const c = [q[0] + ox, top, q[1] + oz], d = [p[0] + ox, top, p[1] + oz]
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...b, ...c, ...a, ...c, ...d], 3))
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute([u0, v0, u1, v0, u1, v1, u0, v0, u1, v1, u0, v1], 2))
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(Array(6).fill([nx, 0, nz]).flat(), 3))
     this.addGeometry(color, geometry, false, surface)
   }
 
@@ -301,7 +570,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const end = new THREE.Vector3(...to)
     const vector = end.clone().sub(start)
     if (vector.length() < 0.04) return
-    const geometry = new THREE.BoxGeometry(thickness, vector.length(), thickness)
+    const geometry = UNIT_BEAM.clone()
+    geometry.scale(thickness, vector.length(), thickness)
     geometry.applyMatrix4(new THREE.Matrix4().compose(
       start.add(end).multiplyScalar(0.5),
       new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), vector.normalize()),
@@ -352,7 +622,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.box(0xd9ded7, 1.34, 0.1, 0.48, x + nx * 0.26, 0.11, z + nz * 0.26, rotation)
   }
 
-  private detailedRoof(color: number, wallColor: number, outline: [number, number][], height: number, id: number, roofStyle: 'flat' | 'gable', shallowSheetRoof = false, restrainedRoof = false, flatSurface?: ConceptSurface, observedPitch = false) {
+  private detailedRoof(color: number, wallColor: number, outline: [number, number][], height: number, id: number, roofStyle: 'flat' | 'gable', shallowSheetRoof = false, restrainedRoof = false, flatSurface?: ConceptSurface, observedPitch = false, rimBeams = true) {
     let longest = { length: 0, unit: [1, 0] as [number, number] }
     for (let index = 0; index < outline.length; index++) {
       const a = outline[index]
@@ -381,9 +651,10 @@ export class StreetSceneLayer implements CustomLayerInterface {
         const [ax, az] = outline[index]
         const [bx, bz] = outline[(index + 1) % outline.length]
         const edgeLength = Math.hypot(bx - ax, bz - az)
-        if (edgeLength < 0.3) continue
+        if (edgeLength < 0.3 || !rimBeams) continue
         this.beam(0xe6e2d9, [ax, height + 0.14, az], [bx, height + 0.14, bz], 0.18)
-        this.beam(0x73817e, [ax, height + 0.22, az], [bx, height + 0.22, bz], 0.035)
+        // 난간 위 가는 선은 가까운 건물에만 둡니다(먼 동네는 지도 축척에서 보이지 않음).
+        if (!restrainedRoof) this.beam(0x73817e, [ax, height + 0.22, az], [bx, height + 0.22, bz], 0.035)
         if (!restrainedRoof && area > 42 && id % 6 === 1 && edgeLength > 2.5) {
           this.beam(0x6f7e7d, [ax, height + 0.9, az], [bx, height + 0.9, bz], 0.055)
           for (let distance = 0; distance < edgeLength; distance += 1.45) {
@@ -430,7 +701,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
         point(minU - 0.15, midV, height + rise),
       ], 'roof-sheet')
       this.beam(trim, point(minU - 0.16, edgeV, height + 0.025), point(maxU + 0.16, edgeV, height + 0.025), 0.055)
-      for (let along = minU + 0.4; along < maxU; along += 0.6) {
+      // 골강판 골은 roof-sheet 텍스처에도 그려져 있으므로, 입체 골(0.6m마다)은 가까운 건물에만 붙입니다.
+      if (!restrainedRoof) for (let along = minU + 0.4; along < maxU; along += 0.6) {
         this.beam(trim, point(along, edgeV, height + 0.04), point(along, midV, height + rise + 0.04), 0.025)
       }
     }
@@ -450,7 +722,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   private tree(x: number, z: number, height: number, blossoms: boolean) {
-    const trunk = new THREE.CylinderGeometry(0.105, 0.17, height * 0.58, 8)
+    const trunk = new THREE.CylinderGeometry(0.105, 0.17, height * 0.58, 6, 1, true)
     trunk.translate(x, height * 0.29, z)
     this.addGeometry(0x78664f, trunk)
     for (const [ox, oy, oz, radius, tone] of [
@@ -458,7 +730,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
       [0.2, 0.69, -0.12, 0.22, 2], [0.04, 0.57, 0.21, 0.17, 1],
       [-0.1, 0.95, -0.06, 0.18, 2],
     ] as const) {
-      const foliage = new THREE.IcosahedronGeometry(height * radius, 2)
+      // 지도 축척에서는 세분 1단계(80면)로도 둥글게 보입니다(2단계는 320면).
+      const foliage = new THREE.IcosahedronGeometry(height * radius, 1)
       foliage.translate(x + ox * height, height * oy, z + oz * height)
       this.addGeometry(blossoms ? [0xe4bec4, 0xd6a6b2, 0xefd0ce][tone] : [0x658761, 0x75996e, 0x8cab77][tone], foliage)
     }
@@ -580,10 +853,15 @@ export class StreetSceneLayer implements CustomLayerInterface {
         const mx = (ax + bx) / 2
         const mz = (az + bz) / 2
         const distance = Math.hypot(mx - centerX, mz - centerZ) || 1
-        this.box(0xffffff, length + 0.4, 0.018, 0.68,
-          mx + (mx - centerX) / distance * 0.38, 0.014,
-          mz + (mz - centerZ) / distance * 0.38,
-          -Math.atan2(dz, dx), false, 'ground-stone')
+        // 바닥 띠는 윗면만 보이므로 상자 대신 납작한 면 하나(삼각형 2개)로 깝니다.
+        const ox = (mx - centerX) / distance * 0.38, oz = (mz - centerZ) / distance * 0.38
+        const ux = dx / length * (length + 0.4) / 2, uz = dz / length * (length + 0.4) / 2
+        const wx = -dz / length * 0.34, wz = dx / length * 0.34
+        const cxApron = mx + ox, czApron = mz + oz
+        this.quad(0xffffff, [
+          [cxApron - ux - wx, 0.023, czApron - uz - wz], [cxApron + ux - wx, 0.023, czApron + uz - wz],
+          [cxApron + ux + wx, 0.023, czApron + uz + wz], [cxApron - ux + wx, 0.023, czApron - uz + wz],
+        ], 'ground-stone')
       }
     }
 
@@ -612,24 +890,12 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const geometry = new THREE.PlaneGeometry(width, 0.44)
     geometry.rotateY(facingRotation(rotation, nx, nz))
     geometry.translate(x + nx * 0.04, y, z + nz * 0.04)
-    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false }))
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false, forceSinglePass: true }))
+    this.fadeWithBuilding(mesh)
     mesh.frustumCulled = false
     mesh.renderOrder = 4
     this.signMeshes.push(mesh)
     this.signTextures.push(texture)
-    this.currentParent().add(mesh)
-  }
-
-  private imageFacade(kind: FacadeKind, x: number, z: number, rotation: number, nx: number, nz: number, width: number, height: number) {
-    const geometry = new THREE.PlaneGeometry(width, height)
-    geometry.rotateY(facingRotation(rotation, nx, nz))
-    geometry.translate(x + nx * 0.19, height / 2, z + nz * 0.19)
-    const material = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, side: THREE.DoubleSide })
-    const mesh = new THREE.Mesh(geometry, material)
-    mesh.visible = false
-    mesh.frustumCulled = false
-    mesh.renderOrder = 3
-    this.facadeMeshes.push({ kind, mesh })
     this.currentParent().add(mesh)
   }
 
@@ -647,13 +913,53 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const geometry = new THREE.PlaneGeometry(1.25, 0.63)
     geometry.rotateY(facingRotation(rotation, nx, nz))
     geometry.translate(x + nx * 0.18, y, z + nz * 0.18)
-    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false }))
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false, forceSinglePass: true }))
+    this.fadeWithBuilding(mesh)
     mesh.renderOrder = 4
     this.signMeshes.push(mesh); this.signTextures.push(texture); this.currentParent().add(mesh)
   }
 
-  // The elevation image already contains window frames and cladding. Only
-  // project elements whose silhouette must change with camera angle.
+  // 사진 시안 건물의 정면을 코드로 그립니다: 1층 가게 통창(분홍 주택은 문과 창)과 위층 창.
+  // 간판·차양처럼 튀어나온 요소는 modelConceptFront가 덧붙입니다.
+  private conceptFrontOpenings(
+    kind: FacadeKind, x: number, z: number, rotation: number,
+    dx: number, dz: number, nx: number, nz: number, length: number, height: number,
+  ) {
+    const at = (along: number, outward: number): [number, number] => [x + dx * along + nx * outward, z + dz * along + nz * outward]
+    if (kind === 'pink') {
+      const [doorX, doorZ] = at(-length * 0.22, 0.13)
+      this.houseDoor(doorX, doorZ, rotation, nx, nz, 0xe9e6dc)
+      const [windowX, windowZ] = at(length * 0.18, 0.13)
+      this.framedWindow(windowX, 1.65, windowZ, rotation, nx, nz, Math.min(1.5, length * 0.3), 1.2, true)
+    } else {
+      // 가게 통창: 어두운 틀 안에 유리 세 칸
+      const width = length * (kind === 'fofos' ? 0.7 : 0.82)
+      const frame = kind === 'fofos' ? 0x4b3a2c : kind === 'mart' ? 0x2f3b3f : 0x3a3f40
+      const [frameX, frameZ] = at(0, 0.13)
+      this.box(frame, width + 0.2, 2.45, 0.08, frameX, 1.3, frameZ, rotation)
+      const panes = 3
+      for (let pane = 0; pane < panes; pane++) {
+        const offset = (pane - (panes - 1) / 2) * (width / panes)
+        const [paneX, paneZ] = at(offset, 0.18)
+        this.box(0x8fb0b5, width / panes - 0.12, 2.2, 0.03, paneX, 1.25, paneZ, rotation, true)
+      }
+    }
+    const stories = kind === 'mart' || kind === 'soup' || kind === 'chinese' ? 2 : 1
+    for (let story = 0; story < stories; story++) {
+      const y = 4.38 + story * 2.72
+      if (y + 0.7 >= height) continue
+      const count = kind === 'chinese' ? 3 : 2
+      const spacing = Math.min(kind === 'mart' ? 3.1 : 2.35, length / count)
+      const width = Math.min(kind === 'mart' ? 2.6 : 1.65, spacing - 0.4)
+      if (width <= 0.5) continue
+      for (let pane = 0; pane < count; pane++) {
+        const [wx, wz] = at((pane - (count - 1) / 2) * spacing, 0.25)
+        this.framedWindow(wx, y, wz, rotation, nx, nz, width, kind === 'mart' ? 1.24 : 1.18,
+          kind === 'soup' || kind === 'chinese' || kind === 'pink')
+      }
+    }
+  }
+
   private modelConceptFront(
     kind: FacadeKind, x: number, z: number, rotation: number,
     dx: number, dz: number, nx: number, nz: number, length: number,
@@ -827,7 +1133,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
       }
 
       if (isFront) {
-        this.imageFacade(kind, x, z, rotation, nx, nz, length, height)
+        this.conceptFrontOpenings(kind, x, z, rotation, dx, dz, nx, nz, length, height)
         this.modelConceptFront(kind, x, z, rotation, dx, dz, nx, nz, length)
         if (kind !== 'pink' && kind !== 'fofos') {
           const signs = {
@@ -1046,7 +1352,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
             for (let step = 0; step < 10; step++) {
               const a = step / 10 * Math.PI / 2, b = (step + 1) / 10 * Math.PI / 2
               this.quad(observed.awning, [point(-awningWidth / 2, a), point(awningWidth / 2, a),
-                point(awningWidth / 2, b), point(-awningWidth / 2, b)])
+                point(awningWidth / 2, b), point(-awningWidth / 2, b)], undefined, true)
               for (const along of [-awningWidth / 2, 0, awningWidth / 2])
                 this.beam(0xe6eee7, point(along, a), point(along, b), 0.04)
             }
@@ -1143,8 +1449,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
       ? 'context-stone' : area >= 48 && building.roofStyle === 'flat' ? 'context-tile' : 'context-stucco'
     // Roof silhouette matters across the widened scene: the aerial reference
     // contains many long blue metal roofs among flat concrete terraces.
-    const metalRoof = building.roofEvidence?.confidence !== 'low'
-      && ['blue', 'teal', 'green'].includes(building.roofEvidence?.kind ?? '')
+    const metalRoof = building.roofFinish === 'sheet'
     this.detailedRoof(building.roofColor, building.wallColor, outline, height,
       building.id, building.roofStyle, building.roofStyle === 'gable', true,
       metalRoof ? 'roof-sheet' : 'roof-grain')
@@ -1268,8 +1573,10 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const h = building.heightMeters
     const [cx, cz] = outlineCenter(outline)
     const shared = new Set(building.sharedEdges)
+    // 먼 동네는 휴대폰에서 삼각형 수가 프레임을 가장 많이 잡아먹으므로, 벽·띠를 바깥 면 하나씩으로 줄이고
+    // 지붕 테두리 막대도 뺍니다(변 하나에 삼각형 약 42개 → 6개).
     this.detailedRoof(building.roofColor, building.wallColor, outline, h, building.id,
-      building.roofStyle, true, true, 'roof-grain')
+      building.roofStyle, true, true, 'roof-grain', false, false)
     const window = (x: number, y: number, z: number, ux: number, uz: number, nx: number, nz: number, width: number) => {
       const half = width / 2
       this.quad(0xffffff, [
@@ -1278,7 +1585,6 @@ export class StreetSceneLayer implements CustomLayerInterface {
         [x + ux * half + nx * 0.12, y + 0.65, z + uz * half + nz * 0.12],
         [x - ux * half + nx * 0.12, y + 0.65, z - uz * half + nz * 0.12],
       ], 'district-window')
-      this.box(0xe8e7df, width + 0.16, 0.1, 0.23, x + nx * 0.16, y - 0.74, z + nz * 0.16, -Math.atan2(uz, ux))
     }
     for (let index = 0; index < outline.length; index++) {
       const [ax, az] = outline[index], [bx, bz] = outline[(index + 1) % outline.length]
@@ -1288,16 +1594,22 @@ export class StreetSceneLayer implements CustomLayerInterface {
       const x = (ax + bx) / 2, z = (az + bz) / 2
       const outward = (-uz) * (x - cx) + ux * (z - cz) >= 0 ? 1 : -1
       const nx = -uz * outward, nz = ux * outward
-      const rotation = -Math.atan2(uz, ux)
+      const plain = !building.inferred?.surface || building.inferred.surface === 'plaster'
       const wallSurface: ConceptSurface = building.inferred?.surface === 'brick' ? 'lane-brick'
         : building.inferred?.surface === 'wood' ? 'wood'
-          : building.inferred?.surface === 'panel' ? 'context-tile' : 'context-stucco'
-      this.box(building.wallColor, length, h, 0.15, x, h / 2, z, rotation, false, wallSurface)
-      if (shared.has(index)) continue
-      this.box(0xe8e6dd, length, 0.37, 0.22, x, h + 0.22, z, rotation)
-      this.box(0xb6bfba, length, 0.36, 0.19, x, 0.2, z, rotation, false, 'context-stone')
-      for (let band = 2.9; band < h - 0.5; band += 2.65)
-        this.box(0xe8e6dd, length, 0.08, 0.22, x, band, z, rotation)
+          : building.inferred?.surface === 'panel' ? 'context-tile'
+            // 먼 동네의 미장 벽은 창문·층 띠를 그린 텍스처 한 장으로 그려 도형 수를 크게 줄입니다.
+            : shared.has(index) ? 'context-stucco' : 'district-facade'
+      const a = outline[index], b = outline[(index + 1) % outline.length]
+      if (shared.has(index)) {
+        this.wallFace(building.wallColor, a, b, nx, nz, 0.075, 0, h, wallSurface)
+        continue
+      }
+      this.wallFace(0xb6bfba, a, b, nx, nz, 0.095, 0, 0.38, 'context-stone')
+      this.wallFace(building.wallColor, a, b, nx, nz, 0.075, 0.38, h, wallSurface)
+      this.wallFace(0xe8e6dd, a, b, nx, nz, 0.11, h - 0.02, h + 0.405)
+      if (plain) continue
+      // 벽돌·목재·패널 벽은 재질 텍스처 위에 창만 얇은 면으로 붙입니다(창턱·층 띠는 생략).
       const count = Math.min(7, Math.floor(length / 2.5))
       for (let row = 1.65; row + 0.8 < h; row += 2.65) for (let col = 0; col < count; col++) {
         const along = (col - (count - 1) / 2) * Math.min(3.1, length / (count + 0.3))
@@ -1314,15 +1626,21 @@ export class StreetSceneLayer implements CustomLayerInterface {
     for (const building of buildings) {
       const outline = building.outline.map(streetMeters)
       this.group = building.id === ARTIST_WORKSHOP_FOOTPRINT_ID ? 'scene' : this.ringOf(outline)
+      this.buildingContext = { outline, height: building.heightMeters }
+      this.currentBuilding = -1
       if (building.concept) {
+        this.doubleSided = true
         this.buildConceptBuilding(building, outline)
+        this.doubleSided = false
         continue
       }
       if (building.id === ARTIST_WORKSHOP_FOOTPRINT_ID) {
+        this.doubleSided = true
         buildArtistWorkshopModel({
           box: this.box.bind(this), beam: this.beam.bind(this), roof: this.roof.bind(this),
           geometry: this.addFinishedGeometry.bind(this),
         }, outline)
+        this.doubleSided = false
         continue
       }
       if (building.observed || building.roadview || (building.inferred && building.detail === 'featured')) {
@@ -1495,6 +1813,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
 
     this.group = 'scene'
+    this.buildingContext = null
     // The filmed road is part of the same union as all other carriageways.
     // Only its pavement edges are drawn separately, outside intersections.
     const points = PHOTOGRAPHED_STREET.map(streetMeters)
@@ -1539,24 +1858,86 @@ export class StreetSceneLayer implements CustomLayerInterface {
       if (slot.geometries.length === 0) continue
       const merged = mergeGeometries(slot.geometries)
       if (!merged) continue
-      const mesh = new THREE.Mesh(merged, slot.material)
-      mesh.frustumCulled = false
-      mesh.castShadow = !slot.ground
-      mesh.receiveShadow = !slot.material.transparent
-      // 비치는 유리·바닥 띠는 불투명한 장면을 다 그린 뒤에 그립니다.
-      if (slot.material.transparent) mesh.renderOrder = 6
-      this.meshes.push(mesh)
-      slot.parent.add(mesh)
       const ring = this.buildingRings.indexOf(slot.parent as THREE.Group)
       if (ring >= 0) {
         // 꺼지는 애니메이션에서 내릴 깊이(고리에서 가장 높은 지점 + 1m)를 미리 재 둡니다.
         merged.computeBoundingBox()
         this.ringDepth[ring] = Math.max(this.ringDepth[ring], (merged.boundingBox?.max.y ?? 0) + 1)
-        if (mesh.castShadow) this.ringShadowCasters.push(mesh)
+      }
+      if (slot.plain) {
+        // 같은 꼭짓점을 두 메시가 나눠 그립니다(비치지 않는 건물 / 비치는 건물).
+        const index = new THREE.BufferAttribute(new Uint32Array(merged.getAttribute('position').count), 1)
+        const fadeGeometry = new THREE.BufferGeometry()
+        for (const [name, attribute] of Object.entries(merged.attributes)) fadeGeometry.setAttribute(name, attribute)
+        merged.setIndex(index)
+        fadeGeometry.setIndex(index)
+        const runs = buildingRuns(merged.getAttribute('buildingIndex'))
+        const split: FadeSplit = {
+          runs, index, state: new Uint8Array(runs.length / 3),
+          plain: this.addSlotMesh(merged, slot.plain, slot, ring),
+          fade: this.addSlotMesh(fadeGeometry, slot.material, slot, ring),
+        }
+        this.partition(split, true)
+        this.fadeSplits.push(split)
+        slot.flushed.push({ geometry: merged, meshes: [split.plain, split.fade], split })
+      } else {
+        slot.flushed.push({ geometry: merged, meshes: [this.addSlotMesh(merged, slot.material, slot, ring)] })
       }
       slot.geometries.forEach((geometry) => geometry.dispose())
       slot.geometries = []
     }
+  }
+
+  // 나눠 만들면서 생긴 같은 재질의 메시 여러 개를 하나로 합칩니다. 메시마다 그리기 호출과 재질 전환이 따로 들어
+  // 휴대폰에서는 CPU 시간이 프레임을 가장 많이 잡아먹습니다. 화면이 멈추지 않게 재질 하나씩 나눠 합칩니다.
+  private consolidateSlots() {
+    const pending = [...this.slots.values()].filter((slot) => slot.flushed.length > 1)
+    const step = () => {
+      const slot = pending.shift()
+      if (!slot || !this.map) return
+      const old = slot.flushed
+      slot.flushed = []
+      for (const { geometry, meshes, split } of old) {
+        // 인덱스 없이 꼭짓점 속성만 다시 합칩니다(나눠 그리기 인덱스는 합친 뒤 새로 만듭니다).
+        const source = new THREE.BufferGeometry()
+        for (const [name, attribute] of Object.entries(geometry.attributes)) source.setAttribute(name, attribute)
+        slot.geometries.push(source)
+        for (const mesh of meshes) {
+          mesh.removeFromParent()
+          this.meshes.splice(this.meshes.indexOf(mesh), 1)
+          const caster = this.ringShadowCasters.indexOf(mesh)
+          if (caster >= 0) this.ringShadowCasters.splice(caster, 1)
+        }
+        if (split) this.fadeSplits.splice(this.fadeSplits.indexOf(split), 1)
+      }
+      this.flushSlots()
+      for (const { meshes } of old) for (const mesh of meshes) mesh.geometry.dispose()
+      this.shadowsBaked = false
+      this.map.triggerRepaint()
+      if (pending.length) setTimeout(step, 0)
+    }
+    setTimeout(step, 0)
+  }
+
+  private addSlotMesh(geometry: THREE.BufferGeometry, material: SlotMaterial, slot: MaterialSlot, ring: number) {
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.frustumCulled = false
+    mesh.castShadow = !slot.ground
+    mesh.receiveShadow = !material.transparent
+    // 비치는 유리·바닥 띠는 불투명한 장면을 다 그린 뒤에 그립니다. 불투명한 메시는 같은 재질끼리 이어 그리도록
+    // 재질별 순서(0~1 사이, 사진 외관·간판(3~4)보다 먼저)를 줍니다. 같은 재질 안에서는 가까운 것부터 그립니다.
+    if (material.transparent) mesh.renderOrder = 6
+    else {
+      if (!this.materialOrder.has(material)) this.materialOrder.set(material, (this.materialOrder.size + 1) / 1000)
+      mesh.renderOrder = this.materialOrder.get(material)!
+    }
+    this.meshes.push(mesh)
+    slot.parent.add(mesh)
+    if (ring >= 0) {
+      if (mesh.castShadow) this.ringShadowCasters.push(mesh)
+      if (this.buildingOpacity < 1) this.applyBuildingOpacity(mesh)
+    }
+    return mesh
   }
 
   // 먼 동네 건물을 한 번에 약 12ms씩 나눠 만들어 화면이 멈추지 않게 합니다. 300동마다 메시로 합쳐 보여 주고,
@@ -1570,6 +1951,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
       while (this.pendingDistrict.length && performance.now() < deadline) {
         const next = this.pendingDistrict.shift()!
         this.group = this.ringOf(next.outline)
+        this.buildingContext = { outline: next.outline, height: next.building.heightMeters }
+        this.currentBuilding = -1
         this.buildDistrictBuilding(next.building, next.outline)
         sinceFlush++
       }
@@ -1577,8 +1960,14 @@ export class StreetSceneLayer implements CustomLayerInterface {
       if (sinceFlush >= 300 || !this.pendingDistrict.length) {
         // 새 메시는 이미 고리 묶음 안에 들어가므로, 숨긴 상태면 함께 숨겨진 채로 붙습니다.
         this.flushSlots()
+        // 새로 붙은 먼 동네 건물도 길을 가리는지 다시 봅니다.
+        this.scheduleOcclusion()
         sinceFlush = 0
-        this.shadowsBaked = false
+        // 그림자 지도는 전체 장면을 한 번 더 그려야 해서 무겁습니다. 먼 동네를 다 붙인 뒤 한 번만 다시 계산합니다.
+        if (!this.pendingDistrict.length) {
+          this.shadowsBaked = false
+          this.consolidateSlots()
+        }
         this.map.triggerRepaint()
       }
       if (this.pendingDistrict.length) setTimeout(step, 0)
@@ -1592,22 +1981,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
     // 그래픽 연결이 다시 붙어 층을 다시 추가한 경우에도 그림자 지도를 새로 계산합니다.
     this.shadowsBaked = false
     if (this.pendingDistrict.length) this.scheduleDistrictBuild()
+    map.on('moveend', this.scheduleOcclusion)
+    this.scheduleOcclusion()
     this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true })
     // 장면이 움직이지 않으므로 그림자 지도는 첫 프레임에 한 번만 계산합니다.
     configureRenderer(this.renderer)
-    const loader = new THREE.TextureLoader()
-    for (const { kind, mesh } of this.facadeMeshes) {
-      loader.load(FACADE_URLS[kind], (texture) => {
-        if (!this.map) { texture.dispose(); return }
-        texture.colorSpace = THREE.SRGBColorSpace
-        texture.anisotropy = Math.min(this.renderer?.capabilities.getMaxAnisotropy() ?? 1, 8)
-        mesh.material.map = texture
-        mesh.material.needsUpdate = true
-        mesh.visible = true
-        this.facadeTextures.push(texture)
-        map.triggerRepaint()
-      })
-    }
   }
 
   render(_gl: WebGL2RenderingContext, options: { defaultProjectionData: { mainMatrix: ArrayLike<number> } }) {
@@ -1633,6 +2011,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
   onRemove() {
     cancelAnimationFrame(this.riseAnimation)
     this.riseAnimation = 0
+    this.map?.off('moveend', this.scheduleOcclusion)
+    if (this.occlusionTimer) clearTimeout(this.occlusionTimer)
+    this.occlusionTimer = null
     this.meshes.forEach((mesh) => mesh.geometry.dispose())
     if (this.shadowCatcher) {
       this.shadowCatcher.geometry.dispose()
@@ -1640,10 +2021,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
     this.signMeshes.forEach((mesh) => { mesh.geometry.dispose(); (mesh.material as THREE.Material).dispose() })
     this.signTextures.forEach((texture) => texture.dispose())
-    this.facadeMeshes.forEach(({ mesh }) => { mesh.geometry.dispose(); mesh.material.dispose() })
-    this.facadeTextures.forEach((texture) => texture.dispose())
     this.conceptTextures.forEach((texture) => texture.dispose())
-    this.slots.forEach((slot) => slot.material.dispose())
+    this.sharedMaterials.forEach((shared) => { shared.material.dispose(); shared.plain?.dispose() })
+    this.fadeSplits = []
     this.renderer?.dispose()
     this.renderer = null
     this.map = null

@@ -1,0 +1,17 @@
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body { overflow: hidden; }
+
+.gamcheon-map.artist-embed-map { height: 100%; min-height: 0; }
+/* 작가 지도 홈페이지가 목록·상세를 직접 그리므로 지도만 보여 줍니다. */
+.artist-embed-map .gamcheon-map__panel { display: none; }
+
+/* 전체 지도(?mode=full): 패널까지 보여 주고 iframe을 꽉 채웁니다. */
+.gamcheon-map.artist-full-map { height: 100%; min-height: 0; border-radius: 0; }
+

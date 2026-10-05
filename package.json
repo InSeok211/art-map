@@ -20,7 +20,8 @@
     "build": "tsc --noEmit && vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json && node scripts/copy-model-assets.mjs",
     "build:demo": "tsc --noEmit && vite build && node scripts/copy-model-assets.mjs --demo",
     "test": "vitest run",
-    "build:road-ground": "node scripts/build-road-ground.mjs"
+    "build:road-ground": "node scripts/build-road-ground.mjs",
+    "export:site": "node scripts/export-to-site.mjs"
   },
   "dependencies": {
     "maplibre-gl": "^6.11.2",

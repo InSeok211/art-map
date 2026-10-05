@@ -4,7 +4,7 @@ import mapSurfaces from './street-surfaces.json'
 import buildingFootprints from './gamcheon-buildings.json'
 import { PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, roadWidth } from './roadCorridors'
 import { PHOTOGRAPHED_ROAD_POINTS } from './streetRoadGeometry'
-import { ARTIST_WORKSHOP_ANNEX_ID, ARTIST_WORKSHOP_FOOTPRINT_ID, clearOfCarriageways, clearRoadOfKeptBuildings, getPhotographedStreetBuildings, KEEP_MAPPED_OUTLINE, MEETING_CIRCLE_CENTER, MEETING_CIRCLE_RADIUS, nearestStreet, PHOTOGRAPHED_STREET, sharedBuildingEdges, streetMeters } from './streetSceneData'
+import { ARTIST_WORKSHOP_ANNEX_ID, ARTIST_WORKSHOP_FOOTPRINT_ID, clearOfCarriageways, clearRoadOfKeptBuildings, genericRoof, getPhotographedStreetBuildings, KEEP_MAPPED_OUTLINE, MEETING_CIRCLE_CENTER, MEETING_CIRCLE_RADIUS, nearestStreet, PHOTOGRAPHED_STREET, sharedBuildingEdges, streetMeters } from './streetSceneData'
 import { isInsideGamcheonMap } from './gamcheonBoundary'
 
 describe('photographed street scene', () => {
@@ -65,14 +65,14 @@ describe('photographed street scene', () => {
       .toMatchObject({ wallColor: 0xc8a438, roadview: { captured: '2025-11', surface: 'plaster', baseColor: 0x6289a4, stoneBaseHeight: 0.9, balcony: true } })
     expect(buildings.find((building) => building.id === 1468590615))
       .toMatchObject({ wallColor: 0xe1e6d8, roadview: { captured: '2025-11', surface: 'plaster', stoneBaseHeight: 1.15 } })
-    expect(buildings.filter((building) => building.roofEvidence).length).toBeGreaterThan(1300)
-    const aerialPainted = buildings.filter((building) => building.roofEvidence && building.roofEvidence.confidence !== 'low')
-    expect(aerialPainted.length).toBeGreaterThan(1200)
-    expect(new Set(aerialPainted.map((building) => building.roofColor)).size).toBeLessThan(25)
-    expect(buildings.find((building) => building.id === 1468551458)?.roofEvidence)
-      .toMatchObject({ source: 'skyview', kind: 'red', confidence: 'high' })
-    expect(buildings.find((building) => building.id === 1468590619)?.roofEvidence)
-      .toMatchObject({ source: 'skyview', kind: 'green', confidence: 'high' })
+    // 조사하지 않은 지붕은 몇 가지 일반형 색에서 OSM 번호로 고르며, 같은 번호는 늘 같은 색입니다.
+    const generic = buildings.filter((building) => !building.observed && !building.roadview && !building.inferred
+      && !building.concept && building.id !== 1469906540)
+    expect(generic.length).toBeGreaterThan(1300)
+    expect(new Set(generic.map((building) => building.roofColor)).size).toBeLessThan(15)
+    expect(generic.every((building) => building.roofColor === genericRoof(building.id).color)).toBe(true)
+    expect(new Set(generic.map((building) => building.roofFinish))).toEqual(new Set(['sheet', 'concrete']))
+    expect(genericRoof(1468551458)).toEqual(genericRoof(1468551458))
     expect(buildings.every((building) => (building.sharedEdges ?? [])
       .every((edge) => edge >= 0 && edge < building.outline.length))).toBe(true)
     // Street-level evidence is unavailable for the surrounding blocks. Keep

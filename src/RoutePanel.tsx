@@ -13,6 +13,8 @@ interface RoutePanelProps {
   route: Route | null
   error: string
   arrived: boolean
+  following: boolean
+  onFollow: () => void
   onOrigin: (endpoint: RouteEndpoint) => void
   onDestination: (endpoint: RouteEndpoint | null) => void
   onPick: (target: 'origin' | 'destination' | null) => void
@@ -53,8 +55,8 @@ const STEP_ICONS: Record<Route['steps'][number]['action'], string> = {
 }
 
 export function RoutePanel({
-  places, origin, destination, picking, avoidStairs, gps, route, error, arrived,
-  onOrigin, onDestination, onPick, onAvoidStairs, onSwap, onRecenter,
+  places, origin, destination, picking, avoidStairs, gps, route, error, arrived, following,
+  onFollow, onOrigin, onDestination, onPick, onAvoidStairs, onSwap, onRecenter,
 }: RoutePanelProps) {
   const endpointSelect = (target: 'origin' | 'destination') => {
     const endpoint = target === 'origin' ? origin : destination
@@ -79,10 +81,31 @@ export function RoutePanel({
     </select>
   }
 
+  const followBlock = origin.kind === 'gps' && gps.status === 'ok' && <div className="gamcheon-map__route-follow">
+    <button type="button" className={following ? 'is-active' : ''} aria-pressed={following} onClick={onFollow} disabled={following}>
+      {following ? '내 위치를 따라가는 중' : '내 위치 따라가기'}
+    </button>
+    {gps.accuracy !== undefined && <p className="gamcheon-map__route-accuracy">정확도 약 ±{Math.round(gps.accuracy)}m · 경로를 {OFF_ROUTE_DISTANCE}m 넘게 벗어나면 다시 찾습니다. 지도를 직접 움직이면 따라가기가 멈춥니다.</p>}
+  </div>
+
+  // 경로가 나오면 결과(시간·거리, 따라가기, 안내)를 맨 위에 둬서, 휴대폰에서 시트를 접어도 바로 보이게 합니다.
   return <div className="gamcheon-map__model-editor gamcheon-map__route">
-    <p className="gamcheon-map__model-help">
+    {arrived && <p className="gamcheon-map__route-arrived" role="status">목적지 근처에 도착했습니다.</p>}
+    {route ? <section className="gamcheon-map__route-result" aria-label="찾은 길">
+      <div className="gamcheon-map__route-summary">
+        <strong>{formatDuration(route.duration)}</strong>
+        <span>{formatDistance(route.distance)}{route.stairsDistance > 0 ? ` · 계단 ${formatDistance(route.stairsDistance)}` : ' · 계단 없음'}</span>
+        <button type="button" onClick={onRecenter}>경로 전체 보기</button>
+      </div>
+      {followBlock && <div className="gamcheon-map__route-result-follow">{followBlock}</div>}
+      <ol className="gamcheon-map__route-steps">
+        {route.steps.map((step, index) => <li key={index} className={`is-${step.action}`}>
+          <span aria-hidden="true">{STEP_ICONS[step.action]}</span>{step.text}
+        </li>)}
+      </ol>
+    </section> : <p className="gamcheon-map__model-help">
       걸어서 가는 길을 찾습니다. 지도에 표시된 골목·계단과 직접 그린 골목길을 따라가며, 경사는 반영하지 않습니다.
-    </p>
+    </p>}
     <div className="gamcheon-map__route-fields">
       <label><span className="gamcheon-map__route-dot gamcheon-map__route-dot--origin" />출발{endpointSelect('origin')}</label>
       <button type="button" className="gamcheon-map__route-swap" onClick={onSwap} aria-label="출발지와 도착지 바꾸기" title="출발지와 도착지 바꾸기">⇅</button>
@@ -97,20 +120,7 @@ export function RoutePanel({
       계단 피하기 (유모차·휠체어)
     </label>
     {origin.kind === 'gps' && GPS_TEXT[gps.status] && <p className={gps.status === 'locating' ? 'gamcheon-map__model-help' : 'gamcheon-map__model-error'} role="status">{GPS_TEXT[gps.status]}</p>}
-    {origin.kind === 'gps' && gps.status === 'ok' && gps.accuracy !== undefined && <p className="gamcheon-map__route-accuracy">내 위치 정확도 약 ±{Math.round(gps.accuracy)}m · 경로를 {OFF_ROUTE_DISTANCE}m 넘게 벗어나면 다시 찾습니다.</p>}
+    {!route && followBlock}
     {error && <p className="gamcheon-map__model-error" role="alert">{error}</p>}
-    {arrived && <p className="gamcheon-map__route-arrived" role="status">목적지 근처에 도착했습니다.</p>}
-    {route && <section className="gamcheon-map__route-result" aria-label="찾은 길">
-      <div className="gamcheon-map__route-summary">
-        <strong>{formatDuration(route.duration)}</strong>
-        <span>{formatDistance(route.distance)}{route.stairsDistance > 0 ? ` · 계단 ${formatDistance(route.stairsDistance)}` : ' · 계단 없음'}</span>
-        <button type="button" onClick={onRecenter}>경로 전체 보기</button>
-      </div>
-      <ol className="gamcheon-map__route-steps">
-        {route.steps.map((step, index) => <li key={index} className={`is-${step.action}`}>
-          <span aria-hidden="true">{STEP_ICONS[step.action]}</span>{step.text}
-        </li>)}
-      </ol>
-    </section>}
   </div>
 }

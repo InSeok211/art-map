@@ -1,5 +1,4 @@
 import buildingFootprints from './gamcheon-buildings.json'
-import skyviewRoofs from './skyview-roofs.json'
 import mapSurfaces from './street-surfaces.json'
 import * as polygonClipping from 'polygon-clipping'
 import { isInsideGamcheonMap } from './gamcheonBoundary'
@@ -148,11 +147,8 @@ export interface StreetBuilding {
     awning?: number
     frontRoad: StreetPoint[]
   }
-  roofEvidence?: {
-    source: 'skyview'
-    kind: 'blue' | 'teal' | 'green' | 'gray' | 'white' | 'red' | 'brown'
-    confidence: 'high' | 'medium' | 'low'
-  }
+  // 지붕 마감: 'sheet'는 칠한 금속 골판 지붕, 'concrete'는 평평한 슬래브 지붕(일반형 지붕 팔레트에서 고름)
+  roofFinish?: 'sheet' | 'concrete'
   sharedEdges?: number[]
 }
 
@@ -195,25 +191,28 @@ function splitWorkshopFootprint(feature: Footprint): Footprint[] {
 
 const footprints = (buildingFootprints as unknown as { features: Footprint[] }).features
   .flatMap((feature) => feature.properties.id === ARTIST_WORKSHOP_FOOTPRINT_ID ? splitWorkshopFootprint(feature) : [feature])
-const sampledRoofs = skyviewRoofs as Record<string, {
-  kind: NonNullable<StreetBuilding['roofEvidence']>['kind']
-  confidence: NonNullable<StreetBuilding['roofEvidence']>['confidence']
-  color: string
-}>
-
-// Retain the measured colour family and choose the closest shared paint.
-// Thousands of unique materials otherwise cause a shader compilation stall.
-const roofPaints = {
-  blue: [0x5593ad, 0x76abc1, 0x497c97], teal: [0x63a6a8, 0x88bdbb, 0x4a9397],
-  green: [0x68a28e, 0x8bb5a1, 0x548d78], gray: [0xa2aaa6, 0xbcc2b8, 0x858f8a],
-  white: [0xdce0d7, 0xc8cdc2], red: [0xb57768, 0xcb9686, 0x9f655c],
-  brown: [0xac9677, 0xc0ac8d, 0x948268],
-}
-function sharedRoofPaint(sample: typeof sampledRoofs[string]) {
-  const measured = Number.parseInt(sample.color.slice(1), 16)
-  const distance = (paint: number) => [0, 8, 16].reduce((sum, shift) =>
-    sum + ((paint >> shift & 255) - (measured >> shift & 255)) ** 2, 0)
-  return roofPaints[sample.kind].reduce((best, paint) => distance(paint) < distance(best) ? paint : best)
+// 개별 지붕을 조사하지 않은 건물의 일반형 지붕 팔레트입니다. 산비탈 마을에 흔한 청색·청록·녹색 칠 금속 지붕과
+// 회색 슬래브 지붕을 섞은 디자인 값이며, 항공사진 등 실제 건물별 자료에서 얻은 색이 아닙니다.
+// 재질 수를 줄이려고 몇 가지 색만 쓰고, OSM 번호로 골라 건물마다 늘 같은 색이 되게 합니다.
+const genericRoofs: { color: number; finish: 'sheet' | 'concrete'; weight: number }[] = [
+  { color: 0x5593ad, finish: 'sheet', weight: 3 }, { color: 0x76abc1, finish: 'sheet', weight: 2 },
+  { color: 0x63a6a8, finish: 'sheet', weight: 3 }, { color: 0x88bdbb, finish: 'sheet', weight: 1 },
+  { color: 0x68a28e, finish: 'sheet', weight: 2 }, { color: 0x8bb5a1, finish: 'sheet', weight: 1 },
+  { color: 0xb57768, finish: 'sheet', weight: 1 },
+  { color: 0xa2aaa6, finish: 'concrete', weight: 3 }, { color: 0xbcc2b8, finish: 'concrete', weight: 3 },
+  { color: 0x858f8a, finish: 'concrete', weight: 1 }, { color: 0xc8cdc2, finish: 'concrete', weight: 1 },
+]
+const genericRoofTotal = genericRoofs.reduce((sum, roof) => sum + roof.weight, 0)
+export function genericRoof(id: number) {
+  // 이웃한 OSM 번호가 같은 색으로 몰리지 않게 정수 해시로 섞습니다.
+  let hash = Math.imul(id ^ (id >>> 16), 0x45d9f3b) >>> 0
+  hash = Math.imul(hash ^ (hash >>> 16), 0x45d9f3b) >>> 0
+  let pick = (hash ^ (hash >>> 16)) % genericRoofTotal
+  for (const roof of genericRoofs) {
+    if (pick < roof.weight) return roof
+    pick -= roof.weight
+  }
+  return genericRoofs[0]
 }
 const workshop = streetMeters([129.00930268855, 35.095522407839])
 
@@ -527,7 +526,7 @@ const roadviewByFootprint: Record<number, Pick<StreetBuilding,
       sign: { text: '우리누리 지역아동센터', color: 0xbd3255, ink: 0xfff0b4,
         offsetFraction: -0.27, widthFraction: 0.36, centerY: 3.75, panelHeight: 1.3 } },
   },
-  // Address pins and highlighted skyview footprints were independently matched.
+  // Address search pins and the stored OSM footprints were matched independently.
   // Heights are estimates; roadview only verifies the street-facing exterior.
   1468590613: {
     heightMeters: 4.7, wallColor: 0xe5e8e4, roofColor: 0xa2aaa6,
@@ -953,12 +952,9 @@ const conceptAppearance: Record<NonNullable<StreetBuilding['concept']>, Pick<Str
   pink: { heightMeters: 6.6, wallColor: 0xd19c94, roofColor: 0x747a7c, accentColor: 0xe1beb1, storefront: false, shopfrontStyle: 'glass', roofStyle: 'gable', brickFacade: false },
 }
 
-// Unverified façades use restrained neutral materials. Their individual wall
-// colours cannot be inferred from the skyview's mostly blue/green roofs.
+// Unverified façades use restrained neutral materials instead of guessed
+// address-specific colours.
 const contextWalls = [0xd9d8d2, 0xe2dfd7, 0xcaccc7, 0xd5d2cc]
-// A neutral fallback avoids assigning colourful roofs to buildings without
-// enough usable aerial pixels. Classified roof colours are loaded below.
-const unknownRoofColor = 0xb7bbb6
 
 function polygonArea(points: [number, number][]) {
   return Math.abs(points.reduce((sum, point, index) => {
@@ -1223,7 +1219,8 @@ export function getPhotographedStreetBuildings(): StreetBuilding[] {
       outline,
       heightMeters: cafeAbong ? 8.2 : floors * 2.65 + 0.8,
       wallColor: cafeAbong ? 0x83ad46 : contextWalls[feature.properties.id % contextWalls.length],
-      roofColor: cafeAbong ? 0x485d59 : unknownRoofColor,
+      roofColor: cafeAbong ? 0x485d59 : genericRoof(feature.properties.id).color,
+      roofFinish: cafeAbong ? 'sheet' : genericRoof(feature.properties.id).finish,
       accentColor: cafeAbong ? 0xdfc667 : 0x828a86,
       storefront: cafeAbong,
       shopfrontStyle: feature.properties.id % 4 === 0 ? 'shutter' : 'glass',
@@ -1240,12 +1237,6 @@ export function getPhotographedStreetBuildings(): StreetBuilding[] {
       : observed ? { ...generic, ...observed, detail: 'featured' }
         : roadview ? { ...generic, ...roadview, detail: 'featured' }
         : generic
-    const sampledRoof = sampledRoofs[String(feature.properties.id)]
-    if (sampledRoof && !concept) {
-      appearance.roofEvidence = { source: 'skyview', kind: sampledRoof.kind, confidence: sampledRoof.confidence }
-      if (!roadview?.roadview?.roofColorVerified) appearance.roofColor = sampledRoof.confidence === 'low'
-        ? unknownRoofColor : sharedRoofPaint(sampledRoof)
-    }
     result.push(appearance)
   }
   inferNearbyFacades(result)

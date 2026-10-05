@@ -8,3 +8,4 @@ design/**/*.jpg
 design/**/*.jpeg
 design/**/*.png
 design/**/*.webp
+.site-build/

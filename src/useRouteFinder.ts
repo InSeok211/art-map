@@ -9,18 +9,20 @@ import { distanceFromRoute, findRoute, walkGraphFor } from './routing'
 import type { Route, RouteError } from './routing'
 import { streetMeters } from './streetSceneData'
 import type { Place } from './types'
+import type { GpsState } from './useMyLocation'
 
-// 길찾기 탭의 상태와 지도 상호작용(내 위치, 지도에서 고르기, 경로 그리기)을 묶은 훅입니다.
-// 위치는 화면에만 쓰고 저장하거나 보내지 않으며, 길찾기 탭을 떠나면 위치 추적을 멈춥니다.
+// 길찾기 탭의 상태와 지도 상호작용(지도에서 고르기, 경로 그리기, 내 위치 따라가기)을 묶은 훅입니다.
+// 내 위치와 방향 화살표는 지도 전체가 쓰는 useMyLocation이 맡고, 여기서는 그 위치를 받아 씁니다.
 
 export type RouteEndpoint = { kind: 'gps' } | { kind: 'place'; id: string } | { kind: 'point'; point: LngLat }
-export type GpsStatus = 'idle' | 'locating' | 'ok' | 'denied' | 'unavailable' | 'unsupported' | 'outside'
-export interface GpsState { status: GpsStatus; position?: LngLat; accuracy?: number }
+export type { GpsState, GpsStatus } from './useMyLocation'
 
 // 이 거리(m)보다 경로에서 벗어나면 현재 위치에서 다시 찾습니다.
 export const OFF_ROUTE_DISTANCE = 25
 // 목적지에 이만큼(m) 가까워지면 도착으로 봅니다.
 export const ARRIVAL_DISTANCE = 15
+// 내 위치를 따라갈 때 최소 확대 단계
+export const FOLLOW_ZOOM = 18
 
 const ERROR_TEXT: Record<RouteError, string> = {
   'origin-off-network': '출발지 근처(80m 안)에 지도에 표시된 길이 없습니다.',
@@ -48,6 +50,7 @@ export function useRouteFinder(
   active: boolean,
   places: Place[],
   alleys: Alley[],
+  gps: GpsState,
   defaultDestinationId?: string,
 ) {
   const [origin, setOrigin] = useState<RouteEndpoint>({ kind: 'gps' })
@@ -55,11 +58,13 @@ export function useRouteFinder(
     defaultDestinationId ? { kind: 'place', id: defaultDestinationId } : null)
   const [picking, setPicking] = useState<'origin' | 'destination' | null>(null)
   const [avoidStairs, setAvoidStairs] = useState(false)
-  const [gps, setGps] = useState<GpsState>({ status: 'idle' })
   // 내 위치에서 출발할 때 경로를 계산한 위치(움직일 때마다 다시 찾지 않고, 경로를 벗어났을 때만 갱신)
   const [gpsOrigin, setGpsOrigin] = useState<LngLat | null>(null)
   const [pickError, setPickError] = useState('')
-  const markersRef = useRef<{ origin?: Marker; destination?: Marker; me?: Marker }>({})
+  // 걸을 때 지도가 내 위치를 따라갑니다. 지도를 손으로 움직이면 꺼지고 버튼으로 다시 켭니다.
+  const [following, setFollowing] = useState(true)
+  const fixCountRef = useRef(0)
+  const markersRef = useRef<{ origin?: Marker; destination?: Marker }>({})
 
   const pointOf = (endpoint: RouteEndpoint | null): LngLat | null => {
     if (!endpoint) return null
@@ -78,39 +83,38 @@ export function useRouteFinder(
   const route: Route | null = result && typeof result !== 'string' ? result : null
   const routeError = typeof result === 'string' ? ERROR_TEXT[result] : ''
 
-  // 내 위치 추적: 길찾기 탭에서 출발지가 '내 위치'일 때만 켭니다.
+  // 길찾기 탭에서 출발지가 '내 위치'일 때만 내 위치로 경로를 찾고 따라갑니다.
   const usesGps = active && origin.kind === 'gps'
   useEffect(() => {
-    if (!usesGps) {
-      setGps({ status: 'idle' })
-      setGpsOrigin(null)
-      return
-    }
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setGps({ status: 'unsupported' })
-      return
-    }
-    setGps({ status: 'locating' })
-    const watch = navigator.geolocation.watchPosition(
-      ({ coords }) => {
-        const position: LngLat = [coords.longitude, coords.latitude]
-        if (!isInsideGamcheonMap(...position)) {
-          setGps({ status: 'outside', position, accuracy: coords.accuracy })
-          return
-        }
-        setGps({ status: 'ok', position, accuracy: coords.accuracy })
-      },
-      (error) => setGps({ status: error.code === error.PERMISSION_DENIED ? 'denied' : 'unavailable' }),
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
-    )
-    return () => navigator.geolocation.clearWatch(watch)
+    if (usesGps) return
+    setGpsOrigin(null)
+    setFollowing(true)
+    fixCountRef.current = 0
   }, [usesGps])
 
   // 첫 위치를 받으면 경로를 찾고, 이후에는 경로를 크게 벗어났을 때만 현재 위치에서 다시 찾습니다.
   useEffect(() => {
-    if (gps.status !== 'ok' || !gps.position) return
+    if (!usesGps || gps.status !== 'ok' || !gps.position) return
     if (!gpsOrigin || (route && distanceFromRoute(route, gps.position) > OFF_ROUTE_DISTANCE)) setGpsOrigin(gps.position)
-  }, [gps.position?.[0], gps.position?.[1], gps.status])
+  }, [usesGps, gps.position?.[0], gps.position?.[1], gps.status])
+
+  // 내 위치 따라가기: 첫 위치에서는 경로 전체를 보여 주고, 그다음 위치부터 지도를 내 위치로 옮깁니다.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !usesGps || gps.status !== 'ok' || !gps.position) return
+    fixCountRef.current++
+    if (!following || fixCountRef.current < 2) return
+    map.easeTo({ center: gps.position, zoom: Math.max(map.getZoom(), FOLLOW_ZOOM), duration: 700 })
+  }, [usesGps, following, gps.position?.[0], gps.position?.[1], gps.status])
+
+  // 사용자가 지도를 직접 끌면 따라가기를 끕니다(코드로 움직인 것은 originalEvent가 없음).
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !usesGps) return
+    const stop = (event: { originalEvent?: unknown }) => { if (event.originalEvent) setFollowing(false) }
+    map.on('dragstart', stop)
+    return () => { map.off('dragstart', stop) }
+  }, [usesGps])
 
   const arrived = Boolean(usesGps && gps.position && destinationPoint && meters(gps.position, destinationPoint) < ARRIVAL_DISTANCE)
 
@@ -164,25 +168,23 @@ export function useRouteFinder(
     const map = mapRef.current
     if (!map) return
     const markers = markersRef.current
-    const place = (key: 'origin' | 'destination' | 'me', point: LngLat | null, className: string, label: string) => {
+    const place = (key: 'origin' | 'destination', point: LngLat | null, className: string, label: string) => {
       if (!active || !point) {
         markers[key]?.remove()
         markers[key] = undefined
         return
       }
-      if (!markers[key]) markers[key] = new Marker({ element: markerElement(className, label), anchor: key === 'me' ? 'center' : 'bottom' })
-      markers[key]!.setLngLat(point).addTo(map)
+      if (!markers[key]) markers[key] = new Marker({ element: markerElement(className, label), anchor: 'bottom' }).setLngLat(point).addTo(map)
+      else markers[key]!.setLngLat(point)
     }
     place('origin', origin.kind === 'gps' ? null : originPoint, 'gamcheon-map__route-pin gamcheon-map__route-pin--origin', '출발')
     place('destination', destinationPoint, 'gamcheon-map__route-pin gamcheon-map__route-pin--destination', '도착')
-    place('me', active && gps.position && gps.status === 'ok' ? gps.position : null, 'gamcheon-map__my-location', '내 위치')
-  }, [active, originPoint?.[0], originPoint?.[1], destinationPoint?.[0], destinationPoint?.[1], gps.position?.[0], gps.position?.[1], gps.status, origin.kind])
+  }, [active, originPoint?.[0], originPoint?.[1], destinationPoint?.[0], destinationPoint?.[1], origin.kind])
 
   useEffect(() => () => {
     const markers = markersRef.current
     markers.origin?.remove()
     markers.destination?.remove()
-    markers.me?.remove()
   }, [])
 
   return {
@@ -196,6 +198,12 @@ export function useRouteFinder(
       route,
       error: pickError || routeError,
       arrived,
+      following,
+      onFollow: () => {
+        setFollowing(true)
+        const map = mapRef.current
+        if (map && gps.position) map.easeTo({ center: gps.position, zoom: Math.max(map.getZoom(), FOLLOW_ZOOM), duration: 700 })
+      },
       onOrigin: (endpoint: RouteEndpoint) => { setOrigin(endpoint); setPicking(null) },
       onDestination: (endpoint: RouteEndpoint | null) => { setDestination(endpoint); setPicking(null) },
       onPick: (target: 'origin' | 'destination' | null) => { setPicking(target); setPickError('') },

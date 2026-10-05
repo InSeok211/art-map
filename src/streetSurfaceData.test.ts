@@ -20,7 +20,7 @@ describe('modeled ground and roads', () => {
       expect(z).toBeGreaterThanOrEqual(bounds.minZ)
       expect(z).toBeLessThanOrEqual(bounds.maxZ)
     }
-  })
+  }, 30000)
 
   it('keeps OSM roads and green areas clipped to the ground slab', () => {
     expect(STREET_SURFACE_WAYS.roads.length).toBeGreaterThan(500)

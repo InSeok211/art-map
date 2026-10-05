@@ -64,6 +64,72 @@ describe('street scene', () => {
     const scene = (layer as unknown as { scene: THREE.Scene }).scene
     expect(pointsInsideWorkshop(scene)).toBeGreaterThan(100)
   })
+  it('makes every building except the workshop see-through and restores it', () => {
+    const rings = (layer as unknown as { buildingRings: THREE.Group[] }).buildingRings
+    const materials = () => rings.flatMap((ring) => ring.children)
+      .filter((object): object is THREE.Mesh => object instanceof THREE.Mesh)
+      .map((mesh) => mesh.material as THREE.Material)
+    const solid = materials().filter((material) => !material.transparent)
+    expect(solid.length).toBeGreaterThan(10)
+    layer.setBuildingOpacity(0.35)
+    expect(solid.every((material) => material.transparent && material.opacity === 0.35 && !material.depthWrite)).toBe(true)
+    // 공방(장면에 바로 붙은 메시)은 반투명해지지 않습니다.
+    const scene = (layer as unknown as { scene: THREE.Scene }).scene
+    const workshopSolid = scene.children.filter((object): object is THREE.Mesh => object instanceof THREE.Mesh)
+      .map((mesh) => mesh.material as THREE.Material).filter((material) => !material.transparent)
+    expect(workshopSolid.length).toBeGreaterThan(0)
+    layer.setBuildingOpacity(1)
+    expect(solid.every((material) => !material.transparent && material.opacity === 1 && material.depthWrite)).toBe(true)
+  })
+
+  it('numbers every street building so it can fade on its own when it hides a road', () => {
+    const occluders = (layer as unknown as { occluders: unknown[] }).occluders
+    expect(occluders.length).toBeGreaterThan(100)
+    const rings = (layer as unknown as { buildingRings: THREE.Group[] }).buildingRings
+    const meshes = rings.flatMap((ring) => ring.children).filter((object): object is THREE.Mesh => object instanceof THREE.Mesh)
+    // 묶어 그린 건물 메시에도 꼭짓점마다 건물 번호가 있고, 재질은 번호별 비침 정도를 읽습니다.
+    const merged = meshes.filter((mesh) => mesh.geometry.getAttribute('position').count > 1000)
+    expect(merged.length).toBeGreaterThan(5)
+    for (const mesh of merged) {
+      const index = mesh.geometry.getAttribute('buildingIndex')
+      expect(index?.count).toBe(mesh.geometry.getAttribute('position').count)
+      expect(index.getX(index.count - 1)).toBeLessThan(occluders.length)
+    }
+    // 같은 꼭짓점을 비치지 않는 건물(점무늬 없는 셰이더)과 비치는 건물(점무늬 셰이더) 두 메시가 나눠 그립니다.
+    const fading = merged.filter((mesh) => (mesh.material as THREE.Material).customProgramCacheKey() === 'building-fade')
+    const plain = merged.filter((mesh) => !fading.includes(mesh))
+    expect(fading.length).toBe(plain.length)
+    for (const mesh of plain) {
+      const partner = fading.find((other) => other.geometry.getAttribute('position') === mesh.geometry.getAttribute('position'))!
+      expect(partner).toBeDefined()
+      expect(partner.geometry.index).toBe(mesh.geometry.index)
+    }
+  })
+
+  it('moves only the buildings that hide a road to the dithered draw', () => {
+    type Split = { runs: Int32Array; plain: THREE.Mesh; fade: THREE.Mesh }
+    const internals = layer as unknown as { fadeSplits: Split[]; occluding: Set<number>; partition: (split: Split, force?: boolean) => void }
+    const split = internals.fadeSplits.find((candidate) => candidate.runs.length >= 6)!
+    const total = split.plain.geometry.getAttribute('position').count
+    // 처음에는 아무 건물도 길을 가리지 않아 모두 점무늬 없는 메시로 그립니다.
+    expect(split.plain.geometry.drawRange.count).toBe(total)
+    expect(split.fade.visible).toBe(false)
+    const [building, , count] = split.runs
+    internals.occluding = new Set([building])
+    internals.partition(split)
+    expect(split.fade.visible).toBe(true)
+    expect(split.fade.geometry.drawRange).toEqual({ start: total - count, count })
+    expect(split.plain.geometry.drawRange.count).toBe(total - count)
+    // 인덱스 앞쪽에는 그 건물의 꼭짓점이 없고, 뒤쪽에는 그 건물의 꼭짓점만 있습니다.
+    const order = split.plain.geometry.index!.array
+    const ids = split.plain.geometry.getAttribute('buildingIndex')
+    expect([...order.slice(total - count)].every((vertex) => ids.getX(vertex) === building)).toBe(true)
+    expect([...order.slice(0, total - count)].some((vertex) => ids.getX(vertex) === building)).toBe(false)
+    internals.occluding = new Set()
+    internals.partition(split)
+    expect(split.fade.visible).toBe(false)
+  })
+
   it('sinks the buildings into the ground ring by ring and raises them back', () => {
     vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame', 'performance'] })
     try {

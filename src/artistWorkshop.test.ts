@@ -68,5 +68,10 @@ describe('artist workshop map model', () => {
     expect(refineArtistWorkshopPlace([custom])[0]).toBe(custom)
     const moved = { ...atAddress, longitude: 129.0095 }
     expect(refineArtistWorkshopPlace([moved])[0]).toEqual(moved)
+    // 편집용 기본 설명은 방문자용 설명으로 바꾸고, 사용자가 쓴 설명은 그대로 둡니다.
+    const oldDescription = { ...ARTIST_WORKSHOP_PLACE, description: '사진과 로드뷰를 참고해 만든 3D 건물 시안입니다. 위치·크기·회전을 수정할 수 있습니다.' }
+    expect(refineArtistWorkshopPlace([oldDescription])[0].description).toBe(ARTIST_WORKSHOP_PLACE.description)
+    const ownDescription = { ...ARTIST_WORKSHOP_PLACE, description: '직접 쓴 소개' }
+    expect(refineArtistWorkshopPlace([ownDescription])[0]).toBe(ownDescription)
   })
 })

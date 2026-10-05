@@ -15,6 +15,8 @@ import { ModelLayer, SEE_THROUGH_OPACITY } from './ModelLayer'
 import { StreetSceneLayer } from './StreetSceneLayer'
 import { RoutePanel } from './RoutePanel'
 import { useRouteFinder } from './useRouteFinder'
+import { useMyLocation } from './useMyLocation'
+import { useSheetDrag } from './useSheetDrag'
 import { ModelEditor } from './ModelEditor'
 import { PlaceBrowser, PlaceForm } from './PlacePanel'
 import type { PlaceDraft } from './PlacePanel'
@@ -35,15 +37,29 @@ const EMPTY_MODELS: MapModel[] = []
 const EMPTY_ALLEYS: Alley[] = []
 const MAP_STYLE = createMinimalStyle(baseStyle) as unknown as StyleSpecification
 
-function mapPadding(element: HTMLElement) {
+// 휴대폰에서 아래 시트를 접었을 때 보이는 높이(손잡이·탭·검색창)입니다. CSS의 접힌 시트 높이와 맞춥니다.
+export const SHEET_PEEK_HEIGHT = 176
+
+function mapPadding(element: HTMLElement, compact = false, sheetOpen = true) {
+  // 패널 없이 지도만 끼워 넣을 때(compact)는 패널 자리를 비워 두지 않습니다.
+  if (compact) return { top: 0, right: 0, bottom: 0, left: 0 }
   return element.clientWidth <= 720
-    ? { top: 0, right: 0, bottom: Math.min(element.clientHeight * 0.62, 480), left: 0 }
+    ? { top: 0, right: 0, bottom: sheetOpen ? Math.min(element.clientHeight * 0.62, 480) : SHEET_PEEK_HEIGHT, left: 0 }
     : { top: 0, right: 0, bottom: 0, left: 420 }
 }
 
 setWorkerUrl(workerUrl)
 
 type EditMode = 'places' | 'models' | 'alleys' | 'route'
+
+// 좁은 화면(휴대폰) 배치인지. CSS의 max-width: 720px와 같습니다.
+const isPhoneLayout = () => typeof window !== 'undefined' && window.innerWidth <= 720
+
+// 지도를 그리는 최대 화면 밀도
+export const MAX_PIXEL_RATIO = 2
+
+// 바탕 지도가 다 그려지기를 기다리는 최대 시간(ms). 이후에는 3D 거리를 바로 만듭니다.
+export const STREET_LAYER_FALLBACK_MS = 3500
 
 function applyBuildingVisibility(map: Map, visible: boolean) {
   for (const id of BUILDING_FOOTPRINT_LAYER_IDS) {
@@ -55,6 +71,12 @@ export interface GamcheonMapProps {
   initialView?: { center: [number, number]; zoom?: number; pitch?: number; bearing?: number }
   places?: Place[]
   onPlaceSelect?: (place: Place) => void
+  // 바깥 화면(예: 작가 지도 홈페이지)에서 고른 장소를 지도에서도 선택하고 그 위치로 이동합니다.
+  selectedPlaceId?: string | null
+  // 장소 탭에서 지도의 빈 곳(표식이 아닌 곳)을 누르면 그 좌표를 알려 줍니다(예: 작업실 위치 고르기).
+  onMapClick?: (longitude: number, latitude: number) => void
+  // 패널 없이 지도만 보여 줄 때 켭니다(패널 자리 여백을 두지 않음).
+  compact?: boolean
   editable?: boolean
   onPlacesChange?: (places: Place[]) => void
   models?: MapModel[]
@@ -68,6 +90,9 @@ export interface GamcheonMapProps {
 export function GamcheonMap({
   places = EMPTY_PLACES,
   onPlaceSelect,
+  selectedPlaceId,
+  onMapClick,
+  compact = false,
   editable = false,
   onPlacesChange,
   models = EMPTY_MODELS,
@@ -92,6 +117,20 @@ export function GamcheonMap({
   const [editor, setEditor] = useState<PlaceDraft | null>(null)
   const [locationError, setLocationError] = useState('')
   const [mode, setMode] = useState<EditMode>('places')
+  // 휴대폰(좁은 화면)에서 아래 시트를 펼쳤는지. 처음에는 지도가 넓게 보이도록 접어 둡니다.
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const sheetOpenRef = useRef(sheetOpen)
+  const panelRef = useRef<HTMLElement>(null)
+  const sheetDrag = useSheetDrag(panelRef, sheetOpen, setSheetOpen)
+  // 휴대폰에서 장소를 고르면 펼친 시트의 목록에서 그 장소가 보이도록 스크롤합니다(시트가 펼쳐지는 동안 기다림).
+  useEffect(() => {
+    if (!selectedId || !isPhoneLayout()) return
+    const timer = window.setTimeout(() => {
+      const item = panelRef.current?.querySelector<HTMLElement>(`[data-place-id="${CSS.escape(selectedId)}"]`)
+      item?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+    }, 280)
+    return () => window.clearTimeout(timer)
+  }, [selectedId])
   const sceneMode = mode === 'models'
   const [localModels, setLocalModels] = useState<MapModel[]>(models)
   const [customAssets, setCustomAssets] = useState<ModelAsset[]>([])
@@ -111,9 +150,18 @@ export function GamcheonMap({
   const workshopOnlyRef = useRef(workshopOnly)
   const streetLayerRef = useRef<StreetSceneLayer | null>(null)
   const alley = useAlleyEditing(mapRef, mode === 'alleys', alleys, onAlleysChange)
+  // 지도를 여는 순간부터 내 위치와 방향을 보여 줍니다. 바깥 화면이 장소를 골라 열었으면 그 장소를 먼저 보여 줍니다.
+  const myLocation = useMyLocation(mapRef, { centerOnFirstFix: !selectedPlaceId })
+  const [locationNotice, setLocationNotice] = useState('')
+  const [moreOpen, setMoreOpen] = useState(false)
+  const locate = () => {
+    const notice = myLocation.locate()
+    setLocationNotice(notice ?? '')
+    if (notice) window.setTimeout(() => setLocationNotice(''), 3500)
+  }
   const routeFinder = useRouteFinder(mapRef, mode === 'route',
     localPlaces.filter((place) => isInsideGamcheonMap(place.longitude, place.latitude)),
-    alley.editorProps.alleys, ARTIST_WORKSHOP_PLACE.id)
+    alley.editorProps.alleys, myLocation.gps, ARTIST_WORKSHOP_PLACE.id)
   const assets = useMemo(() => [...BUILTIN_MODELS, ...customAssets], [customAssets])
   const selectedPlace = localPlaces.find((place) => place.id === selectedId && isInsideGamcheonMap(place.longitude, place.latitude))
 
@@ -144,6 +192,28 @@ export function GamcheonMap({
     onPlaceSelectRef.current = onPlaceSelect
   }, [onPlaceSelect])
 
+  // 시트를 펼치거나 접으면 지도가 가려지는 만큼 여백을 바꿔 중심이 보이는 곳에 오게 합니다.
+  useEffect(() => {
+    sheetOpenRef.current = sheetOpen
+    const map = mapRef.current, element = mapElementRef.current
+    if (map && element && element.clientWidth <= 720) map.easeTo({ padding: mapPadding(element, compact, sheetOpen), duration: 300 })
+  }, [sheetOpen])
+
+  const onMapClickRef = useRef(onMapClick)
+  useEffect(() => {
+    onMapClickRef.current = onMapClick
+  }, [onMapClick])
+
+  useEffect(() => {
+    if (selectedPlaceId === undefined) return
+    setSelectedId(selectedPlaceId)
+    const place = places.find((item) => item.id === selectedPlaceId)
+    const map = mapRef.current
+    if (place && map && isInsideGamcheonMap(place.longitude, place.latitude)) {
+      map.flyTo({ center: [place.longitude, place.latitude], zoom: Math.max(map.getZoom(), 16) })
+    }
+  }, [selectedPlaceId, places])
+
   useEffect(() => {
     const element = mapElementRef.current
     if (!element) return
@@ -162,8 +232,18 @@ export function GamcheonMap({
       scrollZoom: true,
       dragRotate: true,
       pitchWithRotate: true,
-      canvasContextAttributes: { antialias: true },
+      // 화면 밀도가 2 이상이면 계단 현상이 거의 안 보이므로 멀티샘플링(MSAA)을 꺼 픽셀 부담을 줄입니다.
+      canvasContextAttributes: { antialias: (window.devicePixelRatio || 1) < MAX_PIXEL_RATIO },
+      // 화면 밀도가 3인 휴대폰은 픽셀 수가 9배라 3D 장면이 크게 느려집니다. 2배까지만 그려도 선명합니다.
+      pixelRatio: Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO),
     })
+
+    // 좁은 화면에서 MapLibre는 출처 표시를 (i) 버튼으로 바꾸지만 처음엔 펼쳐 두고 지도를 끌어야 접습니다.
+    // 휴대폰에서는 출처가 채워진 뒤(첫 idle) 바로 접어 둡니다. (i)를 누르면 다시 펼쳐집니다.
+    if (isPhoneLayout()) map.once('idle', () => element.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'))
+
+    // 개발 서버에서만: 성능 측정 스크립트가 지도를 찾을 수 있게 둡니다.
+    if (import.meta.env.DEV) (window as unknown as { __gamcheonMap?: Map }).__gamcheonMap = map
 
     const modelLayer = new ModelLayer((name) => setModelError(`${name} 모델을 불러오지 못했습니다.`))
     modelLayerRef.current = modelLayer
@@ -180,18 +260,23 @@ export function GamcheonMap({
       if (disposed || streetLayer) return
       streetLayer = new StreetSceneLayer()
       streetLayer.setOtherBuildingsHidden(workshopOnlyRef.current, false)
+      streetLayer.setBuildingOpacity(modelsSeeThroughRef.current ? SEE_THROUGH_OPACITY : 1)
       streetLayerRef.current = streetLayer
       addStreetLayer()
       setSceneStatus('ready')
     }, 0)
     // 길찾기 경로 선은 3D 건물에 가리지 않도록 3D 층보다 위에 둡니다.
     const raiseRoute = () => { for (const id of ROUTE_LAYER_IDS) if (map.getLayer(id)) map.moveLayer(id) }
+    // 바탕 지도 타일이 늦거나 일부 실패하면 'idle'이 한참 오지 않을 수 있으므로, 스타일이 준비되고
+    // STREET_LAYER_FALLBACK_MS가 지나면 바탕 지도를 기다리지 않고 3D 거리를 만듭니다.
+    let fallbackTimer = 0
     const addModelLayer = () => {
       if (!map.getLayer(modelLayer.id)) map.addLayer(modelLayer)
       addStreetLayer()
       raiseRoute()
       applyBuildingVisibility(map, showBuildingsRef.current)
       alley.renderOnto(map)
+      if (!streetLayer && !fallbackTimer) fallbackTimer = window.setTimeout(buildStreetLayer, STREET_LAYER_FALLBACK_MS)
     }
     map.on('style.load', addModelLayer)
     map.once('idle', buildStreetLayer)
@@ -211,12 +296,12 @@ export function GamcheonMap({
     map.on('webglcontextlost', handleContextLost)
     map.on('webglcontextrestored', handleContextRestored)
 
-    map.setPadding(mapPadding(element))
+    map.setPadding(mapPadding(element, compact, sheetOpenRef.current))
     map.addControl(new NavigationControl({ showCompass: true, visualizePitch: true }), 'bottom-right')
     mapRef.current = map
 
     const observer = new ResizeObserver(() => {
-      map.setPadding(mapPadding(element))
+      map.setPadding(mapPadding(element, compact, sheetOpenRef.current))
       map.resize()
     })
     observer.observe(element)
@@ -230,6 +315,7 @@ export function GamcheonMap({
       modelMarkersRef.current.forEach((marker) => marker.remove())
       modelMarkersRef.current = []
       disposed = true
+      window.clearTimeout(fallbackTimer)
       streetLayerRef.current = null
       map.off('style.load', addModelLayer)
       map.off('idle', buildStreetLayer)
@@ -239,7 +325,21 @@ export function GamcheonMap({
       mapRef.current = null
       map.remove()
     }
-  }, [])
+  }, [compact])
+
+  // 장소 탭에서 표식이 아닌 지도 빈 곳을 누르면 바깥 화면에 좌표를 알려 줍니다(장소 추가·편집 중에는 그쪽이 클릭을 씁니다).
+  const reportsMapClicks = Boolean(onMapClick) && mode === 'places' && !editor
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !reportsMapClicks) return
+    const report = (event: MapMouseEvent) => {
+      const target = event.originalEvent.target as Element | null
+      if (target?.closest?.('.gamcheon-map__marker, .gamcheon-map__featured-marker')) return
+      if (isInsideGamcheonMap(event.lngLat.lng, event.lngLat.lat)) onMapClickRef.current?.(event.lngLat.lng, event.lngLat.lat)
+    }
+    map.on('click', report)
+    return () => { map.off('click', report) }
+  }, [reportsMapClicks])
 
   useEffect(() => {
     workshopOnlyRef.current = workshopOnly
@@ -253,8 +353,12 @@ export function GamcheonMap({
 
   // 골목길을 그리거나 고칠 때는 3D 모델이 길을 가리지 않도록 자동으로 반투명하게 합니다.
   const modelsSeeThrough = translucentModels || mode === 'alleys'
+  const modelsSeeThroughRef = useRef(modelsSeeThrough)
   useEffect(() => {
+    modelsSeeThroughRef.current = modelsSeeThrough
     modelLayerRef.current?.setOpacity(modelsSeeThrough ? SEE_THROUGH_OPACITY : 1)
+    // 거리 장면의 건물(공방 제외)도 함께 반투명하게 합니다.
+    streetLayerRef.current?.setBuildingOpacity(modelsSeeThrough ? SEE_THROUGH_OPACITY : 1)
   }, [modelsSeeThrough])
 
   useEffect(() => {
@@ -311,6 +415,8 @@ export function GamcheonMap({
       }
       element.addEventListener('click', () => {
         setSelectedId(place.id)
+        // 휴대폰에서는 표식을 누르면 시트를 펼쳐 고른 장소를 바로 보여 줍니다.
+        if (isPhoneLayout()) setSheetOpen(true)
         onPlaceSelectRef.current?.(place)
       })
       const marker = new Marker({ element, anchor: featured ? 'bottom' : 'center' })
@@ -397,6 +503,7 @@ export function GamcheonMap({
 
   function switchMode(next: EditMode) {
     setMode(next)
+    setSheetOpen(true)
     setEditor(null)
     setPlacingAssetId(null)
     setMovingModelId(null)
@@ -510,13 +617,50 @@ export function GamcheonMap({
   }
 
   return (
-    <section className={`gamcheon-map ${editor || alley.drawing ? 'is-editing' : ''} ${className}`.trim()} style={style} aria-label="감천2동 지도">
+    <section className={`gamcheon-map ${editor || alley.drawing ? 'is-editing' : ''} ${sheetOpen ? 'is-sheet-open' : ''} ${className}`.trim()} style={style} aria-label="감천2동 지도">
       <div ref={mapElementRef} className="gamcheon-map__canvas" aria-label="OpenStreetMap 지도" />
+      {locationNotice && <p className="gamcheon-map__scene-status gamcheon-map__location-notice" role="status">{locationNotice}</p>}
+      {/* 휴대폰: 시트 바로 위 오른쪽의 둥근 '내 위치' 버튼(넓은 화면에서는 도구 줄의 버튼을 씁니다) */}
+      <button type="button" className={`gamcheon-map__locate-fab${myLocation.gps.status === 'ok' ? ' is-located' : ''}`} onClick={locate} aria-label="내 위치 보기" title="내 위치 보기">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2.5 19.5 20 12 16.2 4.5 20 12 2.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          </svg>
+      </button>
+      {moreOpen && <>
+        <button type="button" className="gamcheon-map__more-backdrop" aria-label="메뉴 닫기" onClick={() => setMoreOpen(false)} />
+        <div className="gamcheon-map__more-menu" role="menu" aria-label="지도 보기">
+          {[
+            ['지도 전체 보기', showWholeMap],
+            ['촬영 거리 보기', showPhotographedStreet],
+            ['시안 건물 보기', showConceptBuildings],
+            ['촬영 거리 중심으로', resetMap],
+            [showBuildings ? '실제 건물 윤곽 숨기기' : '실제 건물 윤곽 보기', () => setShowBuildings((current) => !current)],
+          ].map(([label, action]) => <button key={label as string} type="button" role="menuitem" onClick={() => { (action as () => void)(); setMoreOpen(false) }}>{label as string}</button>)}
+        </div>
+      </>}
       {sceneStatus !== 'ready' && <p className="gamcheon-map__scene-status" role="status">
         {sceneStatus === 'lost' ? '그래픽 연결이 끊겨 3D 지도를 다시 불러오는 중입니다.' : '3D 거리를 불러오는 중입니다.'}
       </p>}
 
-      <aside className={`gamcheon-map__panel${editor ? ' is-editing' : ''}`} aria-label={mode === 'route' ? '길찾기' : mode === 'alleys' ? '골목길 편집' : sceneMode ? '3D 모델 편집' : '장소 탐색'}>
+      <aside
+        ref={panelRef}
+        className={`gamcheon-map__panel${editor ? ' is-editing' : ''}${sheetOpen ? ' is-sheet-open' : ''}`}
+        aria-label={mode === 'route' ? '길찾기' : mode === 'alleys' ? '골목길 편집' : sceneMode ? '3D 모델 편집' : '장소 탐색'}
+        // 휴대폰에서 검색창이나 선택 상자를 누르면 시트를 펼쳐 키보드·목록이 가리지 않게 합니다.
+        onFocusCapture={(event) => { if (/^(INPUT|SELECT|TEXTAREA)$/.test((event.target as HTMLElement).tagName)) setSheetOpen(true) }}
+      >
+        {/* 휴대폰에서만 보이는 시트 손잡이(넓은 화면에서는 CSS로 숨김) */}
+        {/* 손잡이를 위아래로 끌어 펼치고 접습니다. 눌러도 바뀌고, 키보드(Enter·Space)로도 바꿀 수 있습니다. */}
+        <button
+          type="button"
+          className="gamcheon-map__sheet-handle"
+          aria-expanded={sheetOpen}
+          aria-label={sheetOpen ? '목록 접기' : '목록 펼치기'}
+          {...sheetDrag}
+          onClick={(event) => { if (event.detail === 0) setSheetOpen((open) => !open) }}
+        >
+          <span aria-hidden="true" />{sheetOpen ? '아래로 내려 지도 크게 보기' : '위로 올려 목록 보기'}
+        </button>
         <div className="gamcheon-map__intro">
           <div className="gamcheon-map__eyebrow"><span className="gamcheon-map__eyebrow-dot" /> BUSAN · GAMCHEON 2-DONG</div>
           <h1>감천 골목지도<span className="gamcheon-map__title-dot">.</span></h1>
@@ -583,9 +727,10 @@ export function GamcheonMap({
 
       <div className="gamcheon-map__map-tools">
         <span className="gamcheon-map__area-badge"><span /> 부산 사하구 · 감천2동</span>
-        <button type="button" className="gamcheon-map__street-focus" onClick={showWholeMap} title="지도 전체 보기">전체 지도 보기</button>
-        <button type="button" className="gamcheon-map__street-focus" onClick={showPhotographedStreet} title="촬영한 거리 보기">촬영 거리 보기</button>
-        <button type="button" className="gamcheon-map__street-focus" onClick={showConceptBuildings} title="시안 건물 보기">시안 건물 보기</button>
+        {/* 휴대폰에서는 자주 쓰지 않는 보기 버튼을 '더보기' 메뉴로 옮깁니다(is-secondary). */}
+        <button type="button" className="gamcheon-map__street-focus is-secondary" onClick={showWholeMap} title="지도 전체 보기">전체 지도 보기</button>
+        <button type="button" className="gamcheon-map__street-focus is-secondary" onClick={showPhotographedStreet} title="촬영한 거리 보기">촬영 거리 보기</button>
+        <button type="button" className="gamcheon-map__street-focus is-secondary" onClick={showConceptBuildings} title="시안 건물 보기">시안 건물 보기</button>
         <button
           type="button"
           className={modelsSeeThrough ? 'is-active' : ''}
@@ -593,7 +738,7 @@ export function GamcheonMap({
           disabled={mode === 'alleys'}
           aria-pressed={modelsSeeThrough}
           aria-label={modelsSeeThrough ? '3D 건물 모두 반투명 끄기' : '3D 건물 모두 반투명하게'}
-          title={mode === 'alleys' ? '골목길 편집 중에는 3D 건물이 자동으로 반투명해집니다' : modelsSeeThrough ? '3D 건물 모두 반투명 끄기' : '3D 건물 모두 반투명하게 (길을 가리는 건물은 항상 자동으로 반투명해집니다)'}
+          title={mode === 'alleys' ? '골목길 편집 중에는 3D 건물이 자동으로 반투명해집니다' : modelsSeeThrough ? '3D 건물 모두 반투명 끄기' : '3D 건물 모두 반투명하게 (작가님 공방은 그대로 보입니다)'}
         >
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
@@ -602,7 +747,7 @@ export function GamcheonMap({
         </button>
         <button
           type="button"
-          className={showBuildings ? 'is-active' : ''}
+          className={`is-secondary${showBuildings ? ' is-active' : ''}`}
           onClick={() => setShowBuildings((current) => !current)}
           aria-pressed={showBuildings}
           aria-label={showBuildings ? '실제 건물 윤곽 숨기기' : '실제 건물 윤곽 보기'}
@@ -626,7 +771,23 @@ export function GamcheonMap({
             <path d="M2 20h20M12 4v2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
         </button>
-        <button type="button" onClick={resetMap} aria-label="촬영 거리 중심으로 이동" title="촬영 거리 중심으로 이동">
+        <button
+          type="button"
+          className={`gamcheon-map__locate-tool${myLocation.gps.status === 'ok' ? ' is-located' : ''}`}
+          onClick={locate}
+          aria-label="내 위치로 이동"
+          title="내 위치로 이동"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2.5 19.5 20 12 16.2 4.5 20 12 2.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <button type="button" className="gamcheon-map__more-toggle" aria-expanded={moreOpen} aria-label="지도 보기 메뉴" title="지도 보기 메뉴" onClick={() => setMoreOpen((open) => !open)}>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="5.5" cy="12" r="1.7" fill="currentColor" /><circle cx="12" cy="12" r="1.7" fill="currentColor" /><circle cx="18.5" cy="12" r="1.7" fill="currentColor" />
+          </svg>
+        </button>
+        <button type="button" className="is-secondary" onClick={resetMap} aria-label="촬영 거리 중심으로 이동" title="촬영 거리 중심으로 이동">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 2v3m0 14v3M2 12h3m14 0h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             <circle cx="12" cy="12" r="6" stroke="currentColor" strokeWidth="1.8" />

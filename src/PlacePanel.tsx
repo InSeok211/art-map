@@ -76,6 +76,7 @@ export function PlaceBrowser({
             key={place.id}
             type="button"
             className={selectedId === place.id ? 'gamcheon-map__place is-selected' : 'gamcheon-map__place'}
+            data-place-id={place.id}
             onClick={() => onSelect(place)}
           >
             <span className={`gamcheon-map__place-icon gamcheon-map__place-icon--${place.category}`} aria-hidden="true">

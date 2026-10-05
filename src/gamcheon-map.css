@@ -368,6 +368,8 @@
   font-weight: 800;
 }
 .gamcheon-map__map-tools .gamcheon-map__street-focus:hover { background: #347a70; }
+.gamcheon-map__map-tools button.is-located { color: #2f6fd6; }
+.gamcheon-map__location-notice { top: 108px; background: rgba(36, 81, 158, .92); }
 .gamcheon-map__map-tools button.is-active { border-color: #e78349; background: #fdf0e6; color: #c0612b; }
 .gamcheon-map__map-tools button:disabled { cursor: default; opacity: .7; }
 .gamcheon-map__map-tools svg { width: 20px; height: 20px; }
@@ -508,6 +510,65 @@
   .gamcheon-map .maplibregl-ctrl-bottom-right { top: 64px; right: 12px; bottom: auto; }
 }
 
+/* 시트 손잡이: 넓은 화면에서는 숨깁니다. */
+.gamcheon-map__sheet-handle { display: none; }
+
+/* 휴대폰: 아래 시트를 접고 펼치며, 지도 도구는 한 줄 가로 스크롤로 둡니다. */
+@media (max-width: 720px) {
+  .gamcheon-map__panel { bottom: calc(12px + env(safe-area-inset-bottom)); transition: max-height .25s ease; }
+  .gamcheon-map__panel:not(.is-sheet-open):not(.is-editing) { max-height: 176px; }
+  .gamcheon-map__panel.is-sheet-open { max-height: min(68%, 560px); }
+  .gamcheon-map__sheet-handle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    width: 100%;
+    padding: 8px 0 6px;
+    border: 0;
+    background: none;
+    color: #6d8279;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .gamcheon-map__sheet-handle span { width: 40px; height: 5px; border-radius: 3px; background: #cdd8d0; }
+  /* 끄는 동안 브라우저가 화면을 스크롤하지 않게 하고, 높이는 손가락을 바로 따라가게 합니다. */
+  .gamcheon-map__sheet-handle { padding: 10px 0 8px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .gamcheon-map__panel.is-dragging { transition: none; }
+  .gamcheon-map__panel.is-dragging .gamcheon-map__sheet-handle { cursor: grabbing; }
+  /* 사이트 바와 지도 도구에 이름이 있으므로 휴대폰에서는 패널 제목을 숨겨 지도를 넓힙니다. */
+  .gamcheon-map__intro { display: none; }
+  .gamcheon-map__mode-tabs { margin: 0 12px 10px; }
+  .gamcheon-map__mode-tabs button { min-height: 40px; font-size: 13px; }
+  .gamcheon-map__search-wrap { height: 44px; margin: 0 12px; }
+  .gamcheon-map__category { min-height: 36px; padding: 6px 14px; }
+  .gamcheon-map__map-tools {
+    top: 10px;
+    right: 0;
+    left: 0;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 0 12px 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .gamcheon-map__map-tools::-webkit-scrollbar { display: none; }
+  .gamcheon-map__map-tools > * { flex: 0 0 auto; }
+  .gamcheon-map__map-tools button { width: 40px; height: 40px; }
+  .gamcheon-map__map-tools .gamcheon-map__street-focus { width: auto; height: 40px; padding: 0 12px; font-size: 11px; }
+  /* 두 손가락으로 확대·축소할 수 있으므로 확대 버튼은 숨기고 방향(나침반)만 남깁니다. */
+  .gamcheon-map .maplibregl-ctrl-zoom-in,
+  .gamcheon-map .maplibregl-ctrl-zoom-out { display: none; }
+  .gamcheon-map .maplibregl-ctrl-bottom-right { top: 60px; }
+  .gamcheon-map__scene-status { top: 60px; max-width: calc(100% - 90px); text-align: center; }
+  .gamcheon-map__route-fields select { height: 44px; font-size: 14px; }
+  .gamcheon-map__route-swap { width: 40px; height: 40px; }
+}
+
 /* 좁은 화면에서는 지도 도구 버튼이 한 줄에 들어가도록 지역 표시를 숨깁니다(패널 제목에 같은 정보가 있습니다). */
 @media (max-width: 600px) {
   .gamcheon-map__area-badge { display: none; }
@@ -526,7 +587,7 @@
 .gamcheon-map__route-option { display: flex; align-items: center; gap: 7px; margin: 12px 0 0; color: #39594b; font-size: 12px; font-weight: 700; }
 .gamcheon-map__route-accuracy { margin: 8px 0 0; color: #6a7f76; font-size: 11px; }
 .gamcheon-map__route-arrived { margin: 10px 0 0; padding: 8px 10px; border-radius: 9px; background: #fdf0e6; color: #b5521f; font-size: 12px; font-weight: 800; }
-.gamcheon-map__route-result { margin-top: 14px; border: 1px solid #e3eae3; border-radius: 12px; background: #fff; }
+.gamcheon-map__route-result { margin: 0 0 14px; border: 1px solid #e3eae3; border-radius: 12px; background: #fff; }
 .gamcheon-map__route-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 12px 14px; border-bottom: 1px solid #eef3ee; }
 .gamcheon-map__route-summary strong { color: #2f6fd6; font-size: 20px; }
 .gamcheon-map__route-summary span { color: #4f665c; font-size: 12px; font-weight: 700; }
@@ -540,4 +601,87 @@
 .gamcheon-map__route-pin--origin { background: #2f9b6a; }
 .gamcheon-map__route-pin--destination { background: #e2733b; }
 .gamcheon-map__my-location { width: 16px; height: 16px; border: 3px solid #fff; border-radius: 50%; background: #2f6fd6; box-shadow: 0 0 0 6px rgba(47, 111, 214, .22), 0 2px 6px rgba(0, 0, 0, .3); }
+/* 진행 방향 화살표: 점 위쪽(북쪽 기준)으로 튀어나온 삼각형을 마커 회전(setRotation)으로 돌립니다. */
+.gamcheon-map__my-location.has-heading::before {
+  content: '';
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  border-right: 7px solid transparent;
+  border-bottom: 12px solid #2f6fd6;
+  border-left: 7px solid transparent;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 0 1.5px #fff);
+}
+.gamcheon-map__route-follow { margin-top: 10px; }
+.gamcheon-map__route-follow button { width: 100%; min-height: 34px; border: 1px solid #2f6fd6; border-radius: 9px; background: #2f6fd6; color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.gamcheon-map__route-follow button.is-active { border-color: #cfdcf2; background: #eaf1fd; color: #24519e; cursor: default; }
+.gamcheon-map__route-result-follow { padding: 0 14px 10px; border-bottom: 1px solid #eef3ee; }
 
+/* 지도 보기 메뉴(더보기)와 둥근 '내 위치' 버튼은 휴대폰에서만 씁니다. */
+.gamcheon-map__map-tools .gamcheon-map__more-toggle,
+.gamcheon-map__more-menu,
+.gamcheon-map__more-backdrop,
+.gamcheon-map__locate-fab { display: none; }
+
+@media (max-width: 720px) {
+  /* 도구 줄은 자주 쓰는 버튼(반투명, 공방만 보기)과 더보기만 오른쪽에 둡니다. */
+  .gamcheon-map__map-tools { justify-content: flex-end; }
+  .gamcheon-map__map-tools .is-secondary,
+  .gamcheon-map__map-tools .gamcheon-map__locate-tool { display: none; }
+  .gamcheon-map__map-tools .gamcheon-map__more-toggle { display: grid; }
+  .gamcheon-map__map-tools .gamcheon-map__more-toggle[aria-expanded='true'] { border-color: #265d56; background: #265d56; color: #fff; }
+  .gamcheon-map__more-backdrop { display: block; position: absolute; z-index: 590; inset: 0; border: 0; background: transparent; }
+  .gamcheon-map__more-menu {
+    display: grid;
+    position: absolute;
+    z-index: 600;
+    top: 58px;
+    right: 12px;
+    min-width: 190px;
+    padding: 6px;
+    border: 1px solid #e3eae3;
+    border-radius: 14px;
+    background: #fffefa;
+    box-shadow: 0 12px 32px rgba(29, 57, 45, .18);
+  }
+  .gamcheon-map__more-menu button {
+    min-height: 44px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    color: #23463c;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+  }
+  .gamcheon-map__more-menu button:active { background: #eef5ef; }
+  /* 시트 바로 위 오른쪽에 떠 있고, 시트를 펼치면 함께 올라갑니다. */
+  .gamcheon-map__locate-fab {
+    display: grid;
+    position: absolute;
+    z-index: 450;
+    right: 14px;
+    bottom: calc(176px + 24px + env(safe-area-inset-bottom));
+    width: 48px;
+    height: 48px;
+    padding: 12px;
+    place-items: center;
+    border: 1px solid #e3eae3;
+    border-radius: 50%;
+    background: #fffefa;
+    box-shadow: 0 6px 20px rgba(29, 57, 45, .2);
+    color: #426754;
+    cursor: pointer;
+    transition: bottom .25s ease, opacity .2s ease;
+  }
+  .gamcheon-map__locate-fab svg { width: 22px; height: 22px; }
+  .gamcheon-map__locate-fab.is-located { color: #2f6fd6; }
+  .gamcheon-map.is-sheet-open .gamcheon-map__locate-fab { bottom: calc(min(68%, 560px) + 24px + env(safe-area-inset-bottom)); }
+  .gamcheon-map.is-editing .gamcheon-map__locate-fab { display: none; }
+  /* 안내 문구는 둥근 버튼 위가 아니라 도구 줄 아래에 띄웁니다. */
+  .gamcheon-map__location-notice { top: 60px; }
+}

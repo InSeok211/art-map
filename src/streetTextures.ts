@@ -3,7 +3,7 @@ import * as THREE from 'three'
 // 거리 장면의 벽·바닥·지붕 재질에 쓰는 128px 절차 텍스처입니다.
 export type ConceptSurface = 'brick' | 'white-brick' | 'lime-rib' | 'wood' | 'pink-plaster' | 'concrete' | 'lane-plaster' | 'lane-brick'
   | 'context-tile' | 'context-stucco' | 'context-stone' | 'roof-grain'
-  | 'district-window' | 'workshop-brick'
+  | 'district-window' | 'district-facade' | 'workshop-brick'
   | 'ground-pavers' | 'ground-stone' | 'ground-asphalt' | 'ground-cobble' | 'ground-lane' | 'ground-grass' | 'roof-sheet'
 
 type Rgb = [number, number, number]
@@ -16,7 +16,7 @@ const BASE_COLORS: Record<ConceptSurface, Rgb> = {
   concrete: [175, 173, 165], 'lane-plaster': [242, 239, 229], 'lane-brick': [245, 238, 226],
   'context-tile': [247, 246, 240], 'context-stucco': [244, 242, 234], 'context-stone': [235, 234, 225],
   'roof-grain': [245, 245, 241],
-  'district-window': [100, 143, 153], 'workshop-brick': [198, 186, 168],
+  'district-window': [100, 143, 153], 'district-facade': [244, 242, 234], 'workshop-brick': [198, 186, 168],
   'ground-pavers': [231, 239, 232], 'ground-stone': [226, 233, 227],
   'ground-asphalt': [110, 121, 125], 'ground-cobble': [181, 207, 207], 'ground-lane': [144, 163, 166], 'ground-grass': [153, 193, 139],
   'roof-sheet': [228, 239, 238],
@@ -55,6 +55,16 @@ function pixelColor(kind: ConceptSurface, x: number, y: number): Rgb {
   const tinted = (shade: number): Rgb => [red + shade, green + shade, blue + shade]
   const noise = ((x * 73 + y * 151 + x * y * 17) % 23) - 11
 
+  if (kind === 'district-facade') {
+    // 벽 한 칸(폭 3.1m × 층고 2.65m): 가운데 창(틀·창턱 포함)과 아래쪽 층 띠(텍스처 0행이 아래). 벽색과 곱해지므로 창은 어둡게 둡니다.
+    if (y < 5) return tinted(-14)
+    const frame = x >= 34 && x <= 94 && y >= 36 && y <= 90
+    const glass = x >= 38 && x <= 90 && y >= 40 && y <= 86
+    if (glass) return [70 + (x < 64 ? 14 : 0) + Math.round(y * 0.1), 98 + (x < 64 ? 12 : 0), 110 + (x < 64 ? 10 : 0)]
+    if (frame) return [236, 238, 230]
+    if (y >= 31 && y <= 35 && x >= 30 && x <= 98) return tinted(-26)
+    return tinted(((x * 73 + y * 151 + x * y * 17) % 23 - 11) * 0.6)
+  }
   if (kind === 'district-window') {
     const frame = x < 7 || x > 120 || y < 7 || y > 120 || Math.abs(x - 64) < 3 || Math.abs(y - 51) < 2
     return frame ? [231, 233, 222] : tinted(noise * 0.2 + (x < 60 ? 10 : -12) + y * 0.12)
