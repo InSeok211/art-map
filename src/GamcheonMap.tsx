@@ -721,7 +721,7 @@ export function GamcheonMap({
 
         <div className="gamcheon-map__panel-footer">
           <span className="gamcheon-map__footer-mark">G</span>
-          <span>{localModels.some((item) => BUILTIN_MODELS.some((asset) => asset.id === item.assetId)) ? '3D 에셋: dogfooter' : '감천2동을 천천히, 더 자세히.'}</span>
+          <span>감천2동을 천천히, 더 자세히.</span>
         </div>
       </aside>
 

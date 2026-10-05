@@ -177,12 +177,12 @@ describe('GamcheonMap', () => {
     render(<GamcheonMap editable models={[]} onModelsChange={onModelsChange} />)
 
     fireEvent.click(screen.getByRole('button', { name: '3D 배치' }))
-    fireEvent.click(screen.getByRole('button', { name: '각진형' }))
+    fireEvent.click(screen.getByRole('button', { name: '기본 에셋' }))
     fireEvent.click(screen.getByRole('button', { name: /지도에 배치/ }))
     act(() => mapClick.current?.({ lngLat: { lng: 129.0105, lat: 35.0978 } }))
 
     expect(onModelsChange).toHaveBeenCalledWith([expect.objectContaining({
-      assetId: 'angular-house', longitude: 129.0105, latitude: 35.0978,
+      assetId: 'artist-workshop', longitude: 129.0105, latitude: 35.0978,
     })])
     fireEvent.change(screen.getByRole('slider', { name: '모델 크기' }), { target: { value: '30' } })
     expect(onModelsChange).toHaveBeenLastCalledWith([expect.objectContaining({ widthMeters: 30 })])

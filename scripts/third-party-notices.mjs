@@ -17,8 +17,8 @@ export const DATA_NOTICE = `지도 데이터와 3D 에셋 출처
   건물 윤곽, 도로·녹지, 감천2동 경계와 이를 가공한 3D 바닥 데이터(gamcheon-buildings.json, street-surfaces.json,
   road-ground.json, map-data/*.json)는 OpenStreetMap에서 파생한 데이터베이스이며 같은 ODbL 1.0 조건으로 제공합니다.
 - 배경 지도 타일: OpenFreeMap(https://openfreemap.org/), 지도 스타일과 스키마 © OpenMapTiles(https://openmaptiles.org/).
-- 3D 모델 에셋(관리자 3D 배치 도구): dogfooter (출처: dogfooter). 제작자 표시 조건으로 사용하며 AI 학습에 사용할 수 없습니다.
-- 3D 건물 모델과 외벽 질감은 직접 만든 절차적(코드로 생성한) 모델입니다.
+- 지도 스타일: Positron © CARTO, © OpenMapTiles (코드 BSD-3-Clause, 디자인 CC BY 4.0)을 고쳐 사용합니다.
+- 3D 건물 모델, 공방 GLB, 외벽 질감은 모두 직접 만든 절차적(코드로 생성한) 모델입니다. 외부 제작 3D 에셋은 쓰지 않습니다.
 `
 
 async function licenseText(directory) {

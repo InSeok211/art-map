@@ -38,7 +38,7 @@ export function ModelEditor({
   return <div className="gamcheon-map__model-editor">
     <p className="gamcheon-map__model-help">모델을 고른 뒤 지도를 클릭해 배치하세요. 배치한 모델은 위치·크기·방향을 직접 수정할 수 있습니다.</p>
     <div className="gamcheon-map__model-styles" role="group" aria-label="3D 에셋 스타일">
-      {(['rounded', 'angular', 'custom'] as const).map((style) => <button key={style} type="button" className={styleFilter === style ? 'is-active' : ''} onClick={() => onStyleFilter(style)}>{style === 'rounded' ? '둥근형' : style === 'angular' ? '각진형' : '내 에셋'}</button>)}
+      {(['rounded', 'custom'] as const).map((style) => <button key={style} type="button" className={styleFilter === style ? 'is-active' : ''} onClick={() => onStyleFilter(style)}>{style === 'rounded' ? '기본 에셋' : '내 에셋'}</button>)}
     </div>
     <div className="gamcheon-map__model-assets">
       {assets.filter((asset) => asset.style === styleFilter).map((asset) => <button key={asset.id} type="button" className={chosenAssetId === asset.id ? 'is-selected' : ''} onClick={() => onChooseAsset(asset.id)} aria-pressed={chosenAssetId === asset.id}>
@@ -71,6 +71,5 @@ export function ModelEditor({
         <button type="button" className="is-danger" onClick={() => onDelete(selected.id)}>삭제</button>
       </div>
     </div>}
-    <small className="gamcheon-map__model-credit">3D 에셋: dogfooter</small>
   </div>
 }

@@ -66,7 +66,7 @@ export function MapSection() {
 
 배치 결과는 `onModelsChange`로 전달됩니다. 기존 웹에서 사용하려면 위 예시처럼 `models`를 상태로 관리하고, 지속 저장이 필요할 때는 서버나 데이터베이스에도 기록하세요. 미리보기는 배치 정보를 브라우저의 로컬 저장소에 저장합니다. 사용자 GLB는 같은 브라우저에서만 다시 열리므로 여러 기기에서 공유하려면 파일도 별도로 업로드·호스팅해야 합니다. GLB 모델의 좌표·크기는 편집 가능한 시연용이며 실제 건물 위치나 크기를 나타내지 않습니다.
 
-기본 에셋 15개는 제공된 `all-6400` 폴더에서 골랐습니다. 모델 제작자는 **dogfooter**이며 자세한 사용 조건은 [`src/assets/models/LICENSE.txt`](src/assets/models/LICENSE.txt)에 있습니다. 기본 모델을 사용하는 화면에서도 제작자 표시를 유지하세요.
+기본 에셋은 직접 만든 작가님 공방 모델(`src/assets/models/custom/artist-workshop-180.glb`, `scripts/build-artist-workshop.mjs`로 생성) 하나입니다. 예전에 넣었던 외부 제작 샘플 모델 15개는 재배포 조건이 불분명해 저장소와 이력에서 모두 뺐고, 그 모델을 쓰던 브라우저 저장 배치는 불러올 때 지웁니다. 다른 모델은 **내 에셋**에서 GLB를 가져와 쓰세요.
 
 ### 작가님 공방 모델
 
@@ -149,4 +149,4 @@ OSM 윤곽(1468590644)은 골목을 따라 9.5m×2.2m 띠로 그려져 있어 �
 
 ## 출처와 라이선스
 
-지도 데이터(OpenStreetMap, ODbL 1.0), 배경 지도(OpenFreeMap·OpenMapTiles), 3D 모델 에셋(dogfooter)의 출처와 조건, 오픈소스 라이선스 고지 방법은 [`NOTICE.md`](NOTICE.md)에 정리했습니다. 홈페이지로 내보내면 `public/third-party-notices.txt`가 함께 만들어집니다.
+지도 데이터(OpenStreetMap, ODbL 1.0), 배경 지도(OpenFreeMap·OpenMapTiles), 3D 모델 에셋의 출처와 조건, 오픈소스 라이선스 고지 방법은 [`NOTICE.md`](NOTICE.md)에 정리했습니다. 홈페이지로 내보내면 `public/third-party-notices.txt`가 함께 만들어집니다.

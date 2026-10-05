@@ -17,10 +17,11 @@
 
 - 타일: [OpenFreeMap](https://openfreemap.org/)
 - 스타일·스키마: © [OpenMapTiles](https://openmaptiles.org/) (`src/positron-style.json`은 OpenFreeMap Positron 스타일을 고친 파일)
+- Positron 스타일: © CARTO, © OpenMapTiles. 코드는 BSD-3-Clause, 디자인은 CC BY 4.0 조건으로, 고친 경우에도 이 출처를 유지해야 합니다.
 
 ## 3D 모델 에셋
 
-`src/assets/models/`의 기본 GLB는 **dogfooter**의 에셋입니다(`src/assets/models/LICENSE.txt`). 제작자 표시(출처: dogfooter)를 유지해야 하며 AI 학습용으로 쓸 수 없습니다. 3D 배치 화면에 제작자 표시가 나옵니다.
+기본 GLB는 직접 만든 작가님 공방 모델(`src/assets/models/custom/artist-workshop-180.glb`) 하나뿐입니다. 외부 제작 3D 모델은 저장소와 배포물에 들어 있지 않습니다.
 
 ## 건물 외관과 지붕색
 
@@ -29,5 +30,7 @@
 - 조사하지 않은 건물의 지붕색은 일반형 디자인 팔레트(`genericRoof`)이며, 항공사진에서 얻은 값이 아닙니다.
 
 ## 오픈소스 소프트웨어
+
+개발·빌드 도구(vite, vitest 등)는 배포물에 들어가지 않습니다. 그중 lightningcss는 MPL-2.0이지만 수정·배포하지 않으므로 의무가 생기지 않습니다. GPL·AGPL 계열 패키지는 없습니다.
 
 번들에 들어가는 패키지(MapLibre GL JS: BSD-3-Clause, three.js: MIT, polygon-clipping: MIT, React: MIT 등)의 라이선스 전문은 `node scripts/third-party-notices.mjs <출력 파일>`로 모을 수 있습니다. 홈페이지로 내보낼 때(`npm run export:site`) `public/third-party-notices.txt`가 자동으로 만들어지고 사이트 바닥글에서 링크합니다.

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { GamcheonMap } from './GamcheonMap'
-import { GENERIC_BUILDING_ASSET_IDS, sanitizeModels } from './modelCatalog'
+import { RETIRED_ASSET_IDS, sanitizeModels } from './modelCatalog'
 import type { MapModel } from './modelCatalog'
 import { ARTIST_WORKSHOP_MODEL, refineArtistWorkshopPlace, removeUntouchedWorkshopModel, seedArtistWorkshopPlace } from './artistWorkshop'
 import { sanitizeAlleys } from './alleys'
@@ -61,7 +61,7 @@ function loadModels(): MapModel[] {
     const stored = localStorage.getItem(MODELS_STORAGE_KEY)
     const savedModels = stored === null ? demoModels : sanitizeModels(JSON.parse(stored))
     const models = savedModels.filter((model) =>
-      !DEMO_MODEL_IDS.has(model.id) && !GENERIC_BUILDING_ASSET_IDS.has(model.assetId))
+      !DEMO_MODEL_IDS.has(model.id) && !RETIRED_ASSET_IDS.has(model.assetId))
     const next = removeUntouchedWorkshopModel(models)
     if (next !== models || models.length !== savedModels.length) {
       localStorage.setItem(MODELS_STORAGE_KEY, JSON.stringify(next))

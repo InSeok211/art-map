@@ -24,31 +24,18 @@ export interface MapModel {
   altitudeMeters: number
 }
 
+// 기본 에셋은 직접 만든 공방 모델(scripts/build-artist-workshop.mjs) 하나입니다. 그 밖의 모델은
+// 3D 배치 탭에서 GLB를 가져와 씁니다.
 export const BUILTIN_MODELS: ModelAsset[] = [
   { id: 'artist-workshop', name: '작가님 공방 · 옥천로101번길 23', style: 'rounded', category: 'building', url: modelUrl('custom', 'artist-workshop-180.glb'), defaultWidth: 15.5 },
-  { id: 'rounded-house', name: '작은 주택', style: 'rounded', category: 'building', url: modelUrl('rounded', 'common-buildings-small-family-house-compact-normal.glb'), defaultWidth: 18 },
-  { id: 'rounded-shop', name: '골목 가게', style: 'rounded', category: 'building', url: modelUrl('rounded', 'common-buildings-corner-retail-shell-compact-normal.glb'), defaultWidth: 18 },
-  { id: 'rounded-cafe', name: '카페', style: 'rounded', category: 'building', url: modelUrl('rounded', 'restaurant-pancake-cafe-building-cottage-normal.glb'), defaultWidth: 18 },
-  { id: 'rounded-townhouse', name: '연립주택 입구', style: 'rounded', category: 'building', url: modelUrl('rounded', 'common-buildings-townhouse-entrance-module-compact-normal.glb'), defaultWidth: 16 },
-  { id: 'rounded-pine', name: '소나무', style: 'rounded', category: 'nature', url: modelUrl('rounded', 'common-nature-small-pine-tree-cottage-normal.glb'), defaultWidth: 8 },
-  { id: 'rounded-fruit', name: '과일나무', style: 'rounded', category: 'nature', url: modelUrl('rounded', 'common-nature-small-fruit-tree-cottage-normal.glb'), defaultWidth: 7 },
-  { id: 'rounded-flower', name: '수국 덤불', style: 'rounded', category: 'nature', url: modelUrl('rounded', 'common-nature-flowering-hydrangea-bush-cottage-normal.glb'), defaultWidth: 5 },
-  { id: 'rounded-lamp', name: '가로등', style: 'rounded', category: 'street', url: modelUrl('rounded', 'common-infrastructure-street-lamp-column-civic-normal.glb'), defaultWidth: 3 },
-  { id: 'angular-house', name: '작은 주택', style: 'angular', category: 'building', url: modelUrl('angular', 'angular-common-buildings-small-family-house-compact-normal.glb'), defaultWidth: 18 },
-  { id: 'angular-shop', name: '골목 가게', style: 'angular', category: 'building', url: modelUrl('angular', 'angular-common-buildings-corner-retail-shell-compact-normal.glb'), defaultWidth: 18 },
-  { id: 'angular-townhouse', name: '연립주택 입구', style: 'angular', category: 'building', url: modelUrl('angular', 'angular-common-buildings-townhouse-entrance-module-compact-normal.glb'), defaultWidth: 16 },
-  { id: 'angular-pine', name: '소나무', style: 'angular', category: 'nature', url: modelUrl('angular', 'angular-common-nature-small-pine-tree-cottage-normal.glb'), defaultWidth: 8 },
-  { id: 'angular-fruit', name: '과일나무', style: 'angular', category: 'nature', url: modelUrl('angular', 'angular-common-nature-small-fruit-tree-cottage-normal.glb'), defaultWidth: 7 },
-  { id: 'angular-flower', name: '수국 덤불', style: 'angular', category: 'nature', url: modelUrl('angular', 'angular-common-nature-flowering-hydrangea-bush-cottage-normal.glb'), defaultWidth: 5 },
-  { id: 'angular-lamp', name: '가로등', style: 'angular', category: 'street', url: modelUrl('angular', 'angular-common-infrastructure-street-lamp-column-civic-normal.glb'), defaultWidth: 3 },
 ]
 
-// These generic sample buildings do not represent verified Gamcheon houses.
-// Keep the workshop and any user-imported GLB models when cleaning a preview.
-export const GENERIC_BUILDING_ASSET_IDS = new Set(
-  BUILTIN_MODELS.filter((asset) => asset.category === 'building' && asset.id !== 'artist-workshop')
-    .map((asset) => asset.id),
-)
+// 예전에 기본으로 들어 있던 외부 제작 모델의 번호입니다. 라이선스 정리로 뺐으므로, 브라우저에 저장된
+// 예전 배치에서 이 모델을 쓰는 항목은 불러올 때 지웁니다.
+export const RETIRED_ASSET_IDS = new Set([
+  'rounded-house', 'rounded-shop', 'rounded-cafe', 'rounded-townhouse', 'rounded-pine', 'rounded-fruit', 'rounded-flower', 'rounded-lamp',
+  'angular-house', 'angular-shop', 'angular-townhouse', 'angular-pine', 'angular-fruit', 'angular-flower', 'angular-lamp',
+])
 
 export function sanitizeModels(value: unknown, assets?: readonly ModelAsset[]): MapModel[] {
   if (!Array.isArray(value)) return []
