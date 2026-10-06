@@ -12,6 +12,9 @@ import './embed.css'
 //   지도 → 부모: { source: 'gamcheon-artist-map', type: 'ready' | 'select' | 'pick', ... }
 // 주소에 ?mode=full을 붙이면 패널(장소 목록·길찾기)까지 갖춘 전체 지도로 열리고, 작가님 공방을 장소로 함께 보여 줍니다.
 const FULL = new URLSearchParams(window.location.search).get('mode') === 'full'
+// ?host=site: 홈페이지가 제목 카드(← 감천 작가 지도 · 작가 목록)를 지도 위에 띄우므로, 휴대폰 화면의 지도 쪽
+// 이름표를 숨기고 검색·분류를 그 카드 아래에 둡니다(CSS의 is-site-hosted).
+const SITE_HOSTED = new URLSearchParams(window.location.search).get('host') === 'site'
 
 interface HostState { places: Place[]; selectedId: string | null; canPick: boolean }
 
@@ -52,7 +55,7 @@ function EmbeddedMap() {
   const places = FULL ? [ARTIST_WORKSHOP_PLACE, ...host.places.filter((place) => place.id !== ARTIST_WORKSHOP_PLACE.id)] : host.places
   return <GamcheonMap
     compact={!FULL}
-    className={FULL ? 'artist-full-map' : 'artist-embed-map'}
+    className={`${FULL ? 'artist-full-map' : 'artist-embed-map'}${SITE_HOSTED ? ' is-site-hosted' : ''}`}
     places={places}
     selectedPlaceId={host.selectedId}
     onPlaceSelect={(place) => post({ type: 'select', id: place.id })}

@@ -760,6 +760,12 @@
   .gm-mobile__route { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 10px; overflow-y: auto; }
   .gm-mobile__route .gamcheon-map__route-fields select { height: 42px; }
 
+  /* 홈페이지에 끼워질 때(?host=site): 위 이름표는 홈페이지의 제목 카드가 대신하므로 숨기고, 검색·분류를
+     그 카드(위 10px + 높이 48px) 아래로 내립니다. 길찾기 화면에서는 위쪽이 비므로 도구만 카드 아래에 둡니다. */
+  .gamcheon-map.is-site-hosted .gm-mobile__brand { display: none; }
+  .gamcheon-map.is-site-hosted .gm-mobile__top { top: 68px; }
+  .gamcheon-map.is-immersive.is-site-hosted:has(.gm-mobile[data-view='route']) .gamcheon-map__map-tools { top: 72px; }
+
   /* 하단 메뉴 */
   .gm-mobile__nav { position: absolute; z-index: 530; right: 0; bottom: 0; left: 0; display: flex; height: calc(58px + env(safe-area-inset-bottom)); padding: 3px 8px env(safe-area-inset-bottom); border-width: 1px 0 0; box-shadow: 0 -3px 15px rgba(0, 0, 0, .12); }
   .gm-mobile__nav button { display: grid; flex: 1; align-content: center; justify-items: center; gap: 2px; border: 0; background: none; color: var(--m-ink); font: inherit; font-size: 10px; font-weight: 800; opacity: .5; cursor: pointer; }
