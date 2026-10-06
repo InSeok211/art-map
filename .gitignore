@@ -8,4 +8,6 @@ design/**/*.jpg
 design/**/*.jpeg
 design/**/*.png
 design/**/*.webp
+# 사진에서 잘라 낸 원본 픽셀(그린하우스 데칼 등)도 같은 이유로 올리지 않습니다.
+design/**/*.rgba
 .site-build/

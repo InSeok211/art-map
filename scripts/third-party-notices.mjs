@@ -18,7 +18,8 @@ export const DATA_NOTICE = `지도 데이터와 3D 에셋 출처
   road-ground.json, map-data/*.json)는 OpenStreetMap에서 파생한 데이터베이스이며 같은 ODbL 1.0 조건으로 제공합니다.
 - 배경 지도 타일: OpenFreeMap(https://openfreemap.org/), 지도 스타일과 스키마 © OpenMapTiles(https://openmaptiles.org/).
 - 지도 스타일: Positron © CARTO, © OpenMapTiles (코드 BSD-3-Clause, 디자인 CC BY 4.0)을 고쳐 사용합니다.
-- 3D 건물 모델, 공방 GLB, 외벽 질감은 모두 직접 만든 절차적(코드로 생성한) 모델입니다. 외부 제작 3D 에셋은 쓰지 않습니다.
+- 3D 건물 모델, 공방·그린하우스 시안 GLB, 외벽 질감은 모두 직접 만든 절차적(코드로 생성한) 모델입니다. 외부 제작 3D 에셋은 쓰지 않으며,
+  벽화·그림·로고 자리는 사진을 넣지 않고 단색 면으로만 표시합니다.
 `
 
 async function licenseText(directory) {

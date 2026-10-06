@@ -1,5 +1,5 @@
 import * as polygonClipping from 'polygon-clipping'
-import { PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, roadWidth, unionRoadAreas } from './roadCorridors'
+import { displayRoadWidth, PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, unionRoadAreas } from './roadCorridors'
 import type { RoadRun } from './roadCorridors'
 import { clearRoadOfKeptBuildings, MEETING_CIRCLE_CENTER, MEETING_CIRCLE_RADIUS, streetMeters } from './streetSceneData'
 import type { StreetBuilding } from './streetSceneData'
@@ -28,7 +28,7 @@ export const KERB_LINE = { width: 0.13, offset: 3.03 }
 export function buildRoadRuns(bounds: SceneBounds) {
   const roadRuns: RoadRun[] = []
   for (const way of STREET_SURFACE_WAYS.roads) {
-    const wayWidth = roadWidth(way)
+    const wayWidth = displayRoadWidth(way)
     const runs: [number, number][][] = []
     let run: [number, number][] = []
     const finishRun = () => {

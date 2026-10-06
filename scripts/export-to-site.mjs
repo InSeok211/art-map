@@ -25,6 +25,9 @@ await rm(work, { recursive: true, force: true })
 async function buildApp(name, base, input) {
   const outDir = path.join(work, name)
   await build({
+    // The export supplies its own inputs/base; the Vite dev-server config is
+    // unnecessary here and can fail to resolve under the Windows sandbox.
+    configFile: false,
     base,
     logLevel: 'warn',
     build: { outDir, emptyOutDir: true, rolldownOptions: { input } },

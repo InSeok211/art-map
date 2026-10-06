@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>그린하우스 · 달과6펜스 연결형 3D 시안</title>
+  <style>
+    html,body { margin:0; width:100%; height:100%; overflow:hidden; background:#e9ece8; font-family:system-ui,-apple-system,sans-serif; }
+    #view { width:100%; height:100%; display:block; }
+    .note { position:absolute; left:20px; top:20px; max-width:355px; padding:17px 19px; border-radius:15px; background:#fffffff0; box-shadow:0 6px 28px #17251a25; color:#243129; }
+    .note h1 { font-size:17px; margin:0 0 7px; }
+    .note p { font-size:13px; line-height:1.5; margin:0; }
+    .note small { display:block; margin-top:9px; color:#59675d; }
+    .views { position:absolute; right:20px; bottom:20px; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .views button { border:1px solid #bdc9bd; background:#fffffff0; color:#253a2e; border-radius:999px; padding:10px 14px; cursor:pointer; font:600 12px system-ui,sans-serif; box-shadow:0 3px 12px #17251a19; }
+    .views button:hover,.views button:focus-visible { background:#e8eee7; }
+  </style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div class="note"><h1>그린하우스 · 달과6펜스</h1><p>제공해 주신 평면도의 꺾인 외곽선과 안으로 파인 공간을 따라 만든 3D 구조입니다. 드래그해 회전하고 휠로 확대할 수 있습니다.</p><small>평면 윤곽은 첨부 도면 기준이며 지붕 높이와 보이지 않는 벽면은 추정했습니다.</small></div>
+  <div class="views"><button data-view="street">사시도</button><button data-view="facade">입구 외벽</button><button data-view="front">흰색 두 전면</button><button data-view="court">연결된 안쪽</button><button data-view="plan">평면 구조</button></div>
+  <script type="module">
+    import * as THREE from 'three'
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+    const canvas = document.querySelector('#view')
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias:true })
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2))
+    renderer.outputColorSpace = THREE.SRGBColorSpace
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.25
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    const scene = new THREE.Scene()
+    scene.background = new THREE.Color(0xf8f7f3)
+    const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 200)
+    camera.position.set(26, 10, 28)
+    const controls = new OrbitControls(camera, canvas)
+    controls.target.set(0, 3, 0)
+    controls.enableDamping = true
+    const views={street:[26,10,28],facade:[50,8,3],front:[0,21,36],court:[-23,23,29],plan:[0,48,0.01]}
+    document.querySelectorAll('[data-view]').forEach((button)=>button.addEventListener('click',()=>{
+      camera.up.set(...(button.dataset.view==='plan'?[0,0,-1]:[0,1,0]))
+      camera.position.set(...views[button.dataset.view]); controls.target.set(0.5,3,0.5); controls.update()
+    }))
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x9b9d91, 1.65))
+    const sun = new THREE.DirectionalLight(0xfff6e8, 2.0)
+    sun.position.set(-20, 40, 25)
+    sun.castShadow = true
+    sun.shadow.mapSize.set(2048,2048)
+    sun.shadow.normalBias = 0.05
+    sun.shadow.camera.left=-30; sun.shadow.camera.right=30; sun.shadow.camera.top=30; sun.shadow.camera.bottom=-30
+    scene.add(sun)
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(100,100), new THREE.MeshStandardMaterial({color:0xf0efeb,roughness:1}))
+    ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; ground.position.y=-0.05; scene.add(ground)
+    const street = new THREE.Mesh(new THREE.BoxGeometry(6.6,0.035,25), new THREE.MeshStandardMaterial({color:0x999b99,roughness:1}))
+    street.position.set(12.3,-0.018,0.5); street.receiveShadow=true; scene.add(street)
+    const curb = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.14,25), new THREE.MeshStandardMaterial({color:0xbab9b3,roughness:1}))
+    curb.position.set(9.05,0.02,0.5); curb.receiveShadow=true; scene.add(curb)
+    const forecourt = new THREE.Mesh(new THREE.BoxGeometry(20,0.035,5.1), new THREE.MeshStandardMaterial({color:0xc5c2bc,roughness:1}))
+    forecourt.position.set(-0.35,-0.018,13.9); forecourt.receiveShadow=true; scene.add(forecourt)
+    new GLTFLoader().load('/src/assets/models/custom/greenhouse-sixpence-connected.glb', (gltf) => {
+      gltf.scene.traverse((obj) => { if(obj.isMesh) {obj.castShadow=true;obj.receiveShadow=!obj.name.includes('roof-plane')} })
+      scene.add(gltf.scene)
+      const bounds = new THREE.Box3().setFromObject(gltf.scene)
+      controls.target.copy(bounds.getCenter(new THREE.Vector3()))
+      controls.target.y=3
+      controls.update()
+    }, undefined, (error) => { document.querySelector('.note p').textContent = `모델을 불러오지 못했습니다: ${error.message}` })
+    function frame() {
+      const w=innerWidth,h=innerHeight
+      renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix()
+      controls.update(); renderer.render(scene,camera); requestAnimationFrame(frame)
+    }
+    frame()
+  </script>
+</body>
+</html>

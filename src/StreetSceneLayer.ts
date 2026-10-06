@@ -2,6 +2,7 @@ import { MercatorCoordinate } from 'maplibre-gl'
 import type { CustomLayerInterface, Map } from 'maplibre-gl'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import * as polygonClipping from 'polygon-clipping'
 import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings, MEETING_CIRCLE_CENTER, nearestStreet, PHOTOGRAPHED_STREET, STREET_ORIGIN, streetMeters } from './streetSceneData'
 import type { FacadeOpening } from './streetSceneData'
@@ -67,6 +68,13 @@ export function buildingRuns(attribute: THREE.BufferAttribute | THREE.Interleave
   }
   return Int32Array.from(runs)
 }
+
+// 그린하우스(감내1로175번안길 들머리)는 OSM 윤곽 세 동 대신 전용 3D 모델(scripts/build-greenhouse-from-plan.mjs)로
+// 그립니다. 모델은 북쪽이 위인 평면도를 실제 축척(1:1)으로 옮긴 것이라 돌리지 않고, 바닥 중심을 세 윤곽을 합친
+// 범위의 중심(장면 미터 x -7.1, z -108.75)에 맞춥니다. 모델 자체의 바닥 중심은 (0.39, -0.09)입니다.
+export const GREEN_HOUSE_FOOTPRINT_IDS = new Set([1468551429, 1468551431, 1468551433])
+const GREEN_HOUSE_URL = new URL('./assets/models/custom/greenhouse-sixpence-connected.glb', import.meta.url).href
+const GREEN_HOUSE_POSITION = new THREE.Vector3(-7.1 - 0.39, 0, -108.75 + 0.09)
 
 export const SCENE_BUILD_MEASURE = 'gamcheon-map:street-scene-build'
 const isTouchDevice = () => typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
@@ -1619,7 +1627,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   private build() {
-    const buildings = getPhotographedStreetBuildings()
+    const buildings = getPhotographedStreetBuildings().filter((building) => !GREEN_HOUSE_FOOTPRINT_IDS.has(building.id))
     const workshop = buildings.find((building) => building.id === ARTIST_WORKSHOP_FOOTPRINT_ID)
     if (workshop) this.workshopCenter = outlineCenter(workshop.outline.map(streetMeters))
     this.buildGroundAndSideRoads(buildings)
@@ -1986,6 +1994,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true })
     // 장면이 움직이지 않으므로 그림자 지도는 첫 프레임에 한 번만 계산합니다.
     configureRenderer(this.renderer)
+    this.loadGreenHouse(map)
   }
 
   render(_gl: WebGL2RenderingContext, options: { defaultProjectionData: { mainMatrix: ArrayLike<number> } }) {
@@ -2008,7 +2017,37 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.renderer.render(this.scene, this.camera)
   }
 
+  // 그린하우스 전용 모델을 불러와 장면에 바로 둡니다(공방처럼 '다른 건물 숨기기'와 상관없이 늘 보임).
+  private greenHouse: THREE.Object3D | null = null
+  private loadGreenHouse(map: Map) {
+    if (this.greenHouse) return
+    new GLTFLoader().load(GREEN_HOUSE_URL, (gltf) => {
+      if (this.map !== map) return
+      const model = gltf.scene
+      model.name = 'green-house'
+      model.position.copy(GREEN_HOUSE_POSITION)
+      model.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return
+        object.castShadow = true
+        object.receiveShadow = true
+      })
+      this.greenHouse = model
+      this.scene.add(model)
+      this.shadowsBaked = false
+      map.triggerRepaint()
+    }, undefined, () => { /* 모델을 못 불러와도 나머지 장면은 그대로 둡니다. */ })
+  }
+
   onRemove() {
+    if (this.greenHouse) {
+      this.greenHouse.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return
+        object.geometry.dispose()
+        ;(Array.isArray(object.material) ? object.material : [object.material]).forEach((material: THREE.Material) => material.dispose())
+      })
+      this.greenHouse.removeFromParent()
+      this.greenHouse = null
+    }
     cancelAnimationFrame(this.riseAnimation)
     this.riseAnimation = 0
     this.map?.off('moveend', this.scheduleOcclusion)

@@ -24,10 +24,10 @@ export interface MapModel {
   altitudeMeters: number
 }
 
-// 기본 에셋은 직접 만든 공방 모델(scripts/build-artist-workshop.mjs) 하나입니다. 그 밖의 모델은
-// 3D 배치 탭에서 GLB를 가져와 씁니다.
+// 기본 에셋은 프로젝트에서 직접 만든 공방과 연결형 그린하우스 시안입니다.
 export const BUILTIN_MODELS: ModelAsset[] = [
   { id: 'artist-workshop', name: '작가님 공방 · 옥천로101번길 23', style: 'rounded', category: 'building', url: modelUrl('custom', 'artist-workshop-180.glb'), defaultWidth: 15.5 },
+  { id: 'greenhouse-sixpence', name: '그린하우스 · 달과6펜스 연결형 시안', style: 'custom', category: 'building', url: modelUrl('custom', 'greenhouse-sixpence-connected.glb'), defaultWidth: 22 },
 ]
 
 // 예전에 기본으로 들어 있던 외부 제작 모델의 번호입니다. 라이선스 정리로 뺐으므로, 브라우저에 저장된

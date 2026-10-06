@@ -48,6 +48,29 @@ export const gamcheonOutsideFeature = {
   },
 }
 
+// 3D 건물을 그리는 범위: 2026-10-05 사용자가 고른 화면(확대 16.4, 방위 15°, 공방이 화면 312,555px)의 네 모서리입니다.
+// 이 밖의 건물은 3D 장면에서 빼 그리는 양을 줄입니다. 북서 → 북동 → 남동 → 남서 순서의 경도·위도입니다.
+export const BUILDING_AREA: [number, number][] = [
+  [129.0079069037156, 35.099546648144766],
+  [129.0117160366351, 35.09871159136938],
+  [129.00973996614044, 35.092677585897775],
+  [129.00593083322093, 35.0935127044733],
+]
+
+function insidePolygon(longitude: number, latitude: number, polygon: [number, number][]) {
+  let inside = false
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+    const [ax, ay] = polygon[index], [bx, by] = polygon[previous]
+    if ((ay > latitude) !== (by > latitude) && longitude < (bx - ax) * (latitude - ay) / (by - ay) + ax) inside = !inside
+  }
+  return inside
+}
+
+// 건물 윤곽의 꼭짓점이 하나라도 범위 안에 있으면(화면 가장자리에 걸친 건물 포함) 남깁니다.
+export function isBuildingInBuildingArea(outline: [number, number][]): boolean {
+  return outline.some(([longitude, latitude]) => insidePolygon(longitude, latitude, BUILDING_AREA))
+}
+
 export function isInsideGamcheonMap(longitude: number, latitude: number): boolean {
   return Number.isFinite(longitude) && Number.isFinite(latitude)
     && longitude >= west && longitude <= east && latitude >= south && latitude <= north

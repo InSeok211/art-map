@@ -1,7 +1,7 @@
 import buildingFootprints from './gamcheon-buildings.json'
 import mapSurfaces from './street-surfaces.json'
 import * as polygonClipping from 'polygon-clipping'
-import { isInsideGamcheonMap } from './gamcheonBoundary'
+import { isBuildingInBuildingArea, isInsideGamcheonMap } from './gamcheonBoundary'
 import { PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, roadWidth } from './roadCorridors'
 
 export type StreetPoint = [longitude: number, latitude: number]
@@ -1200,7 +1200,7 @@ export function getPhotographedStreetBuildings(): StreetBuilding[] {
       outline.reduce((sum, point) => sum + point[0], 0) / outline.length,
       outline.reduce((sum, point) => sum + point[1], 0) / outline.length,
     ]
-    if (!isInsideGamcheonMap(...center)) continue
+    if (!isInsideGamcheonMap(...center) || !isBuildingInBuildingArea(outline)) continue
     const near = nearestStreet(center)
     const edgeDistance = Math.min(...outline.map((point) => nearestStreet(point).distanceMeters))
     const concept = conceptByFootprint[feature.properties.id]

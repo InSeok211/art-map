@@ -4,6 +4,7 @@ import mapSurfaces from './street-surfaces.json'
 import buildingFootprints from './gamcheon-buildings.json'
 import { PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, roadWidth } from './roadCorridors'
 import { PHOTOGRAPHED_ROAD_POINTS } from './streetRoadGeometry'
+import { isBuildingInBuildingArea } from './gamcheonBoundary'
 import { ARTIST_WORKSHOP_ANNEX_ID, ARTIST_WORKSHOP_FOOTPRINT_ID, clearOfCarriageways, clearRoadOfKeptBuildings, genericRoof, getPhotographedStreetBuildings, KEEP_MAPPED_OUTLINE, MEETING_CIRCLE_CENTER, MEETING_CIRCLE_RADIUS, nearestStreet, PHOTOGRAPHED_STREET, sharedBuildingEdges, streetMeters } from './streetSceneData'
 import { isInsideGamcheonMap } from './gamcheonBoundary'
 
@@ -14,11 +15,14 @@ describe('photographed street scene', () => {
     expect(nearestStreet([129.0091904, 35.0955217]).progress).toBe(1)
   })
 
-  it('covers the whole map while preserving surveyed buildings', () => {
+  it('covers the chosen building area while preserving surveyed buildings', () => {
     const buildings = getPhotographedStreetBuildings()
-    expect(buildings.length).toBeGreaterThan(2000)
-    expect(buildings.length).toBeLessThan(2170)
-    expect(buildings.some((building) => nearestStreet(building.outline[0]).distanceMeters > 500)).toBe(true)
+    // 사용자가 고른 화면(BUILDING_AREA) 안의 건물만 그립니다.
+    expect(buildings.length).toBeGreaterThan(1200)
+    expect(buildings.length).toBeLessThan(1400)
+    expect(buildings.every((building) => isBuildingInBuildingArea(building.outline))).toBe(true)
+    expect(buildings.some((building) => building.id === ARTIST_WORKSHOP_FOOTPRINT_ID)).toBe(true)
+    expect(buildings.some((building) => nearestStreet(building.outline[0]).distanceMeters > 300)).toBe(true)
     expect(buildings.filter((building) => building.detail === 'context').length).toBeGreaterThan(65)
     expect(buildings.filter((building) => building.detail === 'context').every((building) => !building.storefront)).toBe(true)
     // A photographed single-storey house is lower than the generic fallback.
@@ -68,7 +72,7 @@ describe('photographed street scene', () => {
     // 조사하지 않은 지붕은 몇 가지 일반형 색에서 OSM 번호로 고르며, 같은 번호는 늘 같은 색입니다.
     const generic = buildings.filter((building) => !building.observed && !building.roadview && !building.inferred
       && !building.concept && building.id !== 1469906540)
-    expect(generic.length).toBeGreaterThan(1300)
+    expect(generic.length).toBeGreaterThan(1000)
     expect(new Set(generic.map((building) => building.roofColor)).size).toBeLessThan(15)
     expect(generic.every((building) => building.roofColor === genericRoof(building.id).color)).toBe(true)
     expect(new Set(generic.map((building) => building.roofFinish))).toEqual(new Set(['sheet', 'concrete']))

@@ -15,6 +15,19 @@ export function roadWidth(way: { type: string; width?: number }) {
   return way.width ?? DEFAULT_ROAD_WIDTHS[way.type] ?? 4.8
 }
 
+// At map scale, sub-metre paths vanish between 3D buildings. Widen only their
+// drawn paving; roadWidth remains the mapped width used for building outlines.
+export function displayRoadWidth(way: { type: string; width?: number }) {
+  const mapped = roadWidth(way)
+  if (way.type === 'footway' || way.type === 'path' || way.type === 'steps') {
+    return Math.max(1.8, mapped * 1.15)
+  }
+  if (way.type === 'service' || way.type === 'living_street' || way.type === 'residential') {
+    return mapped * 1.12
+  }
+  return mapped
+}
+
 // 촬영한 거리(감내1로 구간)는 영상에서 본 포장 폭으로 그립니다.
 export const PHOTOGRAPHED_ROAD_WIDTH = 5.9
 

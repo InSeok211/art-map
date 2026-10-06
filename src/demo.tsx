@@ -12,13 +12,18 @@ import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings } from './
 
 // Survey links open the same map at the building being reviewed.
 const reviewId = new URLSearchParams(window.location.search).get('building')
+const reviewBearing = Number(new URLSearchParams(window.location.search).get('bearing'))
+const reviewPitch = Number(new URLSearchParams(window.location.search).get('pitch'))
+const reviewZoom = Number(new URLSearchParams(window.location.search).get('zoom'))
 const reviewBuilding = reviewId ? getPhotographedStreetBuildings().find(building => building.id === Number(reviewId)) : undefined
 const reviewView = Number(reviewId) === ARTIST_WORKSHOP_FOOTPRINT_ID ? {
   center: [ARTIST_WORKSHOP_MODEL.longitude, ARTIST_WORKSHOP_MODEL.latitude] as [number, number],
   zoom: 21.1, pitch: 62, bearing: 135,
 } : reviewBuilding ? {
   center: [0, 1].map(axis => reviewBuilding.outline.reduce((sum, point) => sum + point[axis], 0) / reviewBuilding.outline.length) as [number, number],
-  zoom: 20.4, pitch: 56, bearing: 45,
+  zoom: Number.isFinite(reviewZoom) && reviewZoom >= 15 && reviewZoom <= 22 ? reviewZoom : 20.4,
+  pitch: new URLSearchParams(window.location.search).has('pitch') && Number.isFinite(reviewPitch) && reviewPitch >= 0 && reviewPitch <= 80 ? reviewPitch : 56,
+  bearing: Number.isFinite(reviewBearing) && new URLSearchParams(window.location.search).has('bearing') ? reviewBearing : 45,
 } : undefined
 
 // 컴포넌트 동작을 확인하기 위한 미리보기 데이터입니다. 실제 장소 목록은 추후 연결합니다.
