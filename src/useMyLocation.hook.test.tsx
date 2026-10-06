@@ -107,4 +107,16 @@ describe('my location marker', () => {
     act(() => { vi.advanceTimersByTime(1000) })
     expect(jumpTo.mock.calls.length).toBe(calls)
   })
+
+  it('follows my heading from the first fix when that is the default', () => {
+    let report: ((position: GeolocationPosition) => void) | undefined
+    vi.stubGlobal('navigator', { ...navigator, geolocation: { watchPosition: (ok: typeof report) => { report = ok; return 1 }, clearWatch: vi.fn() } })
+    const easeTo = vi.fn()
+    const map = { easeTo, jumpTo: vi.fn(), getZoom: () => 16, getBearing: () => 0, on: vi.fn(), off: vi.fn(), touchZoomRotate: { disableRotation: vi.fn(), enableRotation: vi.fn() } }
+    const { result } = renderHook(() => useMyLocation({ current: map as never }, { headingUpByDefault: true }))
+    expect(result.current.headingUp).toBe(false)
+    act(() => report!({ coords: { longitude: 129.0089102, latitude: 35.0953967, accuracy: 5, heading: null, speed: null } } as GeolocationPosition))
+    expect(result.current.headingUp).toBe(true)
+    expect(easeTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [129.0089102, 35.0953967], zoom: 18 }))
+  })
 })

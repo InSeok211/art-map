@@ -729,7 +729,13 @@
   /* 아래 장소 카드(목록·길찾기로 펼쳐짐) */
   .gm-mobile__card { position: absolute; z-index: 520; right: 10px; bottom: calc(66px + env(safe-area-inset-bottom)); left: 10px; max-height: calc(100% - 260px); overflow: hidden; padding: 0 15px 14px; border-radius: 18px; box-shadow: 0 9px 25px rgba(0, 0, 0, .28); }
   .gm-mobile__card.is-list { height: min(380px, calc(100% - 260px)); display: flex; flex-direction: column; }
-  .gm-mobile__card.is-route { height: min(470px, calc(100% - 210px)); max-height: calc(100% - 210px); display: flex; flex-direction: column; }
+  /* 길찾기: 지도가 보이도록 카드는 화면의 44%까지만 쓰고 안에서 스크롤합니다. 위쪽은 이름표만 남깁니다. */
+  .gm-mobile__card.is-route { max-height: min(44%, 470px); display: flex; flex-direction: column; }
+  .gm-mobile[data-view='route'] .gm-mobile__search,
+  .gm-mobile[data-view='route'] .gm-mobile__chips,
+  .gm-mobile__route .gamcheon-map__model-help { display: none; }
+  .gamcheon-map.is-immersive:has(.gm-mobile[data-view='route']) .gamcheon-map__map-tools { top: calc(72px + env(safe-area-inset-top)); }
+  .gamcheon-map.is-immersive:has(.gm-mobile[data-view='route']) .maplibregl-ctrl-bottom-right { bottom: calc(min(44%, 470px) + 80px + env(safe-area-inset-bottom)); }
   .gm-mobile__handle { display: grid; width: 100%; height: 24px; place-items: center; border: 0; background: none; cursor: pointer; }
   .gm-mobile__handle span { width: 36px; height: 4px; border-radius: 99px; background: var(--m-ink); opacity: .2; }
   .gm-mobile__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

@@ -156,7 +156,9 @@ export function GamcheonMap({
   const streetLayerRef = useRef<StreetSceneLayer | null>(null)
   const alley = useAlleyEditing(mapRef, mode === 'alleys', alleys, onAlleysChange)
   // 지도를 여는 순간부터 내 위치와 방향을 보여 줍니다. 바깥 화면이 장소를 골라 열었으면 그 장소를 먼저 보여 줍니다.
-  const myLocation = useMyLocation(mapRef, { centerOnFirstFix: !selectedPlaceId })
+  // 공개 지도의 휴대폰 화면은 처음 위치를 받으면 지도가 바라보는 방향을 따라 돌도록(방향 보기) 기본으로 켭니다.
+  // 바깥 화면이 장소를 골라 열었으면 그 장소를 먼저 보여 주므로 켜지 않습니다.
+  const myLocation = useMyLocation(mapRef, { centerOnFirstFix: !selectedPlaceId, headingUpByDefault: !editable && !selectedPlaceId && isPhoneLayout() })
   const [locationNotice, setLocationNotice] = useState('')
   const [moreOpen, setMoreOpen] = useState(false)
   const locate = () => {

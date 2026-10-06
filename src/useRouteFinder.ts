@@ -21,6 +21,14 @@ export type { GpsState, GpsStatus } from './useMyLocation'
 export const OFF_ROUTE_DISTANCE = 25
 // 목적지에 이만큼(m) 가까워지면 도착으로 봅니다.
 export const ARRIVAL_DISTANCE = 15
+// 찾은 길에 화면을 맞출 때의 여백. 휴대폰(좁은 화면)은 위 이름표와 아래 길찾기 카드·하단 메뉴가 지도를
+// 덮으므로 그만큼 비워 두고 남은 가운데에 길을 맞춥니다.
+export function routePadding(map: { getContainer(): HTMLElement }) {
+  const height = map.getContainer().clientHeight
+  if (map.getContainer().clientWidth > 720 || height <= 0) return 70
+  return { top: 80, right: 60, left: 40, bottom: Math.round(Math.min(height * 0.44, 470) + 80) }
+}
+
 // 내 위치를 따라갈 때 최소 확대 단계
 export const FOLLOW_ZOOM = 18
 
@@ -160,7 +168,7 @@ export function useRouteFinder(
     const map = mapRef.current
     if (!map || !active || !route) return
     const bounds = route.coordinates.reduce((box, point) => box.extend(point), new LngLatBounds(route.coordinates[0], route.coordinates[0]))
-    map.fitBounds(bounds, { padding: 70, maxZoom: 18.5, duration: 700 })
+    map.fitBounds(bounds, { padding: routePadding(map), maxZoom: 18.5, duration: 700 })
   }, [active, route?.coordinates[0]?.[0], route?.coordinates.at(-1)?.[0], route?.distance])
 
   // 출발·도착·내 위치 표식
@@ -219,7 +227,7 @@ export function useRouteFinder(
         const map = mapRef.current
         if (!map || !route) return
         const bounds = route.coordinates.reduce((box, point) => box.extend(point), new LngLatBounds(route.coordinates[0], route.coordinates[0]))
-        map.fitBounds(bounds, { padding: 70, maxZoom: 18.5, duration: 700 })
+        map.fitBounds(bounds, { padding: routePadding(map), maxZoom: 18.5, duration: 700 })
       },
     },
   }

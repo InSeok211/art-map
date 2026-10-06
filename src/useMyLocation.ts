@@ -52,7 +52,8 @@ export function compassHeading(event: CompassEvent, screenAngle = 0): number | n
   return ((heading + screenAngle) % 360 + 360) % 360
 }
 
-export function useMyLocation(mapRef: RefObject<Map | null>, options: { centerOnFirstFix?: boolean } = {}) {
+// headingUpByDefault: 처음 위치를 받으면 '방향 따라 보기'를 자동으로 켭니다(지도를 이미 만졌으면 켜지 않음).
+export function useMyLocation(mapRef: RefObject<Map | null>, options: { centerOnFirstFix?: boolean; headingUpByDefault?: boolean } = {}) {
   const [gps, setGps] = useState<GpsState>({ status: 'idle' })
   const markerRef = useRef<Marker | null>(null)
   const headingAnchorRef = useRef<LngLat | null>(null)
@@ -64,6 +65,8 @@ export function useMyLocation(mapRef: RefObject<Map | null>, options: { centerOn
   const movedByUserRef = useRef(false)
   const centerOnFirstFixRef = useRef(options.centerOnFirstFix ?? true)
   centerOnFirstFixRef.current = options.centerOnFirstFix ?? true
+  const headingUpByDefaultRef = useRef(options.headingUpByDefault ?? false)
+  headingUpByDefaultRef.current = options.headingUpByDefault ?? false
   const [headingUp, setHeadingUpState] = useState(false)
   const headingUpRef = useRef(false)
   const setHeadingUp = (on: boolean) => {
@@ -209,7 +212,12 @@ export function useMyLocation(mapRef: RefObject<Map | null>, options: { centerOn
     // 지도를 연 뒤 처음 위치를 받았고 아직 지도를 만지지 않았다면 내 위치를 보여 줍니다.
     if (!centeredRef.current) {
       centeredRef.current = true
-      if (centerOnFirstFixRef.current && !movedByUserRef.current) map.easeTo({ center: gps.position, duration: 800 })
+      if (headingUpByDefaultRef.current && !movedByUserRef.current) {
+        // 기본으로 방향 따라 보기: 내 위치로 옮기고, 방향을 알면 그쪽으로 돌립니다(모르면 나침반 값이 오는 대로 돕니다).
+        setHeadingUp(true)
+        const heading = shownHeadingRef.current ?? compassRef.current ?? walkHeadingRef.current
+        map.easeTo({ center: gps.position, zoom: Math.max(map.getZoom(), 18), ...(heading === null || heading === undefined ? {} : { bearing: heading }), duration: 800 })
+      } else if (centerOnFirstFixRef.current && !movedByUserRef.current) map.easeTo({ center: gps.position, duration: 800 })
     }
   }, [gps.status, gps.position?.[0], gps.position?.[1], gps.heading])
 
