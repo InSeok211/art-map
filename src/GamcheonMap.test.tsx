@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { GamcheonMap, STREET_LAYER_FALLBACK_MS } from './GamcheonMap'
 import { ARTIST_WORKSHOP_MODEL, ARTIST_WORKSHOP_PLACE } from './artistWorkshop'
 import { ModelLayer } from './ModelLayer'
@@ -212,19 +212,21 @@ describe('GamcheonMap', () => {
       watchPosition: (success: typeof report) => { report = success; return 7 },
       clearWatch,
     } })
-    const { unmount } = render(<GamcheonMap places={[ARTIST_WORKSHOP_PLACE]} />)
+    const { unmount, container } = render(<GamcheonMap places={[ARTIST_WORKSHOP_PLACE]} />)
+    // 넓은 화면의 옆 패널로 확인합니다(휴대폰 화면 MobileMapUI는 따로 시험).
+    const panel = within(container.querySelector('.gamcheon-map__panel') as HTMLElement)
     // 지도를 열자마자 위치 추적을 시작합니다(길찾기 탭을 열지 않아도).
     expect(report).toBeDefined()
-    fireEvent.click(screen.getByRole('button', { name: '길찾기' }))
-    expect((screen.getByLabelText('출발지') as HTMLSelectElement).value).toBe('gps')
-    expect((screen.getByLabelText('도착지') as HTMLSelectElement).value).toBe(`place:${ARTIST_WORKSHOP_PLACE.id}`)
-    expect(screen.getByText('내 위치를 찾는 중입니다…')).toBeTruthy()
+    fireEvent.click(panel.getByRole('button', { name: '길찾기' }))
+    expect((panel.getByLabelText('출발지') as HTMLSelectElement).value).toBe('gps')
+    expect((panel.getByLabelText('도착지') as HTMLSelectElement).value).toBe(`place:${ARTIST_WORKSHOP_PLACE.id}`)
+    expect(panel.getByText('내 위치를 찾는 중입니다…')).toBeTruthy()
     // 촬영 거리 남쪽 끝에 있다고 알려 줍니다.
     act(() => report!({ coords: { longitude: 129.00884, latitude: 35.0943657, accuracy: 8, heading: null, speed: null } }))
-    const result = screen.getByRole('region', { name: '찾은 길' })
+    const result = panel.getByRole('region', { name: '찾은 길' })
     expect(result.textContent).toMatch(/\d+분/)
     expect(result.textContent).toContain('목적지')
-    expect(screen.getByRole('button', { name: '내 위치를 따라가는 중' }).getAttribute('aria-pressed')).toBe('true')
+    expect(panel.getByRole('button', { name: '내 위치를 따라가는 중' }).getAttribute('aria-pressed')).toBe('true')
     // 북쪽으로 약 10m 걸으면 지도가 따라오고, 화살표가 북쪽(0도 근처)을 가리킵니다.
     const easeCount = mapEaseTo.length
     act(() => report!({ coords: { longitude: 129.00884, latitude: 35.0944557, accuracy: 8, heading: null, speed: null } }))
@@ -285,15 +287,33 @@ describe('GamcheonMap', () => {
   })
 
   it('filters the list by category and search text', () => {
-    render(<GamcheonMap places={places} />)
+    const { container } = render(<GamcheonMap places={places} />)
+    const panel = within(container.querySelector('.gamcheon-map__panel') as HTMLElement)
 
-    expect(screen.getByText('2곳')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: '가게' }))
-    expect(screen.getByText('1곳')).toBeTruthy()
-    expect(screen.queryByText('테스트 전망대')).toBeNull()
+    expect(panel.getByText('2곳')).toBeTruthy()
+    fireEvent.click(panel.getByRole('button', { name: '가게' }))
+    expect(panel.getByText('1곳')).toBeTruthy()
+    expect(panel.queryByText('테스트 전망대')).toBeNull()
 
-    fireEvent.change(screen.getByRole('searchbox', { name: '장소 검색' }), { target: { value: '없는 장소' } })
-    expect(screen.getByText('검색 결과가 없어요')).toBeTruthy()
+    fireEvent.change(panel.getByRole('searchbox', { name: '장소 검색' }), { target: { value: '없는 장소' } })
+    expect(panel.getByText('검색 결과가 없어요')).toBeTruthy()
+  })
+
+  it('shows the phone layout: search, category chips with counts, place card, list and route views', () => {
+    const { container } = render(<GamcheonMap places={[ARTIST_WORKSHOP_PLACE, ...places]} />)
+    const mobile = within(container.querySelector('.gm-mobile') as HTMLElement)
+    // 처음에는 작가님 공방 카드가 보입니다.
+    expect(mobile.getByRole('region', { name: '장소 정보' }).textContent).toContain(ARTIST_WORKSHOP_PLACE.name)
+    expect(mobile.getByRole('button', { name: '가게 1' })).toBeTruthy()
+    // 주변 장소 → 목록, 검색하면 목록이 좁혀집니다.
+    fireEvent.click(mobile.getByRole('button', { name: /주변 장소/ }))
+    expect(mobile.getByRole('region', { name: '장소 목록' })).toBeTruthy()
+    fireEvent.change(mobile.getByRole('searchbox', { name: '장소 검색' }), { target: { value: '카페' } })
+    expect(mobile.getByRole('button', { name: /테스트 카페/ })).toBeTruthy()
+    expect(mobile.queryByRole('button', { name: /테스트 전망대/ })).toBeNull()
+    // 하단 메뉴의 길찾기는 길찾기 화면을 엽니다.
+    fireEvent.click(within(mobile.getByRole('navigation', { name: '지도 메뉴' })).getByRole('button', { name: /길찾기/ }))
+    expect(mobile.getByRole('region', { name: '길찾기' })).toBeTruthy()
   })
 
   it('reports the selected place to the host page', () => {

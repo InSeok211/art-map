@@ -14,6 +14,8 @@ import { useAlleyEditing } from './useAlleyEditing'
 import { ModelLayer, SEE_THROUGH_OPACITY } from './ModelLayer'
 import { StreetSceneLayer } from './StreetSceneLayer'
 import { RoutePanel } from './RoutePanel'
+import { MobileMapUI } from './MobileMapUI'
+import type { MobileView } from './MobileMapUI'
 import { useRouteFinder } from './useRouteFinder'
 import { useMyLocation } from './useMyLocation'
 import { useSheetDrag } from './useSheetDrag'
@@ -119,6 +121,9 @@ export function GamcheonMap({
   const [mode, setMode] = useState<EditMode>('places')
   // 휴대폰(좁은 화면)에서 아래 시트를 펼쳤는지. 처음에는 지도가 넓게 보이도록 접어 둡니다.
   const [sheetOpen, setSheetOpen] = useState(false)
+  // 공개 지도(편집 불가)의 휴대폰 화면은 06 '지도 몰입' 시안(MobileMapUI)을 씁니다. 넓은 화면은 기존 옆 패널입니다.
+  const immersive = !editable
+  const [mobileView, setMobileView] = useState<MobileView>('map')
   const sheetOpenRef = useRef(sheetOpen)
   const panelRef = useRef<HTMLElement>(null)
   const sheetDrag = useSheetDrag(panelRef, sheetOpen, setSheetOpen)
@@ -170,6 +175,12 @@ export function GamcheonMap({
       .sort((a, b) => Number(b.id === ARTIST_WORKSHOP_PLACE.id) - Number(a.id === ARTIST_WORKSHOP_PLACE.id)),
     [localPlaces, query, category],
   )
+
+  // 휴대폰 분류 칩의 개수(검색어만 반영)
+  const categoryCounts = useMemo(() => {
+    const matching = filterPlaces(localPlaces.filter((place) => isInsideGamcheonMap(place.longitude, place.latitude)), { query, category: 'all' })
+    return { all: matching.length, attraction: matching.filter((place) => place.category === 'attraction').length, shop: matching.filter((place) => place.category === 'shop').length }
+  }, [localPlaces, query])
 
   useEffect(() => setLocalPlaces(places), [places])
   useEffect(() => setLocalModels(models), [models])
@@ -404,6 +415,8 @@ export function GamcheonMap({
         : `gamcheon-map__marker gamcheon-map__marker--${place.category}${active ? ' is-active' : ''}`
       element.setAttribute('aria-label', place.name)
       element.title = place.name
+      // 몰입형 지도에서 고른 표식 위에 띄우는 이름표(CSS의 attr(data-name))
+      element.dataset.name = place.name
       if (featured) {
         const label = document.createElement('span')
         label.className = 'gamcheon-map__featured-label'
@@ -415,6 +428,7 @@ export function GamcheonMap({
       }
       element.addEventListener('click', () => {
         setSelectedId(place.id)
+        setMobileView('map')
         // 휴대폰에서는 표식을 누르면 시트를 펼쳐 고른 장소를 바로 보여 줍니다.
         if (isPhoneLayout()) setSheetOpen(true)
         onPlaceSelectRef.current?.(place)
@@ -508,6 +522,12 @@ export function GamcheonMap({
     setPlacingAssetId(null)
     setMovingModelId(null)
     alley.stopDrawing()
+  }
+
+  // 휴대폰 하단 메뉴: 길찾기는 길찾기 모드로, 지도·목록은 장소 모드로 돌아옵니다.
+  function changeMobileView(view: MobileView) {
+    if (view === 'route') { if (mode !== 'route') switchMode('route') } else if (mode === 'route') switchMode('places')
+    setMobileView(view)
   }
 
   function commitModels(next: MapModel[]) {
@@ -617,7 +637,7 @@ export function GamcheonMap({
   }
 
   return (
-    <section className={`gamcheon-map ${editor || alley.drawing ? 'is-editing' : ''} ${sheetOpen ? 'is-sheet-open' : ''} ${className}`.trim()} style={style} aria-label="감천2동 지도">
+    <section className={`gamcheon-map ${editor || alley.drawing ? 'is-editing' : ''} ${sheetOpen ? 'is-sheet-open' : ''} ${immersive ? 'is-immersive' : ''} ${className}`.trim()} style={style} aria-label="감천2동 지도">
       <div ref={mapElementRef} className="gamcheon-map__canvas" aria-label="OpenStreetMap 지도" />
       {locationNotice && <p className="gamcheon-map__scene-status gamcheon-map__location-notice" role="status">{locationNotice}</p>}
       {/* 휴대폰: 시트 바로 위 오른쪽의 둥근 '내 위치' 버튼(넓은 화면에서는 도구 줄의 버튼을 씁니다) */}
@@ -724,6 +744,28 @@ export function GamcheonMap({
           <span>감천2동을 천천히, 더 자세히.</span>
         </div>
       </aside>
+
+      {immersive && <MobileMapUI
+        query={query}
+        onQueryChange={setQuery}
+        category={category}
+        onCategoryChange={setCategory}
+        counts={categoryCounts}
+        places={visiblePlaces}
+        selected={selectedPlace ?? visiblePlaces.find((place) => place.id === ARTIST_WORKSHOP_PLACE.id) ?? null}
+        view={mode === 'route' ? 'route' : mobileView === 'route' ? 'map' : mobileView}
+        onView={changeMobileView}
+        onSelect={selectPlace}
+        onRouteTo={(place) => { routeFinder.panelProps.onDestination({ kind: 'place', id: place.id }); changeMobileView('route') }}
+        onLocate={() => {
+          const notice = myLocation.toggleHeadingUp()
+          setLocationNotice(notice ?? '')
+          if (notice) window.setTimeout(() => setLocationNotice(''), 3500)
+        }}
+        located={myLocation.gps.status === 'ok'}
+        headingUp={myLocation.headingUp}
+        route={mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : null}
+      />}
 
       <div className="gamcheon-map__map-tools">
         <span className="gamcheon-map__area-badge"><span /> 부산 사하구 · 감천2동</span>

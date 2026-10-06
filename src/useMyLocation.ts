@@ -11,6 +11,9 @@ import { streetMeters } from './streetSceneData'
 //
 // 방향은 휴대폰 나침반(방향 센서)을 먼저 쓰고, 없으면 걸어온 방향을 씁니다. 센서는 1초에 수십 번 값을 주므로
 // 화면(React)을 다시 그리지 않고, 화살표만 매 프레임 목표 각도로 부드럽게 돌립니다.
+//
+// '방향 따라 보기'(headingUp)를 켜면 지도도 내가 바라보는 방향이 화면 위쪽이 되도록 같이 돌고, 내 위치를
+// 따라갑니다. 사용자가 지도를 직접 끌거나 돌리면 꺼집니다(확대·축소는 그대로 둠).
 
 export type GpsStatus = 'idle' | 'locating' | 'ok' | 'denied' | 'unavailable' | 'unsupported' | 'outside'
 // heading: 걸어온 방향(북쪽 기준 시계 방향 각도). 서 있을 때는 마지막 방향을 유지합니다.
@@ -61,6 +64,25 @@ export function useMyLocation(mapRef: RefObject<Map | null>, options: { centerOn
   const movedByUserRef = useRef(false)
   const centerOnFirstFixRef = useRef(options.centerOnFirstFix ?? true)
   centerOnFirstFixRef.current = options.centerOnFirstFix ?? true
+  const [headingUp, setHeadingUpState] = useState(false)
+  const headingUpRef = useRef(false)
+  const setHeadingUp = (on: boolean) => {
+    headingUpRef.current = on
+    setHeadingUpState(on)
+    // 따라 보는 동안은 두 손가락 확대·축소가 지도를 돌려 모드가 풀리지 않게 회전만 막습니다.
+    const touch = mapRef.current?.touchZoomRotate
+    if (touch) { if (on) touch.disableRotation(); else touch.enableRotation() }
+  }
+  // 방향 따라 보기 중이면 지도 방위를 화살표와 같은 각도로 맞춥니다(애니메이션 없이 매 프레임 조금씩).
+  // 이 jumpTo가 진행 중인 위치 따라가기(easeTo)를 끊으므로 중심도 내 위치로 함께 맞춥니다.
+  const positionRef = useRef<LngLat | null>(null)
+  const turnMap = (heading: number) => {
+    const map = mapRef.current
+    if (!headingUpRef.current || !map) return
+    if (Math.abs(angleDelta(map.getBearing(), heading)) > 0.2) {
+      map.jumpTo({ bearing: heading, ...(positionRef.current ? { center: positionRef.current } : {}) })
+    }
+  }
 
   // 화살표를 목표 각도로 매 프레임 조금씩 돌립니다(화면 전체를 다시 그리지 않음).
   const steer = () => {
@@ -73,6 +95,7 @@ export function useMyLocation(mapRef: RefObject<Map | null>, options: { centerOn
     if (shown === null) {
       shownHeadingRef.current = target
       marker.setRotation(target)
+      turnMap(target)
       return
     }
     const delta = angleDelta(shown, target)
@@ -80,6 +103,7 @@ export function useMyLocation(mapRef: RefObject<Map | null>, options: { centerOn
     const next = (shown + delta * HEADING_SMOOTHING + 360) % 360
     shownHeadingRef.current = next
     marker.setRotation(next)
+    turnMap(next)
     if (typeof requestAnimationFrame === 'function') frameRef.current = requestAnimationFrame(steer)
   }
   const requestSteer = () => {
@@ -146,8 +170,16 @@ export function useMyLocation(mapRef: RefObject<Map | null>, options: { centerOn
     const map = mapRef.current
     if (!map) return
     const moved = (event: { originalEvent?: unknown }) => { if (event.originalEvent) movedByUserRef.current = true }
+    // 손으로 끌거나 돌리면 방향 따라 보기를 끕니다.
+    const takeOver = (event: { originalEvent?: unknown }) => { if (event.originalEvent && headingUpRef.current) setHeadingUp(false) }
     map.on('movestart', moved)
-    return () => { map.off('movestart', moved) }
+    map.on('dragstart', takeOver)
+    map.on('rotatestart', takeOver)
+    return () => {
+      map.off('movestart', moved)
+      map.off('dragstart', takeOver)
+      map.off('rotatestart', takeOver)
+    }
   }, [mapRef.current])
 
   // 파란 점: 한 번 만들어 두고 위치만 옮깁니다.
@@ -170,7 +202,10 @@ export function useMyLocation(mapRef: RefObject<Map | null>, options: { centerOn
         .setLngLat(gps.position).addTo(map)
     } else markerRef.current.setLngLat(gps.position)
     walkHeadingRef.current = gps.heading
+    positionRef.current = gps.position
     requestSteer()
+    // 방향 따라 보기 중에는 걸어가는 동안 지도가 내 위치를 따라옵니다.
+    if (headingUpRef.current) map.easeTo({ center: gps.position, duration: 500 })
     // 지도를 연 뒤 처음 위치를 받았고 아직 지도를 만지지 않았다면 내 위치를 보여 줍니다.
     if (!centeredRef.current) {
       centeredRef.current = true
@@ -180,20 +215,40 @@ export function useMyLocation(mapRef: RefObject<Map | null>, options: { centerOn
 
   useEffect(() => () => { markerRef.current?.remove() }, [])
 
+  // 위치를 잃으면 방향 따라 보기도 끕니다.
+  useEffect(() => { if (gps.status !== 'ok' && headingUpRef.current) setHeadingUp(false) }, [gps.status])
+
+  // '내 위치' 버튼: 내 위치로 옮기고, 보여 줄 수 없으면 이유를 돌려줍니다.
+  const locate = (): string | null => {
+    const map = mapRef.current
+    if (gps.status === 'ok' && gps.position && map) {
+      map.easeTo({ center: gps.position, zoom: Math.max(map.getZoom(), 17.5), duration: 700 })
+      return null
+    }
+    if (gps.status === 'outside') return '현재 위치가 감천2동 지도 밖입니다.'
+    if (gps.status === 'denied') return '위치 권한이 꺼져 있습니다. 브라우저 설정에서 위치 권한을 허용해 주세요.'
+    if (gps.status === 'unsupported') return '이 브라우저는 위치 기능을 지원하지 않습니다.'
+    if (gps.status === 'unavailable') return '내 위치를 알 수 없습니다. 잠시 뒤 다시 시도해 주세요.'
+    return '내 위치를 찾는 중입니다.'
+  }
+
   return {
     gps,
-    // '내 위치' 버튼: 내 위치로 옮기고, 보여 줄 수 없으면 이유를 돌려줍니다.
-    locate(): string | null {
+    headingUp,
+    locate,
+    // '방향 따라 보기' 켜기/끄기: 켜면 내 위치로 옮기고 지도를 바라보는 방향으로 돌립니다.
+    toggleHeadingUp(): string | null {
       const map = mapRef.current
-      if (gps.status === 'ok' && gps.position && map) {
-        map.easeTo({ center: gps.position, zoom: Math.max(map.getZoom(), 17.5), duration: 700 })
+      if (headingUpRef.current) {
+        setHeadingUp(false)
         return null
       }
-      if (gps.status === 'outside') return '현재 위치가 감천2동 지도 밖입니다.'
-      if (gps.status === 'denied') return '위치 권한이 꺼져 있습니다. 브라우저 설정에서 위치 권한을 허용해 주세요.'
-      if (gps.status === 'unsupported') return '이 브라우저는 위치 기능을 지원하지 않습니다.'
-      if (gps.status === 'unavailable') return '내 위치를 알 수 없습니다. 잠시 뒤 다시 시도해 주세요.'
-      return '내 위치를 찾는 중입니다.'
+      if (gps.status !== 'ok' || !gps.position || !map) return locate()
+      setHeadingUp(true)
+      const heading = shownHeadingRef.current ?? compassRef.current ?? walkHeadingRef.current
+      map.easeTo({ center: gps.position, zoom: Math.max(map.getZoom(), 18), ...(heading === undefined || heading === null ? {} : { bearing: heading }), duration: 700 })
+      if (heading === undefined || heading === null) return '방향을 찾는 중입니다. 휴대폰을 들고 잠시 걸어 보세요.'
+      return null
     },
   }
 }
