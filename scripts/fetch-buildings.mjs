@@ -33,6 +33,11 @@ const features = elements
     const properties = { id: element.id }
     if (element.tags?.name) properties.name = element.tags.name
     if (element.tags?.['addr:housenumber']) properties.housenumber = element.tags['addr:housenumber']
+    // Keep surveyed massing tags. The renderer prefers these over its generic
+    // two-storey / roof-shape fallbacks when the mapper supplied them.
+    if (element.tags?.height) properties.height = element.tags.height
+    if (element.tags?.['building:levels']) properties.levels = element.tags['building:levels']
+    if (element.tags?.['roof:shape']) properties.roofShape = element.tags['roof:shape']
     return { type: 'Feature', properties, geometry: { type: 'Polygon', coordinates: [coordinates] } }
   })
 

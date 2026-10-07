@@ -152,7 +152,26 @@ export interface StreetBuilding {
   sharedEdges?: number[]
 }
 
-type Footprint = { type: string; properties: { id: number }; geometry: { type: string; coordinates: number[][][] } }
+type Footprint = { type: string; properties: {
+  id: number; height?: string; levels?: string; roofShape?: string
+}; geometry: { type: string; coordinates: number[][][] } }
+
+// OSM measurements take precedence over the district-wide massing estimate.
+// Missing or malformed tags leave the photographed/area-based fallbacks intact.
+export function osmMassing(properties: Pick<Footprint['properties'], 'height' | 'levels' | 'roofShape'>) {
+  const height = properties.height?.trim().match(/^(\d+(?:\.\d+)?)\s*(?:m|meters?)?$/i)
+  const measuredHeight = height ? Number(height[1]) : undefined
+  const levels = properties.levels?.trim().match(/^\d+(?:\.\d+)?$/)
+  const measuredLevels = levels ? Number(levels[0]) : undefined
+  const roofShape = properties.roofShape?.toLowerCase()
+  return {
+    heightMeters: measuredHeight && measuredHeight >= 2 && measuredHeight <= 100
+      ? measuredHeight : measuredLevels && measuredLevels >= 1 && measuredLevels <= 30
+        ? measuredLevels * 2.65 + 0.8 : undefined,
+    roofStyle: roofShape === 'flat' ? 'flat' as const
+      : roofShape === 'gabled' || roofShape === 'gable' ? 'gable' as const : undefined,
+  }
+}
 
 // 작가님 공방(꿈꾸는작업실, 옥천로101번길 23). 카카오 장소 좌표가 OSM 1468590644에 붙어 있지만, 이 윤곽은
 // 골목을 따라 9.5m×2.2m 띠로 그려져 있습니다. 장소 로드뷰(pano 1202733209)에서 공방은 골목 쪽 면이 통창 세 칸과
@@ -1211,13 +1230,14 @@ export function getPhotographedStreetBuildings(): StreetBuilding[] {
     const maxZ = Math.max(...meters.map((point) => point[1]))
     const aspect = Math.max(maxX - minX, maxZ - minZ) / Math.max(0.5, Math.min(maxX - minX, maxZ - minZ))
     const floors = featured ? (area > 95 ? 3 : 2) : 2
+    const osm = osmMassing(feature.properties)
     // The green corner shop is the clearly identifiable southern landmark in
     // the supplied photos. Its OSM footprint is the nearest one to Cafe Abong.
     const cafeAbong = feature.properties.id === 1469906540
     const generic: StreetBuilding = {
       id: feature.properties.id,
       outline,
-      heightMeters: cafeAbong ? 8.2 : floors * 2.65 + 0.8,
+      heightMeters: cafeAbong ? 8.2 : osm.heightMeters ?? floors * 2.65 + 0.8,
       wallColor: cafeAbong ? 0x83ad46 : contextWalls[feature.properties.id % contextWalls.length],
       roofColor: cafeAbong ? 0x485d59 : genericRoof(feature.properties.id).color,
       roofFinish: cafeAbong ? 'sheet' : genericRoof(feature.properties.id).finish,
@@ -1226,7 +1246,7 @@ export function getPhotographedStreetBuildings(): StreetBuilding[] {
       shopfrontStyle: feature.properties.id % 4 === 0 ? 'shutter' : 'glass',
       // Long, narrow footprints are the most plausible sheet-roof candidates;
       // avoid sprinkling pitched roofs by OSM id across the whole district.
-      roofStyle: aspect > 1.55 && area >= 18 && area < 130 ? 'gable' : 'flat',
+      roofStyle: osm.roofStyle ?? (aspect > 1.55 && area >= 18 && area < 130 ? 'gable' : 'flat'),
       brickFacade: false,
       detail: featured ? 'featured' : 'context',
       progress: near.progress,

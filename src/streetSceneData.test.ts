@@ -5,10 +5,18 @@ import buildingFootprints from './gamcheon-buildings.json'
 import { PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, roadWidth } from './roadCorridors'
 import { PHOTOGRAPHED_ROAD_POINTS } from './streetRoadGeometry'
 import { isBuildingInBuildingArea } from './gamcheonBoundary'
-import { ARTIST_WORKSHOP_ANNEX_ID, ARTIST_WORKSHOP_FOOTPRINT_ID, clearOfCarriageways, clearRoadOfKeptBuildings, genericRoof, getPhotographedStreetBuildings, KEEP_MAPPED_OUTLINE, MEETING_CIRCLE_CENTER, MEETING_CIRCLE_RADIUS, nearestStreet, PHOTOGRAPHED_STREET, sharedBuildingEdges, streetMeters } from './streetSceneData'
+import { ARTIST_WORKSHOP_ANNEX_ID, ARTIST_WORKSHOP_FOOTPRINT_ID, clearOfCarriageways, clearRoadOfKeptBuildings, genericRoof, getPhotographedStreetBuildings, KEEP_MAPPED_OUTLINE, MEETING_CIRCLE_CENTER, MEETING_CIRCLE_RADIUS, nearestStreet, osmMassing, PHOTOGRAPHED_STREET, sharedBuildingEdges, streetMeters } from './streetSceneData'
 import { isInsideGamcheonMap } from './gamcheonBoundary'
 
 describe('photographed street scene', () => {
+  it('uses valid OSM building measurements and ignores malformed tags', () => {
+    expect(osmMassing({ height: '8.4 m', levels: '2', roofShape: 'gabled' }))
+      .toEqual({ heightMeters: 8.4, roofStyle: 'gable' })
+    expect(osmMassing({ levels: '3', roofShape: 'flat' }))
+      .toEqual({ heightMeters: 8.75, roofStyle: 'flat' })
+    expect(osmMassing({ height: 'unknown', levels: '-1', roofShape: 'pyramidal' }))
+      .toEqual({ heightMeters: undefined, roofStyle: undefined })
+  })
   it('uses the surveyed road bend from the cafe toward the workshop', () => {
     expect(PHOTOGRAPHED_STREET[0][1]).toBeLessThan(PHOTOGRAPHED_STREET.at(-1)![1])
     expect(nearestStreet([129.00884, 35.0943657]).distanceMeters).toBeLessThan(0.1)
@@ -34,6 +42,8 @@ describe('photographed street scene', () => {
     expect(new Set(buildings.map((building) => building.id)).size).toBe(buildings.length)
     expect(buildings.some((building) => building.storefront)).toBe(true)
     expect(buildings.some((building) => building.detail === 'context' && building.roofStyle === 'gable')).toBe(true)
+    // OSM way 1387174630 has building:levels=20 in street-osm-expanded.xml.
+    expect(buildings.find((building) => building.id === 1387174630)?.heightMeters).toBe(53.8)
     expect(buildings.find((building) => building.id === 1469906540)).toMatchObject({ wallColor: 0x83ad46, storefront: true })
     expect(Object.fromEntries(buildings.filter((building) => building.concept)
       .map((building) => [building.concept, building.id]))).toEqual({

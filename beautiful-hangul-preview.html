@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>아름다운한글 · 3D 모델 시안</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f2f0eb;font-family:system-ui,-apple-system,sans-serif}
+    #view{display:block;width:100%;height:100%}
+    .caption{position:absolute;top:18px;left:18px;max-width:360px;padding:15px 18px;border-radius:14px;background:#fffffff0;color:#293632;box-shadow:0 7px 25px #1b28291c}
+    .caption h1{font-size:18px;margin:0 0 6px}.caption p{font-size:13px;line-height:1.45;margin:0}.caption small{display:block;color:#62706b;margin-top:8px}
+    .views{position:absolute;right:18px;bottom:18px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .views button{border:1px solid #bac4bf;background:#fffffff0;color:#283932;border-radius:999px;padding:10px 14px;cursor:pointer;font:600 12px system-ui,sans-serif;box-shadow:0 3px 12px #16211f17}
+    .views button:hover,.views button:focus-visible{background:#e6eeea}
+  </style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div class="caption"><h1>아름다운한글 · 복층 3D 모델</h1><p>OSM 건물 윤곽(약 5.0 × 8.2m, 41.4㎡)에 맞춰 바닥 형태를 만들고, 사진 속 창과 서예 작품을 배치했습니다.</p><small>층고와 지붕 경사는 사진을 기준으로 추정했습니다.</small></div>
+  <div class="views"><button data-view="angle">사시도</button><button data-view="front">전면</button><button data-view="art">창 작품</button><button data-view="entry">출입구</button><button data-view="side">측면</button><button data-view="plan">평면</button></div>
+  <script type="module">
+    import * as THREE from 'three'
+    import {OrbitControls} from 'three/addons/controls/OrbitControls.js'
+    import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js'
+    const renderer=new THREE.WebGLRenderer({canvas:document.querySelector('#view'),antialias:true})
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace
+    renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.3
+    renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap
+    const scene=new THREE.Scene();scene.background=new THREE.Color(0xf6f4ef)
+    const camera=new THREE.PerspectiveCamera(38,1,0.1,150);camera.position.set(18,10,25)
+    const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,2.0,0);controls.enableDamping=true
+    const views={angle:{position:[18,10,25],target:[0,2,0]},front:{position:[0,6,27],target:[0,2,2]},art:{position:[0,3.4,11.5],target:[0,1.7,3.2]},entry:{position:[0,4.3,17],target:[3.8,1.9,3]},side:{position:[28,9,3],target:[0,2,0]},plan:{position:[0,37,0.01],target:[0,0,0]}}
+    document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{
+      const view=button.dataset.view;camera.up.set(...(view==='plan'?[0,0,-1]:[0,1,0]))
+      camera.position.set(...views[view].position);controls.target.set(...views[view].target);controls.update()
+    }))
+    scene.add(new THREE.HemisphereLight(0xffffff,0xa6a396,1.7))
+    const sun=new THREE.DirectionalLight(0xfff7e9,2.15);sun.position.set(-13,21,14);sun.castShadow=true
+    sun.shadow.mapSize.set(2048,2048);sun.shadow.normalBias=0.04
+    sun.shadow.camera.left=-19;sun.shadow.camera.right=19;sun.shadow.camera.top=19;sun.shadow.camera.bottom=-19;scene.add(sun)
+    const ground=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0xd8d4ce,roughness:1}))
+    ground.rotation.x=-Math.PI/2;ground.position.y=-0.035;ground.receiveShadow=true;scene.add(ground)
+    new GLTFLoader().load('/src/assets/models/custom/beautiful-hangul-studio.glb',gltf=>{
+      gltf.scene.traverse(obj=>{if(obj.isMesh){obj.castShadow=true;obj.receiveShadow=!obj.name.includes('roof-slope')}})
+      scene.add(gltf.scene)
+    },undefined,error=>{document.querySelector('.caption p').textContent=`모델을 불러오지 못했습니다: ${error.message}`})
+    function frame(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();controls.update();renderer.render(scene,camera);requestAnimationFrame(frame)}
+    frame()
+  </script>
+</body>
+</html>

@@ -28,6 +28,7 @@ export interface MapModel {
 export const BUILTIN_MODELS: ModelAsset[] = [
   { id: 'artist-workshop', name: '작가님 공방 · 옥천로101번길 23', style: 'rounded', category: 'building', url: modelUrl('custom', 'artist-workshop-180.glb'), defaultWidth: 15.5 },
   { id: 'greenhouse-sixpence', name: '그린하우스 · 달과6펜스 연결형 시안', style: 'custom', category: 'building', url: modelUrl('custom', 'greenhouse-sixpence-connected.glb'), defaultWidth: 22 },
+  { id: 'beautiful-hangul', name: '아름다운한글 · 서예 공방', style: 'custom', category: 'building', url: modelUrl('custom', 'beautiful-hangul-studio.glb'), defaultWidth: 10.5 },
 ]
 
 // 예전에 기본으로 들어 있던 외부 제작 모델의 번호입니다. 라이선스 정리로 뺐으므로, 브라우저에 저장된

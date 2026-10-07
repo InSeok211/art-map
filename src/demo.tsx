@@ -4,6 +4,7 @@ import { GamcheonMap } from './GamcheonMap'
 import { RETIRED_ASSET_IDS, sanitizeModels } from './modelCatalog'
 import type { MapModel } from './modelCatalog'
 import { ARTIST_WORKSHOP_MODEL, refineArtistWorkshopPlace, removeUntouchedWorkshopModel, seedArtistWorkshopPlace } from './artistWorkshop'
+import { seedBeautifulHangulPlace } from './beautifulHangul'
 import { sanitizeAlleys } from './alleys'
 import type { Alley } from './alleys'
 import type { Place } from './types'
@@ -42,6 +43,7 @@ const demoPlaces: Place[] = [
 const STORAGE_KEY = 'gamcheon-map-places-v1'
 const MODELS_STORAGE_KEY = 'gamcheon-map-models-v1'
 const WORKSHOP_PLACE_SEEDED_KEY = 'gamcheon-map-workshop-place-180-seeded-v1'
+const BEAUTIFUL_HANGUL_PLACE_SEEDED_KEY = 'gamcheon-map-beautiful-hangul-place-32-seeded-v1'
 const ALLEYS_STORAGE_KEY = 'gamcheon-map-alleys-v1'
 
 function loadAlleys(): Alley[] {
@@ -91,14 +93,16 @@ function loadPlaces(): Place[] {
     })
     const places = valid ? value as Place[] : demoPlaces
     const seeded = stored !== null && localStorage.getItem(WORKSHOP_PLACE_SEEDED_KEY) === '1'
-    const next = refineArtistWorkshopPlace(seedArtistWorkshopPlace(places, seeded))
-    if (!seeded || next !== places) {
+    const hangulSeeded = stored !== null && localStorage.getItem(BEAUTIFUL_HANGUL_PLACE_SEEDED_KEY) === '1'
+    const next = seedBeautifulHangulPlace(refineArtistWorkshopPlace(seedArtistWorkshopPlace(places, seeded)), hangulSeeded)
+    if (!seeded || !hangulSeeded || next !== places) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
       localStorage.setItem(WORKSHOP_PLACE_SEEDED_KEY, '1')
+      localStorage.setItem(BEAUTIFUL_HANGUL_PLACE_SEEDED_KEY, '1')
     }
     return next
   } catch {
-    return seedArtistWorkshopPlace(demoPlaces, false)
+    return seedBeautifulHangulPlace(seedArtistWorkshopPlace(demoPlaces, false), false)
   }
 }
 

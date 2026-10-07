@@ -6,7 +6,7 @@
 
 다음 파일은 OpenStreetMap 데이터에서 받거나 가공한 데이터베이스이며 [Open Database License(ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/)을 따릅니다. 이 파일을 다시 배포하거나 고쳐 배포할 때도 같은 ODbL 조건과 위 출처 표시를 유지해야 합니다.
 
-- `src/gamcheon-buildings.json` — 건물 윤곽
+- `src/gamcheon-buildings.json` — 건물 윤곽(OSM의 높이·층수·지붕 모양 태그 포함)
 - `src/gamcheon2-boundary.json` — 감천2동 경계(Relation 4057099)
 - `src/street-surfaces.json`, `design/street-osm.xml`, `design/street-osm-expanded.xml` — 도로·녹지
 - `src/generated/road-ground.json` — 위 도로·건물 자료로 계산한 3D 바닥
@@ -21,13 +21,13 @@
 
 ## 3D 모델 에셋
 
-기본 GLB는 직접 만든 작가님 공방 모델(`src/assets/models/custom/artist-workshop-180.glb`)과 그린하우스 연결형 시안(`greenhouse-sixpence-connected.glb`, `scripts/build-greenhouse-from-plan.mjs`로 생성)입니다. 외부 제작 3D 모델은 저장소와 배포물에 들어 있지 않습니다.
+기본 GLB는 직접 만든 작가님 공방 모델(`src/assets/models/custom/artist-workshop-180.glb`), 그린하우스 연결형 시안(`greenhouse-sixpence-connected.glb`, `scripts/build-greenhouse-from-plan.mjs`로 생성), 아름다운한글 서예 공방 시안(`beautiful-hangul-studio.glb`, `scripts/build-beautiful-hangul.mjs`로 생성)입니다. 외부 제작 3D 모델은 저장소와 배포물에 들어 있지 않습니다.
 
-그린하우스 시안의 벽화·그림·로고·간판 글씨는 각 작가와 가게의 저작물이므로 사진을 모델에 넣지 않고, 자리마다 대표색의 단색 면으로만 표시합니다(색 값은 빌드 스크립트의 `PANEL_COLORS`). 사진에서 잘라 냈던 원본은 지웠습니다. 지도에서는 이 모델이 OSM 윤곽 세 동(1468551429·1468551431·1468551433) 자리에 놓입니다.
+그린하우스와 아름다운한글 시안의 벽화·그림·서예 작품·로고·간판 글씨는 각 작가와 가게의 저작물이므로 사진을 모델에 넣지 않고, 자리마다 대표색의 단색 면으로만 표시합니다(색 값은 빌드 스크립트의 `PANEL_COLORS`·`PAPER_COLORS`). 사진에서 잘라 냈던 원본은 지웠습니다. 지도에서는 그린하우스가 OSM 윤곽 세 동(1468551429·1468551431·1468551433) 자리에, 아름다운한글이 OSM 윤곽 1468551350 자리에 놓입니다.
 
 ## 건물 외관과 지붕색
 
-- 거리 장면의 건물·공방·그린하우스 시안과 외벽 질감은 모두 코드로 생성한 절차적 모델입니다. 외부 사진·생성 이미지를 질감으로 쓰지 않습니다.
+- 거리 장면의 건물·공방·그린하우스·아름다운한글 시안과 외벽 질감은 모두 코드로 생성한 절차적 모델입니다. 외부 사진·생성 이미지를 질감으로 쓰지 않습니다.
 - 외관 색·창 배열은 사용자가 직접 촬영한 영상·사진과 공개 로드뷰를 눈으로 보고 정리한 관찰값입니다. 로드뷰·항공사진 화면이나 타일은 저장소에 넣거나 배포하지 않습니다(`.gitignore`의 `design/**/*.jpg|png`).
 - 조사하지 않은 건물의 지붕색은 일반형 디자인 팔레트(`genericRoof`)이며, 항공사진에서 얻은 값이 아닙니다.
 
