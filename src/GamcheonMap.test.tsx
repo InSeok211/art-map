@@ -336,7 +336,7 @@ describe('GamcheonMap', () => {
     expect(onPlacesChange).toHaveBeenCalledWith([expect.objectContaining({
       name: '새 카페', category: 'shop', longitude: 129.0105, latitude: 35.0978,
     })])
-    expect(screen.getByText('새 카페')).toBeTruthy()
+    expect(within(screen.getByRole('region', { name: '선택한 장소' })).getByText('새 카페')).toBeTruthy()
   })
 
   it('shows a newly saved place even when a previous search hid it', () => {
@@ -347,7 +347,7 @@ describe('GamcheonMap', () => {
     fireEvent.change(screen.getByRole('textbox', { name: '장소 이름' }), { target: { value: '새 장소' } })
     fireEvent.click(screen.getByRole('button', { name: '저장' }))
 
-    expect(screen.getByText('새 장소')).toBeTruthy()
+    expect(within(screen.getByRole('region', { name: '선택한 장소' })).getByText('새 장소')).toBeTruthy()
   })
 
   it('edits an existing place and preserves its id', () => {

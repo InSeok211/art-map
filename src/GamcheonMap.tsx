@@ -664,6 +664,14 @@ export function GamcheonMap({
         {sceneStatus === 'lost' ? '그래픽 연결이 끊겨 3D 지도를 다시 불러오는 중입니다.' : '3D 거리를 불러오는 중입니다.'}
       </p>}
 
+      <nav className="gamcheon-map__desktop-nav" aria-label="PC 지도 메뉴">
+        <span className="gamcheon-map__desktop-nav-mark" aria-hidden="true">G</span>
+        <button type="button" className={mode === 'places' ? 'is-active' : ''} onClick={() => switchMode('places')} aria-label="장소 탐색 메뉴"><span aria-hidden="true">⌖</span>장소</button>
+        {editable && <button type="button" className={mode === 'models' ? 'is-active' : ''} onClick={() => switchMode('models')} aria-label="3D 작업 메뉴"><span aria-hidden="true">⬡</span>3D 건물</button>}
+        {editable && <button type="button" className={mode === 'alleys' ? 'is-active' : ''} onClick={() => switchMode('alleys')} aria-label="골목길 도구 메뉴"><span aria-hidden="true">⌁</span>골목길</button>}
+        <button type="button" className={mode === 'route' ? 'is-active' : ''} onClick={() => switchMode('route')} aria-label="길찾기 메뉴"><span aria-hidden="true">➤</span>길찾기</button>
+      </nav>
+
       <aside
         ref={panelRef}
         className={`gamcheon-map__panel${editor ? ' is-editing' : ''}${sheetOpen ? ' is-sheet-open' : ''}`}
@@ -768,6 +776,16 @@ export function GamcheonMap({
         headingUp={myLocation.headingUp}
         route={mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : null}
       />}
+
+      {selectedPlace && mode === 'places' && !editor && <div className="gamcheon-map__desktop-selection" role="region" aria-label="선택한 장소">
+        <span className="gamcheon-map__desktop-selection-icon" aria-hidden="true">{selectedPlace.category === 'attraction' ? '✦' : '⌂'}</span>
+        <div className="gamcheon-map__desktop-selection-copy">
+          <small>{selectedPlace.category === 'attraction' ? '명소' : '가게'} · 선택한 장소</small>
+          <strong>{selectedPlace.name}</strong>
+          {selectedPlace.address && <span>{selectedPlace.address}</span>}
+        </div>
+        <button type="button" onClick={() => { routeFinder.panelProps.onDestination({ kind: 'place', id: selectedPlace.id }); switchMode('route') }}>길찾기 ↗</button>
+      </div>}
 
       <div className="gamcheon-map__map-tools">
         <span className="gamcheon-map__area-badge"><span /> 부산 사하구 · 감천2동</span>

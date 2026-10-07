@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { GamcheonMap } from './GamcheonMap'
 import { RETIRED_ASSET_IDS, sanitizeModels } from './modelCatalog'
@@ -107,10 +107,19 @@ function loadPlaces(): Place[] {
 }
 
 function Demo() {
+  const [phoneLayout, setPhoneLayout] = useState(() => window.matchMedia('(max-width: 720px)').matches)
+  const [mobileEditing, setMobileEditing] = useState(false)
   const [selectedName, setSelectedName] = useState<string | null>(null)
   const [places, setPlaces] = useState<Place[]>(loadPlaces)
   const [models, setModels] = useState<MapModel[]>(loadModels)
   const [alleys, setAlleys] = useState<Alley[]>(loadAlleys)
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 720px)')
+    const update = () => setPhoneLayout(query.matches)
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
 
   function updateAlleys(next: Alley[]) {
     setAlleys(next)
@@ -132,12 +141,14 @@ function Demo() {
       <header className="demo-header">
         <div className="demo-brand">
           <span className="demo-brand-icon">G</span>
-          <span><strong>감천 골목지도</strong><small>MAP COMPONENT PREVIEW</small></span>
+          <span className="demo-brand-desktop"><strong>감천 골목지도</strong><small>MAP COMPONENT PREVIEW</small></span>
+          <span className="demo-brand-mobile"><strong>감천 작가 지도</strong><small>공방과 가게를 한 지도에서</small></span>
         </div>
         <div className="demo-status"><span /> {selectedName ? `${selectedName} 선택됨` : '리액트 지도 컴포넌트 미리보기'}</div>
+        {phoneLayout && <button className="demo-edit-toggle" type="button" onClick={() => setMobileEditing((editing) => !editing)}>{mobileEditing ? '지도 보기' : '편집'}</button>}
       </header>
       <main className="demo-main">
-        <GamcheonMap initialView={reviewView} places={places} models={models} editable onPlacesChange={updatePlaces} onModelsChange={updateModels} alleys={alleys} onAlleysChange={updateAlleys}onPlaceSelect={(place) => setSelectedName(place.name)} />
+        <GamcheonMap initialView={reviewView} places={places} models={models} editable={!phoneLayout || mobileEditing} className={phoneLayout && !mobileEditing ? 'is-site-hosted' : ''} onPlacesChange={updatePlaces} onModelsChange={updateModels} alleys={alleys} onAlleysChange={updateAlleys} onPlaceSelect={(place) => setSelectedName(place.name)} />
       </main>
       <div className="demo-note">장소·3D 배치·골목길은 이 브라우저에 자동 저장됩니다. 영상·로드뷰에서 확인한 건물 외관을 반영하고, 주변 지붕은 항공사진과 건물 윤곽을 대조해 색을 입혔습니다. 확인되지 않은 외벽과 판독이 어려운 지붕은 중립색 임시 모델입니다.</div>
     </div>
