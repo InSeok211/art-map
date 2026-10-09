@@ -7,7 +7,9 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './gamcheon-map.css'
 import { filterPlaces } from './filterPlaces'
 import { GAMCHEON_MAP_BOUNDS, isInsideGamcheon2, isInsideGamcheonMap } from './gamcheonBoundary'
-import { BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle, ROUTE_LAYER_IDS, TRAIL_LAYER_IDS } from './mapStyle'
+import { BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle, DEM_SOURCE_ID, ROUTE_LAYER_IDS, TRAIL_LAYER_IDS } from './mapStyle'
+import { loadTerrain } from './terrain'
+import type { TerrainSampler } from './terrain'
 import { AlleyEditor } from './AlleyEditor'
 import type { Alley } from './alleys'
 import { useAlleyEditing } from './useAlleyEditing'
@@ -43,6 +45,10 @@ const EMPTY_ALLEYS: Alley[] = []
 export type EditTool = 'places' | 'models' | 'alleys'
 const ALL_EDIT_TOOLS: EditTool[] = ['places', 'models', 'alleys']
 const MAP_STYLE = createMinimalStyle(baseStyle) as unknown as StyleSpecification
+const TERRAIN_MODE_KEY = 'gamcheon-map-terrain-v1'
+function loadTerrainMode() {
+  try { return localStorage.getItem(TERRAIN_MODE_KEY) === '1' } catch { return false }
+}
 
 // 휴대폰에서 아래 시트를 접었을 때 보이는 높이(손잡이·탭·검색창)입니다. CSS의 접힌 시트 높이와 맞춥니다.
 export const SHEET_PEEK_HEIGHT = 176
@@ -174,6 +180,16 @@ export function GamcheonMap({
   const [workshopOnly, setWorkshopOnly] = useState(false)
   const workshopOnlyRef = useRef(workshopOnly)
   const streetLayerRef = useRef<StreetSceneLayer | null>(null)
+  // 평지 / 3D 지형(언덕 높낮이). 이 기기에 기억해 두고, 바꾸면 3D 거리를 지형에 맞춰 다시 만듭니다.
+  const [terrainMode, setTerrainMode] = useState(loadTerrainMode)
+  const terrainModeRef = useRef(terrainMode)
+  const rebuildStreetRef = useRef<((terrain: boolean) => void) | null>(null)
+  useEffect(() => {
+    if (terrainModeRef.current === terrainMode) return
+    terrainModeRef.current = terrainMode
+    try { localStorage.setItem(TERRAIN_MODE_KEY, terrainMode ? '1' : '0') } catch { /* 이 기기에 기억하지 못해도 됩니다. */ }
+    rebuildStreetRef.current?.(terrainMode)
+  }, [terrainMode])
   const alley = useAlleyEditing(mapRef, mode === 'alleys', alleys, onAlleysChange)
   // 골목길 탭 안의 두 도구: 지도에 점을 찍어 그리기(draw) / 걸으며 기록해 찾기(walk)
   const [alleyTool, setAlleyTool] = useState<'draw' | 'walk'>('draw')
@@ -297,15 +313,32 @@ export function GamcheonMap({
       map.addLayer(streetLayer, map.getLayer(modelLayer.id) ? modelLayer.id : undefined)
       raiseRoute()
     }
-    const buildStreetLayer = () => window.setTimeout(() => {
-      if (disposed || streetLayer) return
-      streetLayer = new StreetSceneLayer()
+    // 3D 거리를 (다시) 만듭니다. 지형을 넘기면 건물·길을 언덕 높이에 맞추고 바탕 지도에도 지형을 켭니다.
+    const createStreetLayer = (terrain?: TerrainSampler) => {
+      if (streetLayer && map.getLayer(streetLayer.id)) map.removeLayer(streetLayer.id)
+      streetLayer = new StreetSceneLayer({ terrain })
       streetLayer.setOtherBuildingsHidden(workshopOnlyRef.current, false)
       streetLayer.setBuildingOpacity(modelsSeeThroughRef.current ? SEE_THROUGH_OPACITY : 1)
       streetLayerRef.current = streetLayer
       addStreetLayer()
+      if (map.getSource(DEM_SOURCE_ID)) map.setTerrain(terrain ? { source: DEM_SOURCE_ID, exaggeration: 1 } : null)
       setSceneStatus('ready')
+    }
+    let buildStarted = false
+    const buildStreetLayer = () => window.setTimeout(async () => {
+      if (disposed || buildStarted) return
+      buildStarted = true
+      const terrain = terrainModeRef.current ? await loadTerrain().catch(() => undefined) : undefined
+      if (!disposed) createStreetLayer(terrain)
     }, 0)
+    rebuildStreetRef.current = async (useTerrain) => {
+      if (!buildStarted) return // 처음 만들 때 지금 설정을 따릅니다.
+      setSceneStatus('loading')
+      const terrain = useTerrain ? await loadTerrain().catch(() => undefined) : undefined
+      // '불러오는 중' 표시가 먼저 그려지도록 한 박자 쉬고 만듭니다(만드는 동안 화면이 멈춥니다).
+      await new Promise((resolve) => window.setTimeout(resolve, 40))
+      if (!disposed && terrainModeRef.current === useTerrain) createStreetLayer(terrain)
+    }
     // 길찾기 경로 선은 3D 건물에 가리지 않도록 3D 층보다 위에 둡니다.
     const raiseRoute = () => { for (const id of [...TRAIL_LAYER_IDS, ...ROUTE_LAYER_IDS]) if (map.getLayer(id)) map.moveLayer(id) }
     // 바탕 지도 타일이 늦거나 일부 실패하면 'idle'이 한참 오지 않을 수 있으므로, 스타일이 준비되고
@@ -835,6 +868,10 @@ export function GamcheonMap({
 
       <div className="gamcheon-map__map-tools">
         <span className="gamcheon-map__area-badge"><span /> 부산 사하구 · 감천2동</span>
+        <div className="gamcheon-map__terrain-switch" role="group" aria-label="지형 보기">
+          <button type="button" className={terrainMode ? '' : 'is-active'} aria-pressed={!terrainMode} onClick={() => setTerrainMode(false)} title="땅을 평평하게 보기">평지</button>
+          <button type="button" className={terrainMode ? 'is-active' : ''} aria-pressed={terrainMode} onClick={() => setTerrainMode(true)} title="언덕 높낮이를 살려 3D로 보기" aria-label="3D 지형">3D<span className="gamcheon-map__terrain-long"> 지형</span></button>
+        </div>
         {/* 휴대폰에서는 자주 쓰지 않는 보기 버튼을 '더보기' 메뉴로 옮깁니다(is-secondary). */}
         <button type="button" className="gamcheon-map__street-focus is-secondary" onClick={showWholeMap} title="지도 전체 보기">전체 지도 보기</button>
         <button type="button" className="gamcheon-map__street-focus is-secondary" onClick={showPhotographedStreet} title="촬영한 거리 보기">촬영 거리 보기</button>

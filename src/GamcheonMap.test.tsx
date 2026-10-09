@@ -35,6 +35,8 @@ vi.mock('maplibre-gl', () => ({
     triggerRepaint() {}
     getLayer() { return {} }
     getSource() { return { setData() {} } }
+    setTerrain() {}
+    getTerrain() { return null }
     setLayoutProperty(id: string, _name: string, value: unknown) { layerVisibility[id] = value }
     on(event: string, listener: typeof mapClick.current) { if (event === 'click') mapClick.current = listener; if (event === 'style.load') styleLoad.current = listener as unknown as () => void }
     off(event: string) { if (event === 'click') mapClick.current = null }

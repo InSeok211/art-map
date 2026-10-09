@@ -945,3 +945,14 @@
   .gamcheon-map__tool-switch { margin: 4px 16px 10px; }
   .gamcheon-map__rec-bar { top: 58px; }
 }
+
+/* 평지 / 3D 지형 전환 */
+.gamcheon-map__terrain-switch { display: inline-flex; flex: none; gap: 2px; padding: 3px; border: 1px solid rgba(21, 21, 21, .12); border-radius: 999px; background: rgba(255, 255, 255, .96); box-shadow: 0 4px 14px rgba(0, 0, 0, .1); }
+.gamcheon-map__map-tools .gamcheon-map__terrain-switch button { width: auto; height: 32px; min-width: 0; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; box-shadow: none; color: #5d6577; font: inherit; font-size: 12px; font-weight: 800; white-space: nowrap; cursor: pointer; }
+.gamcheon-map__map-tools .gamcheon-map__terrain-switch button.is-active { background: #5b6cf0; color: #fff; }
+/* 휴대폰: 오른쪽 둥근 도구 버튼과 같은 폭으로 세로로 쌓습니다. */
+@media (max-width: 720px) {
+  .gamcheon-map__terrain-switch { flex-direction: column; width: 44px; padding: 3px; border-radius: 14px; }
+  .gamcheon-map__map-tools .gamcheon-map__terrain-switch button { height: 30px; padding: 0; border-radius: 11px; font-size: 11px; }
+  .gamcheon-map__terrain-long { display: none; }
+}

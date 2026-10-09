@@ -1,6 +1,7 @@
 import { gamcheonMapAreaFeature, gamcheonOutsideFeature, isBuildingInsideGamcheon2 } from './gamcheonBoundary'
 import gamcheonBuildings from './gamcheon-buildings.json'
 import { PHOTOGRAPHED_STREET_GEOJSON } from './streetSceneData'
+import { TERRAIN_ATTRIBUTION, TERRAIN_TILE_URL } from './terrain'
 
 const localBuildingFootprints = {
   ...gamcheonBuildings,
@@ -25,6 +26,8 @@ export const ROUTE_LAYER_IDS = ['route-casing', 'route-line']
 export const TRAIL_SOURCE_ID = 'gamcheonTrails'
 export const CANDIDATE_SOURCE_ID = 'gamcheonAlleyCandidates'
 export const TRAIL_LAYER_IDS = ['gps-trails-line', 'alley-candidates-casing', 'alley-candidates-line']
+// '3D 지형'을 켜면 바탕 지도도 이 고도 타일로 언덕을 세웁니다(map.setTerrain). 끄면 타일을 받지 않습니다.
+export const DEM_SOURCE_ID = 'gamcheonDem'
 // 3D 모델이 가리면 모델을 반투명하게 만드는 길 레이어입니다(ModelLayer).
 export const ROAD_LAYER_IDS = [
   'highway_path', 'highway_minor', 'highway_major_inner',
@@ -227,6 +230,7 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       [ROUTE_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
       [TRAIL_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
       [CANDIDATE_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
+      [DEM_SOURCE_ID]: { type: 'raster-dem', tiles: [TERRAIN_TILE_URL], encoding: 'terrarium', tileSize: 256, maxzoom: 15, attribution: TERRAIN_ATTRIBUTION },
     },
     layers,
   } as T

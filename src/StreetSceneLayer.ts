@@ -15,6 +15,7 @@ import roadGroundCache from './generated/road-ground.json'
 import { ALLEY_EDGE, roadOutlines, unionRoadAreas } from './roadCorridors'
 import { isBakedAlley } from './recordedAlleys'
 import type { Alley } from './alleys'
+import type { TerrainSampler } from './terrain'
 import type { RoadGround } from './roadGround'
 // 길을 가리는 건물 반투명(findRoadOccluders)은 2026-10-09 주석 처리했습니다. 되살릴 때 아래 두 줄의 주석을 풉니다.
 // import { buildRoadRuns } from './roadGround'
@@ -109,6 +110,67 @@ export function greenHouseOsmPlacement() {
 // 골목길 포장 색(따뜻한 베이지)
 const ALLEY_PAVING_COLOR = 0xead2ad
 
+// 3D 지형에서 바닥(길·포장)을 지형 위로 띄우는 높이(m). 바탕 지도의 지형 면과 겹쳐 깜빡이지 않게 합니다.
+const TERRAIN_GROUND_LIFT = 0.35
+
+// 평평하게 만든 바닥 도형을 지형에 얹습니다. 긴 변을 maxEdge(m) 이하로 나눈 뒤 꼭짓점마다 지형 높이를 더합니다.
+// (넓은 도로 면을 그대로 올리면 큰 삼각형이 비탈을 가로질러 땅속으로 파고들기 때문입니다.)
+// 변의 가운데 점은 이웃 삼각형과 함께 쓰므로(변마다 한 번만 만듦) 나눈 자리에 틈이 생기지 않습니다.
+export function drapeOnTerrain(geometry: THREE.BufferGeometry, terrain: Pick<TerrainSampler, 'height'>, lift = TERRAIN_GROUND_LIFT, maxEdge = 6) {
+  const names = Object.keys(geometry.attributes)
+  const attributes = names.map((name) => geometry.getAttribute(name) as THREE.BufferAttribute)
+  const sizes = attributes.map((attribute) => attribute.itemSize)
+  const stride = sizes.reduce((sum, size) => sum + size, 0)
+  const positionOffset = sizes.slice(0, names.indexOf('position')).reduce((sum, size) => sum + size, 0)
+  const count = attributes[0].count
+  // 꼭짓점마다 모든 속성 값을 이어 붙인 표
+  const pool: number[] = []
+  for (let vertex = 0; vertex < count; vertex++) {
+    attributes.forEach((attribute, a) => { for (let k = 0; k < sizes[a]; k++) pool.push(attribute.getComponent(vertex, k)) })
+  }
+  const x = (vertex: number) => pool[vertex * stride + positionOffset]
+  const z = (vertex: number) => pool[vertex * stride + positionOffset + 2]
+  const length2 = (a: number, b: number) => (x(a) - x(b)) ** 2 + (z(a) - z(b)) ** 2
+  const middles = new globalThis.Map<number, number>()
+  const middle = (a: number, b: number) => {
+    const key = a < b ? a * 16_777_216 + b : b * 16_777_216 + a
+    let vertex = middles.get(key)
+    if (vertex === undefined) {
+      vertex = pool.length / stride
+      for (let k = 0; k < stride; k++) pool.push((pool[a * stride + k] + pool[b * stride + k]) / 2)
+      middles.set(key, vertex)
+    }
+    return vertex
+  }
+  const stack = geometry.index ? Array.from(geometry.index.array) : Array.from({ length: count }, (_, vertex) => vertex)
+  const triangles: number[] = []
+  const limit = maxEdge * maxEdge
+  while (stack.length >= 3) {
+    const c = stack.pop()!, b = stack.pop()!, a = stack.pop()!
+    const ab = length2(a, b), bc = length2(b, c), ca = length2(c, a)
+    const longest = Math.max(ab, bc, ca)
+    if (longest <= limit || pool.length > 6_000_000) { triangles.push(a, b, c); continue }
+    // 가장 긴 변의 가운데에서 둘로 나눕니다(감는 방향은 그대로).
+    if (longest === ab) { const m = middle(a, b); stack.push(a, m, c, m, b, c) }
+    else if (longest === bc) { const m = middle(b, c); stack.push(b, m, a, m, c, a) }
+    else { const m = middle(c, a); stack.push(c, m, b, m, a, b) }
+  }
+  const vertices = pool.length / stride
+  for (let vertex = 0; vertex < vertices; vertex++) pool[vertex * stride + positionOffset + 1] += terrain.height(x(vertex), z(vertex)) + lift
+  const result = new THREE.BufferGeometry()
+  let offset = 0
+  names.forEach((name, a) => {
+    const values = new Float32Array(vertices * sizes[a])
+    for (let vertex = 0; vertex < vertices; vertex++) for (let k = 0; k < sizes[a]; k++) values[vertex * sizes[a] + k] = pool[vertex * stride + offset + k]
+    result.setAttribute(name, new THREE.Float32BufferAttribute(values, sizes[a]))
+    offset += sizes[a]
+  })
+  result.setIndex(triangles)
+  if (result.getAttribute('normal')) result.computeVertexNormals()
+  geometry.dispose()
+  return result
+}
+
 export const SCENE_BUILD_MEASURE = 'gamcheon-map:street-scene-build'
 const isTouchDevice = () => typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
   && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
@@ -188,8 +250,14 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private workshopCenter: [number, number] = [0, 0]
   private pendingDistrict: { building: StreetBuilding; outline: [number, number][]; distance: number }[] = []
 
-  constructor() {
+  // 3D 지형(켜져 있을 때만). 건물은 윤곽의 가장 낮은 땅 높이(buildingBase)에 세우고 바닥은 지형에 얹습니다.
+  private readonly terrain?: TerrainSampler
+  private buildingBase = 0
+  private occluderBases: number[] = []
+
+  constructor(options: { terrain?: TerrainSampler } = {}) {
     const started = performance.now()
+    this.terrain = options.terrain
     // 휴대폰·태블릿(터치 화면)은 그림자 지도를 2048로 줄여 그래픽 메모리와 그리기 부담을 덜어 줍니다.
     addSceneLights(this.scene, SHADOW_CENTER, SHADOW_EXTENT, isTouchDevice() ? 2048 : 4096)
     this.buildingRings.forEach((ring) => this.scene.add(ring))
@@ -199,7 +267,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const bounds = getStreetSceneBounds(20)
     this.shadowCatcher = createShadowCatcher()
     fitShadowCatcher(this.shadowCatcher, bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ)
-    this.scene.add(this.shadowCatcher)
+    // 지형에서는 평평한 그림자 받이가 언덕을 가로지르므로 쓰지 않습니다(지형에 얹은 바닥이 그림자를 받습니다).
+    if (!this.terrain) this.scene.add(this.shadowCatcher)
   }
 
   // 색은 꼭짓점 색(vertex color)으로 넣고 재질은 질감·유리 여부로만 나눕니다. 색마다 재질을 만들면 그리기
@@ -376,13 +445,31 @@ export class StreetSceneLayer implements CustomLayerInterface {
 
   private addFinishedGeometry(color: number, geometry: THREE.BufferGeometry, finish?: SurfaceFinish) {
     if (!finish) return this.addGeometry(color, geometry)
+    geometry = this.onTerrain(geometry)
     const plain = geometry.index ? geometry.toNonIndexed() : geometry
     if (plain !== geometry) geometry.dispose()
     this.tagBuilding(plain)
     this.finishedMaterial(color, finish).geometries.push(plain)
   }
 
+  // 3D 지형이면 도형을 제 높이로 올립니다: 건물(과 그 간판·장식)은 건물 바닥 높이만큼 통째로, 바닥처럼 납작한
+  // 도형은 지형에 얹고, 나무 같은 작은 물체는 그 자리 땅 높이만큼 올립니다.
+  private onTerrain(geometry: THREE.BufferGeometry) {
+    const terrain = this.terrain
+    if (!terrain) return geometry
+    if (this.buildingContext) {
+      geometry.translate(0, this.buildingBase, 0)
+      return geometry
+    }
+    geometry.computeBoundingBox()
+    const box = geometry.boundingBox!
+    if (box.max.y - box.min.y < 0.6) return drapeOnTerrain(geometry, terrain)
+    geometry.translate(0, terrain.height((box.min.x + box.max.x) / 2, (box.min.z + box.max.z) / 2), 0)
+    return geometry
+  }
+
   private addGeometry(color: number, geometry: THREE.BufferGeometry, glass = false, surface?: ConceptSurface) {
+    geometry = this.onTerrain(geometry)
     const plain = geometry.index ? geometry.toNonIndexed() : geometry
     if (plain !== geometry) geometry.dispose()
     this.tagBuilding(plain)
@@ -401,6 +488,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     if (this.group === 'scene') return
     if (this.currentBuilding < 0 && this.buildingContext && this.occluders.length < FADE_TEXTURE_SIZE * FADE_TEXTURE_SIZE) {
       this.currentBuilding = this.occluders.push(this.buildingContext) - 1
+      this.occluderBases[this.currentBuilding] = this.buildingBase
     }
     const index = Math.max(0, this.currentBuilding)
     geometry.setAttribute('buildingIndex', new THREE.Float32BufferAttribute(new Float32Array(geometry.getAttribute('position').count).fill(index), 1))
@@ -463,7 +551,12 @@ export class StreetSceneLayer implements CustomLayerInterface {
     // }
     // 지금은 내 위치(GPS)를 가리는 근처 건물만 반투명하게 합니다. 위치를 모르면 아무 건물도 비치지 않습니다.
     if (this.autoSeeThrough && this.buildingOpacity >= 1 && this.myPosition) {
-      next = findPointOccluders(this.occluders, this.myPosition, map.getBearing(), map.getPitch())
+      // 지형에서는 건물 높이를 내 위치 땅 높이 기준으로 바꿔 셉니다(아래쪽 비탈의 건물은 나를 가리지 않음).
+      const terrain = this.terrain, position = this.myPosition
+      const occluders = terrain ? this.occluders.map((occluder, index) => ({
+        ...occluder, height: Math.max(0, occluder.height + (this.occluderBases[index] ?? 0) - terrain.height(position[0], position[1])),
+      })) : this.occluders
+      next = findPointOccluders(occluders, position, map.getBearing(), map.getPitch())
     }
     const changed = next.size !== this.occluding.size || [...next].some((index) => !this.occluding.has(index))
     if (!changed) return
@@ -548,8 +641,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
           return geometry
         })
         if (!geometries.length) continue
-        const mesh = new THREE.Mesh(mergeGeometries(geometries), new THREE.MeshLambertMaterial({ color, map: this.extraAlleyTexture }))
-        geometries.forEach((geometry) => geometry.dispose())
+        const placed = geometries.map((geometry) => this.onTerrain(geometry))
+        const mesh = new THREE.Mesh(mergeGeometries(placed), new THREE.MeshLambertMaterial({ color, map: this.extraAlleyTexture }))
+        placed.forEach((geometry) => geometry.dispose())
         mesh.receiveShadow = true
         mesh.frustumCulled = false
         this.scene.add(mesh)
@@ -997,6 +1091,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const geometry = new THREE.PlaneGeometry(width, 0.44)
     geometry.rotateY(facingRotation(rotation, nx, nz))
     geometry.translate(x + nx * 0.04, y, z + nz * 0.04)
+    this.onTerrain(geometry)
     const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false, forceSinglePass: true }))
     this.fadeWithBuilding(mesh)
     mesh.frustumCulled = false
@@ -1020,6 +1115,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const geometry = new THREE.PlaneGeometry(1.25, 0.63)
     geometry.rotateY(facingRotation(rotation, nx, nz))
     geometry.translate(x + nx * 0.18, y, z + nz * 0.18)
+    this.onTerrain(geometry)
     const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false, forceSinglePass: true }))
     this.fadeWithBuilding(mesh)
     mesh.renderOrder = 4
@@ -1735,6 +1831,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
       const outline = building.outline.map(streetMeters)
       this.group = building.id === ARTIST_WORKSHOP_FOOTPRINT_ID ? 'scene' : this.ringOf(outline)
       this.buildingContext = { outline, height: building.heightMeters }
+      this.buildingBase = this.terrain?.lowest(outline) ?? 0
       this.currentBuilding = -1
       if (building.concept) {
         this.doubleSided = true
@@ -2060,6 +2157,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
         const next = this.pendingDistrict.shift()!
         this.group = this.ringOf(next.outline)
         this.buildingContext = { outline: next.outline, height: next.building.heightMeters }
+        this.buildingBase = this.terrain?.lowest(next.outline) ?? 0
         this.currentBuilding = -1
         this.buildDistrictBuilding(next.building, next.outline)
         sinceFlush++
@@ -2129,7 +2227,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
       model.name = 'green-house'
       const placement = greenHouseOsmPlacement()
       model.scale.set(placement.scaleX, 1, placement.scaleZ)
-      model.position.set(placement.x, 0, placement.z)
+      const base = this.terrain?.lowest(GREEN_HOUSE_PLAN.map(([px, pz]) => [px + placement.x, pz + placement.z] as [number, number])) ?? 0
+      model.position.set(placement.x, base, placement.z)
       model.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return
         object.castShadow = true
@@ -2151,7 +2250,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
       // OSM 윤곽 그대로 두면 넓힌 골목(감내1로175번안길 등)과 겹치므로, 차도·골목길에서 비켜 놓습니다.
       const [x, z] = streetMeters(BEAUTIFUL_HANGUL_CENTER)
       const [dx, dz] = shiftOffCarriageways(BEAUTIFUL_HANGUL_OUTLINE.map(streetMeters), 3, 'all')
-      model.position.set(x + dx, 0, z + dz)
+      const base = this.terrain?.lowest(BEAUTIFUL_HANGUL_OUTLINE.map(streetMeters).map(([px, pz]) => [px + dx, pz + dz] as [number, number])) ?? 0
+      model.position.set(x + dx, base, z + dz)
       // The GLB's vertices already follow the OSM quadrilateral at metre scale.
       // Rotate its west-facing entrance toward the alley and place its centre.
       model.rotation.y = BEAUTIFUL_HANGUL_ROTATION

@@ -21,6 +21,7 @@
     "build:demo": "tsc --noEmit && vite build && node scripts/copy-model-assets.mjs --demo",
     "test": "vitest run",
     "build:road-ground": "node scripts/build-road-ground.mjs",
+    "build:terrain": "node scripts/build-terrain.mjs",
     "build:greenhouse": "node scripts/build-greenhouse-from-plan.mjs",
     "build:beautiful-hangul": "node scripts/build-beautiful-hangul.mjs",
     "export:site": "node scripts/export-to-site.mjs",

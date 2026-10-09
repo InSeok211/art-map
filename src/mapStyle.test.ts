@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import baseStyle from './positron-style.json'
-import { BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle } from './mapStyle'
+import { BUILDING_FOOTPRINT_LAYER_IDS, DEM_SOURCE_ID, createMinimalStyle } from './mapStyle'
 import { isBuildingInsideGamcheon2 } from './gamcheonBoundary'
 
 describe('createMinimalStyle', () => {
@@ -46,13 +46,13 @@ describe('createMinimalStyle', () => {
     expect(ids.indexOf('highway_minor_casing')).toBeLessThan(ids.indexOf('highway_minor'))
   })
 
-  it('keeps the map surface flat when the camera is tilted', () => {
+  it('starts flat and only prepares the elevation source for the 3D terrain button', () => {
     const style = createMinimalStyle(baseStyle)
 
     expect(style).not.toHaveProperty('terrain')
-    expect(Object.values(style.sources).some((source) =>
-      typeof source === 'object' && source !== null && 'type' in source && source.type === 'raster-dem',
-    )).toBe(false)
+    const demSources = Object.entries(style.sources).filter(([, source]) =>
+      typeof source === 'object' && source !== null && 'type' in source && source.type === 'raster-dem')
+    expect(demSources.map(([id]) => id)).toEqual([DEM_SOURCE_ID])
     expect(style.layers.some((layer) => layer.type === 'hillshade')).toBe(false)
   })
 

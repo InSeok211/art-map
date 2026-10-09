@@ -19,6 +19,12 @@
 - 스타일·스키마: © [OpenMapTiles](https://openmaptiles.org/) (`src/positron-style.json`은 OpenFreeMap Positron 스타일을 고친 파일)
 - Positron 스타일: © CARTO, © OpenMapTiles. 코드는 BSD-3-Clause, 디자인은 CC BY 4.0 조건으로, 고친 경우에도 이 출처를 유지해야 합니다.
 
+## 지형 고도 ('3D 지형' 보기)
+
+- 고도 타일: [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Mapzen/Tilezen, AWS Open Data, terrarium 형식)
+- 감천 일대의 원자료: SRTM·GMTED2010 data courtesy of the U.S. Geological Survey(퍼블릭 도메인), ETOPO1 — NOAA National Centers for Environmental Information(미국 저작권 대상 아님). 출처 표시만 요구됩니다([attribution](https://github.com/tilezen/joerd/blob/master/docs/attribution.md)).
+- `src/generated/terrain.json`은 이 타일(줌 15)에서 뽑은 8m 간격 높이 표이고(`npm run build:terrain`), 바탕 지도의 MapLibre 지형도 같은 타일을 씁니다. 지형을 켜면 지도 출처 표시에 "지형: Terrain Tiles (USGS SRTM·GMTED2010, NOAA ETOPO1)"가 함께 나옵니다.
+
 ## 3D 모델 에셋
 
 기본 GLB는 직접 만든 작가님 공방 모델(`src/assets/models/custom/artist-workshop-180.glb`), 그린하우스 연결형 시안(`greenhouse-sixpence-connected.glb`, `scripts/build-greenhouse-from-plan.mjs`로 생성), 아름다운한글 서예 공방 시안(`beautiful-hangul-studio.glb`, `scripts/build-beautiful-hangul.mjs`로 생성)입니다. 외부 제작 3D 모델은 저장소와 배포물에 들어 있지 않습니다.
