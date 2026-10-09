@@ -15,6 +15,8 @@ interface TrailPanelProps {
   onApprove: () => void
   onDismiss: () => void
   onDeleteTrail: (id: string) => void
+  // 기록을 시작하면 휴대폰에서 시트를 접어 지도를 넓게 보여 줍니다.
+  onRecordStart?: () => void
 }
 
 const when = (iso: string) => {
@@ -25,21 +27,20 @@ const when = (iso: string) => {
 // 골목길 탭 아래쪽의 "걸어서 골목길 찾기" 영역입니다.
 export function TrailPanel({
   recorder, trails, candidates, selectedId, threshold, showTrails,
-  onThresholdChange, onShowTrailsChange, onSelect, onApprove, onDismiss, onDeleteTrail,
+  onThresholdChange, onShowTrailsChange, onSelect, onApprove, onDismiss, onDeleteTrail, onRecordStart,
 }: TrailPanelProps) {
   const selected = candidates.find((candidate) => candidate.id === selectedId)
   const draftPoints = recorder.draft?.points.length ?? 0
 
   return <div className="gamcheon-map__model-editor gamcheon-map__trail-panel">
-    <div className="gamcheon-map__model-section-title">걸어서 골목길 찾기</div>
     <p className="gamcheon-map__model-help">
-      기록을 켜고 골목을 걸으면 지나간 길이 저장됩니다. 서로 다른 기록에서 같은 곳을 {threshold}번 이상 지나간 곳 중
-      지도에 없는 길이 후보(주황 점선)로 나타납니다. 확인한 후보만 골목길로 추가됩니다.
+      기록을 켜고 골목을 걸어 주세요. 서로 다른 기록에서 같은 곳을 <b>{threshold}번 이상</b> 지나간, 지도에 없는 길이
+      주황 점선 후보로 나타납니다. 확인한 후보만 골목길로 추가됩니다.
     </p>
     <div className="gamcheon-map__model-primary-actions">
       {recorder.recording
         ? <button type="button" className="gamcheon-map__model-place gamcheon-map__trail-recording" onClick={() => void recorder.finish()}>■ 기록 끝내고 저장 ({draftPoints}점)</button>
-        : <button type="button" className="gamcheon-map__model-place" onClick={recorder.start}>{draftPoints ? `● 기록 이어가기 (${draftPoints}점)` : '● 걸으며 기록 시작'}</button>}
+        : <button type="button" className="gamcheon-map__model-place" onClick={() => { recorder.start(); onRecordStart?.() }}>{draftPoints ? `● 기록 이어가기 (${draftPoints}점)` : '● 걸으며 기록 시작'}</button>}
       {recorder.recording && <button type="button" onClick={recorder.pause}>잠시 멈춤</button>}
       {!recorder.recording && draftPoints > 0 && <button type="button" onClick={() => void recorder.finish()}>저장</button>}
       {draftPoints > 0 && <button type="button" onClick={recorder.discard}>기록 버리기</button>}
@@ -53,7 +54,7 @@ export function TrailPanel({
       <button type="button" onClick={() => void recorder.retry()}>올리지 못한 기록 {recorder.pendingCount}개 다시 올리기</button>
     </div>}
 
-    <div className="gamcheon-map__model-inspector">
+    <div className="gamcheon-map__model-inspector gamcheon-map__trail-settings">
       <label>골목길로 볼 기준 <span>{threshold}번 이상</span>
         <input aria-label="골목길로 볼 기준 횟수" type="range" min={PASS_THRESHOLD_RANGE.min} max={PASS_THRESHOLD_RANGE.max} step="1" value={threshold} onChange={(event) => onThresholdChange(Number(event.target.value))} />
       </label>

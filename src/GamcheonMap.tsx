@@ -40,6 +40,8 @@ const BEARING = -8
 const EMPTY_PLACES: Place[] = []
 const EMPTY_MODELS: MapModel[] = []
 const EMPTY_ALLEYS: Alley[] = []
+export type EditTool = 'places' | 'models' | 'alleys'
+const ALL_EDIT_TOOLS: EditTool[] = ['places', 'models', 'alleys']
 const MAP_STYLE = createMinimalStyle(baseStyle) as unknown as StyleSpecification
 
 // 휴대폰에서 아래 시트를 접었을 때 보이는 높이(손잡이·탭·검색창)입니다. CSS의 접힌 시트 높이와 맞춥니다.
@@ -83,6 +85,8 @@ export interface GamcheonMapProps {
   // 패널 없이 지도만 보여 줄 때 켭니다(패널 자리 여백을 두지 않음).
   compact?: boolean
   editable?: boolean
+  // 편집할 수 있을 때 보여 줄 편집 도구(기본: 모두). 홈페이지 관리자 작업실은 골목길만 씁니다.
+  editTools?: EditTool[]
   onPlacesChange?: (places: Place[]) => void
   models?: MapModel[]
   onModelsChange?: (models: MapModel[]) => void
@@ -101,6 +105,7 @@ export function GamcheonMap({
   onMapClick,
   compact = false,
   editable = false,
+  editTools = ALL_EDIT_TOOLS,
   onPlacesChange,
   models = EMPTY_MODELS,
   onModelsChange,
@@ -129,6 +134,15 @@ export function GamcheonMap({
   const [sheetOpen, setSheetOpen] = useState(false)
   // 공개 지도(편집 불가)의 휴대폰 화면은 06 '지도 몰입' 시안(MobileMapUI)을 씁니다. 넓은 화면은 기존 옆 패널입니다.
   const immersive = !editable
+  const canEditPlaces = editable && editTools.includes('places')
+  const canEditModels = editable && editTools.includes('models')
+  const canEditAlleys = editable && editTools.includes('alleys')
+  // 장소를 편집하지 않는 화면(골목지도 작업실)은 편집을 켜면 바로 골목길 도구를 엽니다.
+  const startsWithAlleys = canEditAlleys && !canEditPlaces && !canEditModels
+  useEffect(() => {
+    if (startsWithAlleys) setMode((current) => current === 'places' ? 'alleys' : current)
+    else if (!editable) setMode((current) => current === 'alleys' || current === 'models' ? 'places' : current)
+  }, [startsWithAlleys, editable])
   const [mobileView, setMobileView] = useState<MobileView>('map')
   const sheetOpenRef = useRef(sheetOpen)
   const panelRef = useRef<HTMLElement>(null)
@@ -161,7 +175,9 @@ export function GamcheonMap({
   const workshopOnlyRef = useRef(workshopOnly)
   const streetLayerRef = useRef<StreetSceneLayer | null>(null)
   const alley = useAlleyEditing(mapRef, mode === 'alleys', alleys, onAlleysChange)
-  const alleyFinder = useAlleyFinder(mapRef, editable && mode === 'alleys', gpsTrails, alley.editorProps.alleys, alley.addAlley)
+  // 골목길 탭 안의 두 도구: 지도에 점을 찍어 그리기(draw) / 걸으며 기록해 찾기(walk)
+  const [alleyTool, setAlleyTool] = useState<'draw' | 'walk'>('draw')
+  const alleyFinder = useAlleyFinder(mapRef, canEditAlleys && mode === 'alleys', gpsTrails, alley.editorProps.alleys, alley.addAlley)
   // 사용자가 그리거나 GPS 기록으로 추가한 골목길을 3D 거리 바닥에도 골목길 포장으로 그립니다.
   useEffect(() => { streetLayerRef.current?.setExtraAlleys(alley.editorProps.alleys) }, [alley.editorProps.alleys, sceneStatus])
   // 지도를 여는 순간부터 내 위치와 방향을 보여 줍니다. 바깥 화면이 장소를 골라 열었으면 그 장소를 먼저 보여 줍니다.
@@ -679,8 +695,8 @@ export function GamcheonMap({
       <nav className="gamcheon-map__desktop-nav" aria-label="PC 지도 메뉴">
         <span className="gamcheon-map__desktop-nav-mark" aria-hidden="true">G</span>
         <button type="button" className={mode === 'places' ? 'is-active' : ''} onClick={() => switchMode('places')} aria-label="장소 탐색 메뉴"><span aria-hidden="true">⌖</span>장소</button>
-        {editable && <button type="button" className={mode === 'models' ? 'is-active' : ''} onClick={() => switchMode('models')} aria-label="3D 작업 메뉴"><span aria-hidden="true">⬡</span>3D 건물</button>}
-        {editable && <button type="button" className={mode === 'alleys' ? 'is-active' : ''} onClick={() => switchMode('alleys')} aria-label="골목길 도구 메뉴"><span aria-hidden="true">⌁</span>골목길</button>}
+        {canEditModels && <button type="button" className={mode === 'models' ? 'is-active' : ''} onClick={() => switchMode('models')} aria-label="3D 작업 메뉴"><span aria-hidden="true">⬡</span>3D 건물</button>}
+        {canEditAlleys && <button type="button" className={mode === 'alleys' ? 'is-active' : ''} onClick={() => switchMode('alleys')} aria-label="골목길 도구 메뉴"><span aria-hidden="true">⌁</span>골목길</button>}
         <button type="button" className={mode === 'route' ? 'is-active' : ''} onClick={() => switchMode('route')} aria-label="길찾기 메뉴"><span aria-hidden="true">➤</span>길찾기</button>
       </nav>
 
@@ -703,21 +719,32 @@ export function GamcheonMap({
         >
           <span aria-hidden="true" />{sheetOpen ? '아래로 내려 지도 크게 보기' : '위로 올려 목록 보기'}
         </button>
-        <div className="gamcheon-map__intro">
+        {/* 편집 도구 탭(3D 배치·골목길)에서는 큰 소개 대신 짧은 제목만 두어 도구가 위로 올라오게 합니다. */}
+        {(mode === 'models' || mode === 'alleys') ? <div className="gamcheon-map__tool-head">
+          <h2>{mode === 'models' ? '3D 건물 배치' : '골목길 편집'}</h2>
+        </div> : <div className="gamcheon-map__intro">
           <div className="gamcheon-map__eyebrow"><span className="gamcheon-map__eyebrow-dot" /> BUSAN · GAMCHEON 2-DONG</div>
           <h1>감천 골목지도<span className="gamcheon-map__title-dot">.</span></h1>
           <p>작가님 공방을 중심으로 골목의 가게와 명소를 찾아보세요.</p>
-        </div>
+        </div>}
 
         {/* 길찾기는 보기 전용 지도에서도 쓰므로 탭을 늘 보이고, 편집 탭(3D 배치·골목길)은 편집할 수 있을 때만 보입니다. */}
         <div className="gamcheon-map__mode-tabs" role="group" aria-label="지도 모드">
           <button type="button" className={mode === 'places' ? 'is-active' : ''} onClick={() => switchMode('places')}>장소</button>
-          {editable && <button type="button" className={mode === 'models' ? 'is-active' : ''} onClick={() => switchMode('models')}>3D 배치</button>}
-          {editable && <button type="button" className={mode === 'alleys' ? 'is-active' : ''} onClick={() => switchMode('alleys')}>골목길</button>}
+          {canEditModels && <button type="button" className={mode === 'models' ? 'is-active' : ''} onClick={() => switchMode('models')}>3D 배치</button>}
+          {canEditAlleys && <button type="button" className={mode === 'alleys' ? 'is-active' : ''} onClick={() => switchMode('alleys')}>골목길</button>}
           <button type="button" className={mode === 'route' ? 'is-active' : ''} onClick={() => switchMode('route')}>길찾기</button>
         </div>
 
-        {mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : mode === 'alleys' ? <><AlleyEditor {...alley.editorProps} />{alleyFinder.enabled && <TrailPanel {...alleyFinder.panelProps} />}</> : sceneMode ? <ModelEditor
+        {mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : mode === 'alleys' ? <>
+          {alleyFinder.enabled && <div className="gamcheon-map__tool-switch" role="tablist" aria-label="골목길 도구">
+            <button type="button" role="tab" aria-selected={alleyTool === 'draw'} className={alleyTool === 'draw' ? 'is-active' : ''} onClick={() => setAlleyTool('draw')}>직접 그리기 · {alley.editorProps.alleys.length}</button>
+            <button type="button" role="tab" aria-selected={alleyTool === 'walk'} className={alleyTool === 'walk' ? 'is-active' : ''} onClick={() => { alley.stopDrawing(); setAlleyTool('walk') }}>
+              걸어서 찾기{alleyFinder.panelProps.candidates.length > 0 && <em>{alleyFinder.panelProps.candidates.length}</em>}
+            </button>
+          </div>}
+          {alleyFinder.enabled && alleyTool === 'walk' ? <TrailPanel {...alleyFinder.panelProps} onRecordStart={() => setSheetOpen(false)} /> : <AlleyEditor {...alley.editorProps} />}
+        </> : sceneMode ? <ModelEditor
           assets={assets}
           models={localModels.filter((item) => isInsideGamcheon2(item.longitude, item.latitude))}
           selectedId={selectedModelId}
@@ -756,16 +783,23 @@ export function GamcheonMap({
           hasAnyPlace={localPlaces.length > 0}
           selectedId={selectedId}
           onSelect={selectPlace}
-          editable={editable}
+          editable={canEditPlaces}
           onAdd={() => startEditingPlace()}
           onEditSelected={selectedPlace && (() => startEditingPlace(selectedPlace))}
         />}
 
-        <div className="gamcheon-map__panel-footer">
+        {!editable && <div className="gamcheon-map__panel-footer">
           <span className="gamcheon-map__footer-mark">G</span>
           <span>감천2동을 천천히, 더 자세히.</span>
-        </div>
+        </div>}
       </aside>
+
+      {/* GPS 기록 중에는 어느 탭에 있든 지도 위에 기록 상태와 끝내기 버튼을 띄웁니다(휴대폰에서 시트를 접어도 보임). */}
+      {alleyFinder.panelProps.recorder.recording && <div className="gamcheon-map__rec-bar" role="status">
+        <span className="gamcheon-map__rec-dot" aria-hidden="true" />
+        <span>기록 중 · {alleyFinder.panelProps.recorder.draft?.points.length ?? 0}점{alleyFinder.panelProps.recorder.accuracy !== null && ` · 정확도 ${alleyFinder.panelProps.recorder.accuracy}m`}</span>
+        <button type="button" onClick={() => void alleyFinder.panelProps.recorder.finish()}>끝내고 저장</button>
+      </div>}
 
       {immersive && <MobileMapUI
         query={query}

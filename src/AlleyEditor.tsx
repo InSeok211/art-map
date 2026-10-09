@@ -39,12 +39,12 @@ export function AlleyEditor({
       <button type="button" className="gamcheon-map__model-place" onClick={onStartDrawing}>＋ 새 골목길 그리기</button>
     </div>}
     {error && <p className="gamcheon-map__model-error" role="alert">{error}</p>}
-    <div className="gamcheon-map__model-section-title">그린 골목길 <strong>{alleys.length}개</strong></div>
+    <div className="gamcheon-map__model-section-title">골목길 목록 <strong>{alleys.length}개</strong></div>
     <div className="gamcheon-map__model-placed">
       {alleys.map((alley, index) => <button key={alley.id} type="button" className={selectedId === alley.id ? 'is-selected' : ''} onClick={() => onSelect(alley.id)}>
         <span>{String(index + 1).padStart(2, '0')}</span>{alleyLabel(alley, index)}
       </button>)}
-      {alleys.length === 0 && <p className="gamcheon-map__model-empty">아직 그린 골목길이 없습니다.</p>}
+      {alleys.length === 0 && <p className="gamcheon-map__model-empty">아직 골목길이 없습니다.</p>}
     </div>
     {selected && !drawing && <div className="gamcheon-map__model-inspector">
       <strong>{alleyLabel(selected, selectedIndex)} 수정</strong>

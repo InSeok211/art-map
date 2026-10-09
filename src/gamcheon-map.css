@@ -1,8 +1,8 @@
 .gamcheon-map {
-  --gm-ink: #203b36;
-  --gm-muted: #81918b;
-  --gm-green: #245f55;
-  --gm-line: #e7ece7;
+  --gm-ink: #20232a;
+  --gm-muted: #777d86;
+  --gm-green: #5b6cf0;
+  --gm-line: #e8eaf0;
   position: relative;
   display: block;
   width: 100%;
@@ -34,13 +34,13 @@
   font-size: 10px;
 }
 
-.gamcheon-map .maplibregl-ctrl-attrib a { color: #245f55; }
+.gamcheon-map .maplibregl-ctrl-attrib a { color: #5b6cf0; }
 
 .gamcheon-map .maplibregl-ctrl-group {
-  border: 1px solid #e2e9e3;
+  border: 1px solid #e6e8f0;
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 8px 28px rgba(24, 53, 42, .11);
+  box-shadow: 0 8px 28px rgba(30, 36, 64, .11);
 }
 
 .gamcheon-map .maplibregl-ctrl-group button {
@@ -62,7 +62,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #fffefa;
+  background: #ffffff;
   border: 1px solid rgba(234, 237, 229, .94);
   border-radius: 22px;
   box-shadow: 0 20px 60px rgba(29, 57, 45, .17), 0 3px 9px rgba(29, 57, 45, .05);
@@ -109,41 +109,41 @@
   letter-spacing: -.015em;
 }
 
-.gamcheon-map__mode-tabs { display: flex; gap: 4px; margin: 0 24px 16px; padding: 4px; border-radius: 10px; background: #edf3ed; }
+.gamcheon-map__mode-tabs { display: flex; gap: 4px; margin: 0 24px 16px; padding: 4px; border-radius: 10px; background: #f2f3f8; }
 .gamcheon-map__mode-tabs button { flex: 1; min-height: 32px; border: 0; border-radius: 7px; background: transparent; color: #738a7d; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
-.gamcheon-map__mode-tabs button.is-active { background: #fffefa; color: #245f55; box-shadow: 0 2px 7px rgba(24, 53, 42, .1); }
+.gamcheon-map__mode-tabs button.is-active { background: #ffffff; color: #5b6cf0; box-shadow: 0 2px 7px rgba(30, 36, 64, .1); }
 
 .gamcheon-map__model-editor { min-height: 0; flex: 1; overflow-y: auto; padding: 0 24px 20px; }
-.gamcheon-map__model-help { margin: 2px 0 14px; color: #71867b; font-size: 11px; line-height: 1.6; }
+.gamcheon-map__model-help { margin: 2px 0 14px; color: #6f7686; font-size: 11px; line-height: 1.6; }
 .gamcheon-map__model-styles { display: flex; gap: 5px; margin-bottom: 10px; }
-.gamcheon-map__model-styles button { flex: 1; padding: 8px 4px; border: 1px solid #e2e9e3; border-radius: 7px; background: #fff; color: #71867b; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
-.gamcheon-map__model-styles button.is-active { border-color: #245f55; background: #245f55; color: white; }
+.gamcheon-map__model-styles button { flex: 1; padding: 8px 4px; border: 1px solid #e6e8f0; border-radius: 7px; background: #fff; color: #6f7686; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
+.gamcheon-map__model-styles button.is-active { border-color: #5b6cf0; background: #5b6cf0; color: white; }
 .gamcheon-map__model-assets { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-.gamcheon-map__model-assets button { display: flex; align-items: center; min-width: 0; gap: 7px; padding: 7px; border: 1px solid #e2e9e3; border-radius: 9px; background: #fff; color: #456151; text-align: left; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
-.gamcheon-map__model-assets button.is-selected { border-color: #3f906b; background: #eff8ef; box-shadow: inset 0 0 0 1px #3f906b; }
+.gamcheon-map__model-assets button { display: flex; align-items: center; min-width: 0; gap: 7px; padding: 7px; border: 1px solid #e6e8f0; border-radius: 9px; background: #fff; color: #3f4656; text-align: left; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+.gamcheon-map__model-assets button.is-selected { border-color: #5b6cf0; background: #eef0ff; box-shadow: inset 0 0 0 1px #5b6cf0; }
 .gamcheon-map__model-assets button span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gamcheon-map__model-icon { display: grid; width: 29px; height: 29px; flex: 0 0 auto; place-items: center; border-radius: 7px; background: #eaf3e7; color: #4c8a67; font-size: 18px; }
 .gamcheon-map__model-primary-actions { display: flex; gap: 7px; margin: 11px 0 4px; }
-.gamcheon-map__model-primary-actions button, .gamcheon-map__model-import { display: grid; min-height: 36px; padding: 8px 9px; place-items: center; border: 1px solid #d5e5d9; border-radius: 8px; background: #fff; color: #245f55; text-align: center; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
-.gamcheon-map__model-place { flex: 1; background: #245f55 !important; color: #fff !important; }
+.gamcheon-map__model-primary-actions button, .gamcheon-map__model-import { display: grid; min-height: 36px; padding: 8px 9px; place-items: center; border: 1px solid #dde2fb; border-radius: 8px; background: #fff; color: #5b6cf0; text-align: center; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
+.gamcheon-map__model-place { flex: 1; background: #5b6cf0 !important; color: #fff !important; }
 .gamcheon-map__model-place:disabled { opacity: .5; cursor: not-allowed; }
 .gamcheon-map__model-import input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .gamcheon-map__model-error { margin: 8px 0; color: #9a5943; font-size: 10px; font-weight: 700; }
-.gamcheon-map__model-section-title { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 7px; padding-top: 14px; border-top: 1px solid #e7ece7; color: #344e44; font-size: 11px; font-weight: 800; }
-.gamcheon-map__model-section-title strong { color: #6b9c77; }
+.gamcheon-map__model-section-title { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 7px; padding-top: 14px; border-top: 1px solid #e8eaf0; color: #2b3040; font-size: 11px; font-weight: 800; }
+.gamcheon-map__model-section-title strong { color: #5b6cf0; }
 .gamcheon-map__model-placed { display: flex; flex-direction: column; gap: 4px; max-height: 150px; overflow-y: auto; }
-.gamcheon-map__model-placed button { width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: 7px; background: #f6f8f4; color: #496152; text-align: left; font: inherit; font-size: 10px; cursor: pointer; }
-.gamcheon-map__model-placed button.is-selected { border-color: #77aa88; background: #eaf4eb; }
-.gamcheon-map__model-placed button span { margin-right: 9px; color: #8bab95; font-weight: 800; }
+.gamcheon-map__model-placed button { width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: 7px; background: #f5f6fa; color: #3f4656; text-align: left; font: inherit; font-size: 10px; cursor: pointer; }
+.gamcheon-map__model-placed button.is-selected { border-color: #8d9af5; background: #eef0ff; }
+.gamcheon-map__model-placed button span { margin-right: 9px; color: #9aa3c4; font-weight: 800; }
 .gamcheon-map__model-empty { grid-column: 1 / -1; margin: 8px 0; color: #97a79b; font-size: 10px; }
-.gamcheon-map__model-inspector { display: flex; flex-direction: column; gap: 11px; margin-top: 14px; padding: 13px; border: 1px solid #dce9df; border-radius: 10px; background: #f6faf5; }
-.gamcheon-map__model-inspector > strong { color: #2f5f48; font-size: 12px; }
-.gamcheon-map__model-inspector label { display: grid; grid-template-columns: 1fr auto; gap: 5px; color: #607969; font-size: 10px; font-weight: 700; }
-.gamcheon-map__model-inspector label span { color: #2f7053; }
-.gamcheon-map__model-inspector input { grid-column: 1 / -1; width: 100%; accent-color: #347b5d; }
+.gamcheon-map__model-inspector { display: flex; flex-direction: column; gap: 11px; margin-top: 14px; padding: 13px; border: 1px solid #e1e5f5; border-radius: 10px; background: #f7f8fc; }
+.gamcheon-map__model-inspector > strong { color: #2b3040; font-size: 12px; }
+.gamcheon-map__model-inspector label { display: grid; grid-template-columns: 1fr auto; gap: 5px; color: #5d6577; font-size: 10px; font-weight: 700; }
+.gamcheon-map__model-inspector label span { color: #5b6cf0; }
+.gamcheon-map__model-inspector input { grid-column: 1 / -1; width: 100%; accent-color: #5b6cf0; }
 .gamcheon-map__model-coordinates { color: #8ba093; font-size: 10px; }
 .gamcheon-map__model-item-actions { display: flex; gap: 5px; }
-.gamcheon-map__model-item-actions button { flex: 1; min-height: 31px; padding: 6px 4px; border: 1px solid #d5e5d9; border-radius: 7px; background: #fff; color: #376a50; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
+.gamcheon-map__model-item-actions button { flex: 1; min-height: 31px; padding: 6px 4px; border: 1px solid #dde2fb; border-radius: 7px; background: #fff; color: #376a50; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
 .gamcheon-map__model-item-actions button.is-danger { border-color: #efd9d4; color: #a65e48; }
 .gamcheon-map__model-credit { display: block; margin-top: 15px; color: #9aaa9b; font-size: 9px; }
 .gamcheon-map__model-marker { width: 22px; height: 22px; padding: 0; border: 2px solid #fff; border-radius: 50%; background: #3a8964; box-shadow: 0 2px 8px #234f4470; color: #fff; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
@@ -152,7 +152,7 @@
 .gamcheon-map__alley-vertex:active { cursor: grabbing; }
 .gamcheon-map__alley-midpoint { display: grid; width: 16px; height: 16px; padding: 0; place-items: center; border: 1px solid #e3b08f; border-radius: 50%; background: rgba(255, 250, 240, .9); color: #c0612b; font: inherit; font-size: 12px; font-weight: 800; line-height: 1; cursor: copy; opacity: .8; }
 .gamcheon-map__alley-midpoint:hover { opacity: 1; background: #fdf0e6; }
-.gamcheon-map__model-inspector input.gamcheon-map__alley-name { padding: 7px 9px; border: 1px solid #d5e5d9; border-radius: 7px; background: #fff; color: #2f5f48; font: inherit; font-size: 11px; }
+.gamcheon-map__model-inspector input.gamcheon-map__alley-name { padding: 7px 9px; border: 1px solid #dde2fb; border-radius: 7px; background: #fff; color: #2b3040; font: inherit; font-size: 11px; }
 .gamcheon-map__alley-tip { margin: 0; font-size: 10px; }
 
 .gamcheon-map__search-wrap {
@@ -163,7 +163,7 @@
   margin: 0 24px;
   border: 1px solid #e4eae5;
   border-radius: 11px;
-  background: #f6f8f4;
+  background: #f5f6fa;
   transition: border-color .15s, box-shadow .15s;
 }
 
@@ -226,7 +226,7 @@
 }
 
 .gamcheon-map__category:hover { border-color: #a8bfb2; }
-.gamcheon-map__category.is-active { border-color: #245f55; background: #245f55; color: white; }
+.gamcheon-map__category.is-active { border-color: #5b6cf0; background: #5b6cf0; color: white; }
 
 .gamcheon-map__results-head {
   display: flex;
@@ -234,7 +234,7 @@
   justify-content: space-between;
   padding: 17px 27px 13px;
   border-top: 1px solid var(--gm-line);
-  color: #344e44;
+  color: #2b3040;
   font-size: 12px;
   font-weight: 800;
 }
@@ -265,7 +265,7 @@
 }
 
 .gamcheon-map__place:hover,
-.gamcheon-map__place.is-selected { border-color: #dce9df; background: #f5faf5; }
+.gamcheon-map__place.is-selected { border-color: #e1e5f5; background: #f7f8fc; }
 
 .gamcheon-map__place-icon {
   display: grid;
@@ -297,7 +297,7 @@
   text-align: center;
 }
 
-.gamcheon-map__empty-icon { display: grid; width: 36px; height: 36px; margin-bottom: 5px; place-items: center; border-radius: 50%; background: #edf3ed; color: #799986; font-size: 23px; }
+.gamcheon-map__empty-icon { display: grid; width: 36px; height: 36px; margin-bottom: 5px; place-items: center; border-radius: 50%; background: #f2f3f8; color: #799986; font-size: 23px; }
 .gamcheon-map__empty strong { color: #455e50; font-size: 12px; }
 .gamcheon-map__empty span:last-child { color: #98a59b; font-size: 10px; }
 
@@ -330,11 +330,11 @@
   gap: 8px;
   height: 38px;
   padding: 0 14px;
-  border: 1px solid #e3eae3;
+  border: 1px solid #e6e8f0;
   border-radius: 11px;
-  background: #fffefa;
+  background: #ffffff;
   box-shadow: 0 5px 18px rgba(29, 57, 45, .09);
-  color: #39594b;
+  color: #3f4656;
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
@@ -348,11 +348,11 @@
   height: 38px;
   padding: 9px;
   place-items: center;
-  border: 1px solid #e3eae3;
+  border: 1px solid #e6e8f0;
   border-radius: 11px;
-  background: #fffefa;
+  background: #ffffff;
   box-shadow: 0 5px 18px rgba(29, 57, 45, .09);
-  color: #426754;
+  color: #4a5263;
   cursor: pointer;
 }
 
@@ -361,8 +361,8 @@
   width: auto;
   padding: 0 13px;
   white-space: nowrap;
-  background: #265d56;
-  border-color: #265d56;
+  background: #5b6cf0;
+  border-color: #5b6cf0;
   color: #fff;
   font-size: 11px;
   font-weight: 800;
@@ -464,7 +464,7 @@
 .gamcheon-map.is-editing .maplibregl-canvas { cursor: crosshair; }
 .gamcheon-map__edit-toolbar { display: flex; gap: 8px; padding: 11px 17px 15px; border-top: 1px solid var(--gm-line); }
 .gamcheon-map__edit-toolbar button,
-.gamcheon-map__editor-actions button { min-height: 36px; padding: 8px 12px; border: 1px solid #dce9df; border-radius: 9px; background: #fff; color: var(--gm-green); font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.gamcheon-map__editor-actions button { min-height: 36px; padding: 8px 12px; border: 1px solid #e1e5f5; border-radius: 9px; background: #fff; color: var(--gm-green); font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
 .gamcheon-map__edit-toolbar button:first-child,
 .gamcheon-map__editor-actions .gamcheon-map__editor-save { border-color: var(--gm-green); background: var(--gm-green); color: #fff; }
 .gamcheon-map__edit-toolbar button:hover,
@@ -472,11 +472,11 @@
 .gamcheon-map__editor { min-height: 0; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 13px; padding: 15px 24px 24px; }
 .gamcheon-map__editor-hint { margin: 0; color: #698375; font-size: 11px; line-height: 1.55; }
 .gamcheon-map__editor-error { margin: -4px 0 0; color: #a45239; font-size: 11px; font-weight: 700; }
-.gamcheon-map__editor-location { padding: 10px 12px; border: 1px dashed #a8c5af; border-radius: 9px; background: #f2f8f2; color: #3d795c; font-size: 11px; font-weight: 700; }
+.gamcheon-map__editor-location { padding: 10px 12px; border: 1px dashed #a8c5af; border-radius: 9px; background: #f5f6fa; color: #3d795c; font-size: 11px; font-weight: 700; }
 .gamcheon-map__editor label { display: flex; flex-direction: column; gap: 6px; color: #38584a; font-size: 11px; font-weight: 800; }
 .gamcheon-map__editor input,
 .gamcheon-map__editor select,
-.gamcheon-map__editor textarea { width: 100%; min-height: 38px; padding: 9px 11px; border: 1px solid #dfe8df; border-radius: 9px; outline: 0; background: #fff; color: var(--gm-ink); font: inherit; font-size: 12px; font-weight: 400; }
+.gamcheon-map__editor textarea { width: 100%; min-height: 38px; padding: 9px 11px; border: 1px solid #e1e5f5; border-radius: 9px; outline: 0; background: #fff; color: var(--gm-ink); font: inherit; font-size: 12px; font-weight: 400; }
 .gamcheon-map__editor input:focus,
 .gamcheon-map__editor select:focus,
 .gamcheon-map__editor textarea:focus { border-color: #75a78a; box-shadow: 0 0 0 3px rgba(69, 125, 91, .11); }
@@ -576,29 +576,29 @@
 
 /* 길찾기 */
 .gamcheon-map__route-fields { position: relative; display: grid; gap: 8px; padding-right: 42px; }
-.gamcheon-map__route-fields label { display: grid; grid-template-columns: 14px 32px 1fr; align-items: center; gap: 6px; color: #39594b; font-size: 12px; font-weight: 800; }
-.gamcheon-map__route-fields select { min-width: 0; height: 36px; padding: 0 10px; border: 1px solid #dce9df; border-radius: 9px; background: #fff; color: #23463c; font: inherit; font-size: 12px; font-weight: 600; }
+.gamcheon-map__route-fields label { display: grid; grid-template-columns: 14px 32px 1fr; align-items: center; gap: 6px; color: #3f4656; font-size: 12px; font-weight: 800; }
+.gamcheon-map__route-fields select { min-width: 0; height: 36px; padding: 0 10px; border: 1px solid #e1e5f5; border-radius: 9px; background: #fff; color: #2b3040; font: inherit; font-size: 12px; font-weight: 600; }
 .gamcheon-map__route-dot { width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, .15); }
-.gamcheon-map__route-dot--origin { background: #2f9b6a; }
+.gamcheon-map__route-dot--origin { background: #4f8f6a; }
 .gamcheon-map__route-dot--destination { background: #e2733b; }
-.gamcheon-map__route-swap { position: absolute; top: 50%; right: 0; width: 34px; height: 34px; border: 1px solid #dce9df; border-radius: 9px; background: #fff; color: #2f6fd6; font-size: 16px; font-weight: 800; cursor: pointer; transform: translateY(-50%); }
+.gamcheon-map__route-swap { position: absolute; top: 50%; right: 0; width: 34px; height: 34px; border: 1px solid #e1e5f5; border-radius: 9px; background: #fff; color: #2f6fd6; font-size: 16px; font-weight: 800; cursor: pointer; transform: translateY(-50%); }
 .gamcheon-map__route-picking { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0 0; padding: 8px 10px; border-radius: 9px; background: #eaf1fd; color: #24519e; font-size: 12px; font-weight: 700; }
 .gamcheon-map__route-picking button { border: 0; background: none; color: #24519e; font: inherit; text-decoration: underline; cursor: pointer; }
-.gamcheon-map__route-option { display: flex; align-items: center; gap: 7px; margin: 12px 0 0; color: #39594b; font-size: 12px; font-weight: 700; }
+.gamcheon-map__route-option { display: flex; align-items: center; gap: 7px; margin: 12px 0 0; color: #3f4656; font-size: 12px; font-weight: 700; }
 .gamcheon-map__route-accuracy { margin: 8px 0 0; color: #6a7f76; font-size: 11px; }
 .gamcheon-map__route-arrived { margin: 10px 0 0; padding: 8px 10px; border-radius: 9px; background: #fdf0e6; color: #b5521f; font-size: 12px; font-weight: 800; }
-.gamcheon-map__route-result { margin: 0 0 14px; border: 1px solid #e3eae3; border-radius: 12px; background: #fff; }
-.gamcheon-map__route-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 12px 14px; border-bottom: 1px solid #eef3ee; }
+.gamcheon-map__route-result { margin: 0 0 14px; border: 1px solid #e6e8f0; border-radius: 12px; background: #fff; }
+.gamcheon-map__route-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 12px 14px; border-bottom: 1px solid #f2f3f8; }
 .gamcheon-map__route-summary strong { color: #2f6fd6; font-size: 20px; }
 .gamcheon-map__route-summary span { color: #4f665c; font-size: 12px; font-weight: 700; }
-.gamcheon-map__route-summary button { margin-left: auto; padding: 5px 9px; border: 1px solid #dce9df; border-radius: 8px; background: #fff; color: #2f6fd6; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.gamcheon-map__route-summary button { margin-left: auto; padding: 5px 9px; border: 1px solid #e1e5f5; border-radius: 8px; background: #fff; color: #2f6fd6; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
 .gamcheon-map__route-steps { margin: 0; padding: 6px 0; list-style: none; }
 .gamcheon-map__route-steps li { display: grid; grid-template-columns: 22px 1fr; gap: 6px; padding: 7px 14px; color: #2c463d; font-size: 12px; line-height: 1.45; }
 .gamcheon-map__route-steps li span { color: #2f6fd6; font-weight: 800; text-align: center; }
 .gamcheon-map__route-steps li.is-steps span { color: #b5521f; }
 .gamcheon-map__route-steps li.is-arrive span { color: #e2733b; }
 .gamcheon-map__route-pin { width: 22px; height: 22px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; box-shadow: 0 3px 10px rgba(20, 40, 60, .35); transform: rotate(-45deg); }
-.gamcheon-map__route-pin--origin { background: #2f9b6a; }
+.gamcheon-map__route-pin--origin { background: #4f8f6a; }
 .gamcheon-map__route-pin--destination { background: #e2733b; }
 .gamcheon-map__my-location { width: 16px; height: 16px; border: 3px solid #fff; border-radius: 50%; background: #2f6fd6; box-shadow: 0 0 0 6px rgba(47, 111, 214, .22), 0 2px 6px rgba(0, 0, 0, .3); }
 /* 진행 방향 화살표: 점 위쪽(북쪽 기준)으로 튀어나온 삼각형을 마커 회전(setRotation)으로 돌립니다. */
@@ -616,7 +616,7 @@
 .gamcheon-map__route-follow { margin-top: 10px; }
 .gamcheon-map__route-follow button { width: 100%; min-height: 34px; border: 1px solid #2f6fd6; border-radius: 9px; background: #2f6fd6; color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 .gamcheon-map__route-follow button.is-active { border-color: #cfdcf2; background: #eaf1fd; color: #24519e; cursor: default; }
-.gamcheon-map__route-result-follow { padding: 0 14px 10px; border-bottom: 1px solid #eef3ee; }
+.gamcheon-map__route-result-follow { padding: 0 14px 10px; border-bottom: 1px solid #f2f3f8; }
 
 /* 지도 보기 메뉴(더보기)와 둥근 '내 위치' 버튼은 휴대폰에서만 씁니다. */
 .gamcheon-map__map-tools .gamcheon-map__more-toggle,
@@ -630,7 +630,7 @@
   .gamcheon-map__map-tools .is-secondary,
   .gamcheon-map__map-tools .gamcheon-map__locate-tool { display: none; }
   .gamcheon-map__map-tools .gamcheon-map__more-toggle { display: grid; }
-  .gamcheon-map__map-tools .gamcheon-map__more-toggle[aria-expanded='true'] { border-color: #265d56; background: #265d56; color: #fff; }
+  .gamcheon-map__map-tools .gamcheon-map__more-toggle[aria-expanded='true'] { border-color: #5b6cf0; background: #5b6cf0; color: #fff; }
   .gamcheon-map__more-backdrop { display: block; position: absolute; z-index: 590; inset: 0; border: 0; background: transparent; }
   .gamcheon-map__more-menu {
     display: grid;
@@ -640,9 +640,9 @@
     right: 12px;
     min-width: 190px;
     padding: 6px;
-    border: 1px solid #e3eae3;
+    border: 1px solid #e6e8f0;
     border-radius: 14px;
-    background: #fffefa;
+    background: #ffffff;
     box-shadow: 0 12px 32px rgba(29, 57, 45, .18);
   }
   .gamcheon-map__more-menu button {
@@ -651,7 +651,7 @@
     border: 0;
     border-radius: 9px;
     background: none;
-    color: #23463c;
+    color: #2b3040;
     font: inherit;
     font-size: 14px;
     font-weight: 700;
@@ -670,11 +670,11 @@
     height: 48px;
     padding: 12px;
     place-items: center;
-    border: 1px solid #e3eae3;
+    border: 1px solid #e6e8f0;
     border-radius: 50%;
-    background: #fffefa;
+    background: #ffffff;
     box-shadow: 0 6px 20px rgba(29, 57, 45, .2);
-    color: #426754;
+    color: #4a5263;
     cursor: pointer;
     transition: bottom .25s ease, opacity .2s ease;
   }
@@ -906,3 +906,42 @@
 .gamcheon-map__trail-list summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
 .gamcheon-map__trail-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.06); }
 .gamcheon-map__trail-row button { font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(0, 0, 0, 0.15); background: #fff; cursor: pointer; }
+
+/* 편집 도구 탭(3D 배치·골목길)의 짧은 제목 */
+.gamcheon-map__tool-head { flex: none; padding: 22px 24px 4px; }
+.gamcheon-map__tool-head h2 { margin: 0; color: var(--gm-ink); font-size: 19px; font-weight: 800; letter-spacing: -.03em; }
+/* 골목길 탭 안의 "직접 그리기 / 걸어서 찾기" 전환 */
+.gamcheon-map__tool-switch { display: grid; flex: none; grid-template-columns: 1fr 1fr; gap: 4px; margin: 4px 24px 12px; padding: 4px; border-radius: 11px; background: #f2f3f8; }
+.gamcheon-map__tool-switch button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; border: 0; border-radius: 8px; background: transparent; color: #5d6577; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.gamcheon-map__tool-switch button.is-active { background: #fff; color: #4a5ae0; box-shadow: 0 2px 7px rgba(30, 36, 64, .1); }
+.gamcheon-map__tool-switch em { min-width: 18px; padding: 1px 6px; border-radius: 999px; background: #e78349; color: #fff; font-size: 10px; font-style: normal; }
+.gamcheon-map__trail-panel { margin-top: 0; padding-top: 0; border-top: 0; }
+.gamcheon-map__trail-panel .gamcheon-map__model-help b { color: #4a5ae0; }
+.gamcheon-map__trail-settings label.gamcheon-map__trail-toggle { display: flex; grid-template-columns: none; align-items: center; gap: 7px; color: #3f4656; font-size: 11px; cursor: pointer; }
+.gamcheon-map__trail-settings label.gamcheon-map__trail-toggle input { grid-column: auto; width: 16px; height: 16px; margin: 0; }
+/* 편집 도구의 글씨가 작아 읽기 어려워 조금 키웁니다. */
+.gamcheon-map__model-help { font-size: 12px; line-height: 1.55; }
+.gamcheon-map__model-primary-actions button, .gamcheon-map__model-import { min-height: 40px; font-size: 12px; }
+.gamcheon-map__model-section-title { font-size: 12px; }
+.gamcheon-map__model-placed button { padding: 10px 11px; font-size: 12px; }
+.gamcheon-map__model-inspector label { font-size: 11px; }
+.gamcheon-map__model-assets button { font-size: 11px; }
+.gamcheon-map__model-assets button span:last-child { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; }
+.gamcheon-map__model-placed { max-height: 260px; }
+
+/* GPS 기록 중 지도 위에 뜨는 막대 */
+.gamcheon-map__rec-bar {
+  position: absolute; z-index: 30; top: 14px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px;
+  border-radius: 999px; background: rgba(32, 35, 42, .92); color: #fff; font-size: 12px; font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .22); white-space: nowrap;
+}
+.gamcheon-map__rec-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff5a45; animation: gamcheon-rec 1.2s ease-in-out infinite; }
+.gamcheon-map__rec-bar button { min-height: 32px; padding: 0 13px; border: 0; border-radius: 999px; background: #ff5a45; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+@keyframes gamcheon-rec { 50% { opacity: .3; } }
+@media (max-width: 720px) {
+  .gamcheon-map__tool-head { padding: 6px 16px 2px; }
+  .gamcheon-map__tool-head h2 { font-size: 16px; }
+  .gamcheon-map__tool-switch { margin: 4px 16px 10px; }
+  .gamcheon-map__rec-bar { top: 58px; }
+}

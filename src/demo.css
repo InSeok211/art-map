@@ -47,3 +47,11 @@ body { background: #edf3ed; }
   .demo-note { display: none; }
 }
 .demo-note.is-alert { display: flex !important; color: #b4532a; font-size: 12px; }
+.demo-brand small { color: #848b98; font-size: 11px; font-weight: 700; letter-spacing: 0; }
+@media (max-width: 720px) { .demo-brand strong { font-size: 14px; } }
+/* 휴대폰: 위에 떠 있는 작업실 머리글 아래로 지도 도구를 내립니다. */
+@media (max-width: 720px) {
+  .demo-shell .gamcheon-map__map-tools { top: calc(70px + env(safe-area-inset-top)); }
+  .demo-shell .gamcheon-map .maplibregl-ctrl-bottom-right { top: calc(118px + env(safe-area-inset-top)); }
+  .demo-shell .gamcheon-map__rec-bar { top: calc(118px + env(safe-area-inset-top)); }
+}
