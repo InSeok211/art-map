@@ -897,3 +897,12 @@
   .gamcheon-map__panel { width: 310px; }
   .gamcheon-map__desktop-selection { left: 423px; width: min(390px, calc(100% - 510px)); }
 }
+
+/* 걸어서 골목길 찾기(TrailPanel) */
+.gamcheon-map__trail-panel { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(0, 0, 0, 0.08); }
+.gamcheon-map__trail-panel .gamcheon-map__model-place.gamcheon-map__trail-recording { background: #d6402b; border-color: #d6402b; }
+.gamcheon-map__trail-toggle { display: flex !important; flex-direction: row !important; align-items: center; gap: 6px; font-size: 12px; }
+.gamcheon-map__trail-list { margin-top: 10px; font-size: 12px; }
+.gamcheon-map__trail-list summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
+.gamcheon-map__trail-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.06); }
+.gamcheon-map__trail-row button { font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(0, 0, 0, 0.15); background: #fff; cursor: pointer; }

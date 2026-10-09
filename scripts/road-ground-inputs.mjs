@@ -12,6 +12,9 @@ export const ROAD_GROUND_INPUTS = [
   'src/streetRoadGeometry.ts',
   'src/roadCorridors.ts',
   'src/roadGround.ts',
+  'src/recorded-alleys.json',
+  'src/recordedAlleys.ts',
+  'src/alleys.ts',
 ]
 
 export function roadGroundInputsHash(root = '.') {

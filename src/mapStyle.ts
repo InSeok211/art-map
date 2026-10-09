@@ -21,6 +21,10 @@ export const ALLEY_DRAFT_SOURCE_ID = 'gamcheonAlleyDraft'
 // 길찾기 경로 선입니다. 3D 층 위에 보이도록 GamcheonMap이 3D 층을 붙인 뒤 맨 위로 올립니다(ROUTE_LAYER_IDS).
 export const ROUTE_SOURCE_ID = 'gamcheonRoute'
 export const ROUTE_LAYER_IDS = ['route-casing', 'route-line']
+// 관리자가 걸으며 남긴 GPS 기록과, 그 기록에서 찾은 골목길 후보입니다(gpsTrails.ts). 3D 층 위로 올립니다.
+export const TRAIL_SOURCE_ID = 'gamcheonTrails'
+export const CANDIDATE_SOURCE_ID = 'gamcheonAlleyCandidates'
+export const TRAIL_LAYER_IDS = ['gps-trails-line', 'alley-candidates-casing', 'alley-candidates-line']
 // 3D 모델이 가리면 모델을 반투명하게 만드는 길 레이어입니다(ModelLayer).
 export const ROAD_LAYER_IDS = [
   'highway_path', 'highway_minor', 'highway_major_inner',
@@ -150,6 +154,33 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       paint: { 'circle-radius': 5, 'circle-color': '#fff', 'circle-stroke-color': '#e78349', 'circle-stroke-width': 2.5 },
     },
     {
+      id: 'gps-trails-line',
+      type: 'line',
+      source: TRAIL_SOURCE_ID,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#3b82f6', 'line-opacity': 0.35, 'line-width': 2 },
+    },
+    {
+      id: 'alley-candidates-casing',
+      type: 'line',
+      source: CANDIDATE_SOURCE_ID,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#ffffff', 'line-width': ['case', ['get', 'selected'], 11, 8] },
+    },
+    {
+      id: 'alley-candidates-line',
+      type: 'line',
+      source: CANDIDATE_SOURCE_ID,
+      layout: { 'line-cap': 'butt', 'line-join': 'round' },
+      // 많이 지나간 후보일수록 진하게 그립니다.
+      paint: {
+        'line-color': ['case', ['get', 'selected'], '#e0561b', '#e78349'],
+        'line-opacity': ['interpolate', ['linear'], ['get', 'passes'], 2, 0.45, 6, 1],
+        'line-width': ['case', ['get', 'selected'], 6, 4],
+        'line-dasharray': [1.4, 0.9],
+      },
+    },
+    {
       id: 'route-casing',
       type: 'line',
       source: ROUTE_SOURCE_ID,
@@ -194,6 +225,8 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       [ALLEY_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
       [ALLEY_DRAFT_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
       [ROUTE_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
+      [TRAIL_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
+      [CANDIDATE_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
     },
     layers,
   } as T

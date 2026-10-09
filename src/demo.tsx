@@ -5,8 +5,7 @@ import { RETIRED_ASSET_IDS, sanitizeModels } from './modelCatalog'
 import type { MapModel } from './modelCatalog'
 import { ARTIST_WORKSHOP_MODEL, refineArtistWorkshopPlace, removeUntouchedWorkshopModel, seedArtistWorkshopPlace } from './artistWorkshop'
 import { seedBeautifulHangulPlace } from './beautifulHangul'
-import { sanitizeAlleys } from './alleys'
-import type { Alley } from './alleys'
+import { useAlleyStore } from './alleyStore'
 import type { Place } from './types'
 import './demo.css'
 import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings } from './streetSceneData'
@@ -44,16 +43,6 @@ const STORAGE_KEY = 'gamcheon-map-places-v1'
 const MODELS_STORAGE_KEY = 'gamcheon-map-models-v1'
 const WORKSHOP_PLACE_SEEDED_KEY = 'gamcheon-map-workshop-place-180-seeded-v1'
 const BEAUTIFUL_HANGUL_PLACE_SEEDED_KEY = 'gamcheon-map-beautiful-hangul-place-32-seeded-v1'
-const ALLEYS_STORAGE_KEY = 'gamcheon-map-alleys-v1'
-
-function loadAlleys(): Alley[] {
-  try {
-    const stored = localStorage.getItem(ALLEYS_STORAGE_KEY)
-    return stored === null ? [] : sanitizeAlleys(JSON.parse(stored))
-  } catch {
-    return []
-  }
-}
 
 // Older previews placed sample houses and decorations on unrelated parcels.
 // Remove only those known sample IDs; user-placed models remain untouched.
@@ -112,7 +101,7 @@ function Demo() {
   const [selectedName, setSelectedName] = useState<string | null>(null)
   const [places, setPlaces] = useState<Place[]>(loadPlaces)
   const [models, setModels] = useState<MapModel[]>(loadModels)
-  const [alleys, setAlleys] = useState<Alley[]>(loadAlleys)
+  const alleyStore = useAlleyStore()
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 720px)')
@@ -120,11 +109,6 @@ function Demo() {
     query.addEventListener('change', update)
     return () => query.removeEventListener('change', update)
   }, [])
-
-  function updateAlleys(next: Alley[]) {
-    setAlleys(next)
-    try { localStorage.setItem(ALLEYS_STORAGE_KEY, JSON.stringify(next)) } catch { /* Browser storage can be unavailable. */ }
-  }
 
   function updatePlaces(next: Place[]) {
     setPlaces(next)
@@ -148,9 +132,10 @@ function Demo() {
         {phoneLayout && <button className="demo-edit-toggle" type="button" onClick={() => setMobileEditing((editing) => !editing)}>{mobileEditing ? '지도 보기' : '편집'}</button>}
       </header>
       <main className="demo-main">
-        <GamcheonMap initialView={reviewView} places={places} models={models} editable={!phoneLayout || mobileEditing} className={phoneLayout && !mobileEditing ? 'is-site-hosted' : ''} onPlacesChange={updatePlaces} onModelsChange={updateModels} alleys={alleys} onAlleysChange={updateAlleys} onPlaceSelect={(place) => setSelectedName(place.name)} />
+        <GamcheonMap initialView={reviewView} places={places} models={models} editable={!phoneLayout || mobileEditing} className={phoneLayout && !mobileEditing ? 'is-site-hosted' : ''} onPlacesChange={updatePlaces} onModelsChange={updateModels} alleys={alleyStore.alleys} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} onPlaceSelect={(place) => setSelectedName(place.name)} />
       </main>
-      <div className="demo-note">장소·3D 배치·골목길은 이 브라우저에 자동 저장됩니다. 영상·로드뷰에서 확인한 건물 외관을 반영하고, 주변 지붕은 항공사진과 건물 윤곽을 대조해 색을 입혔습니다. 확인되지 않은 외벽과 판독이 어려운 지붕은 중립색 임시 모델입니다.</div>
+      {alleyStore.notice && <div className="demo-note is-alert" role="status">{alleyStore.notice}</div>}
+      <div className="demo-note">{alleyStore.server ? '골목길과 GPS 기록은 홈페이지에 저장되고, 장소·3D 배치는 이 브라우저에 저장됩니다.' : '장소·3D 배치·골목길은 이 브라우저에 자동 저장됩니다.'} 영상·로드뷰에서 확인한 건물 외관을 반영하고, 주변 지붕은 항공사진과 건물 윤곽을 대조해 색을 입혔습니다. 확인되지 않은 외벽과 판독이 어려운 지붕은 중립색 임시 모델입니다.</div>
     </div>
   )
 }

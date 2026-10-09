@@ -1,8 +1,9 @@
 import buildingFootprints from './gamcheon-buildings.json'
 import mapSurfaces from './street-surfaces.json'
+import { RECORDED_ALLEY_WAYS } from './recordedAlleys'
 import * as polygonClipping from 'polygon-clipping'
 import { isBuildingInBuildingArea, isInsideGamcheonMap } from './gamcheonBoundary'
-import { PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, roadWidth } from './roadCorridors'
+import { ALLEY_EDGE, FOOT_ROAD_TYPES, PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, roadWidth } from './roadCorridors'
 
 export type StreetPoint = [longitude: number, latitude: number]
 
@@ -1006,7 +1007,9 @@ export function sharedBuildingEdges(outline: [number, number][], neighbors: [num
   })
 }
 
-const allRoads = (mapSurfaces.roads as unknown as { points: StreetPoint[] }[]).map((road) => ({
+// OSM 도로와 관리자가 확인한 골목길(recordedAlleys.ts)
+const mapRoads = [...mapSurfaces.roads, ...RECORDED_ALLEY_WAYS]
+const allRoads = (mapRoads as unknown as { points: StreetPoint[] }[]).map((road) => ({
   points: road.points, meters: road.points.map(streetMeters),
 }))
 
@@ -1053,19 +1056,30 @@ function inferNearbyFacades(buildings: StreetBuilding[]) {
   }
 }
 
-// 도로 침범 보정. OSM 건물 윤곽과 도로 중심선은 따로 그려져 있어, 거리 장면이 그리는 차도 폭(roadCorridors)과
-// 겹치는 건물이 있습니다. 지도 자료에 그렇게 표기되어 있더라도 건물이 차도에 튀어나오지 않도록 윤곽에서 차도
-// 부분을 잘라 냅니다. 보도(footway)는 건물 사이 통로로 표기된 경우가 많아 자르지 않습니다.
+// 도로 침범 보정. OSM 건물 윤곽과 도로 중심선은 따로 그려져 있어, 거리 장면이 그리는 도로 폭(roadCorridors)과
+// 겹치는 건물이 있습니다. 지도 자료에 그렇게 표기되어 있더라도 건물이 도로에 튀어나오지 않도록 윤곽에서 도로
+// 부분을 잘라 냅니다.
+//  - 차도: 차도 가장자리 아래로 보이는 돌 포장(roadOutlines의 sidewalk 여유)까지 깎습니다.
+//  - 골목길(footway·path·steps): 가장자리 돌 테두리(ALLEY_EDGE)까지 깎습니다. 예전에는 건물 한가운데를 지나도록
+//    그려진 길을 건너뛰었지만, 그런 건물은 대부분 작은 창고·부속 건물(36㎡ 이하)이라 이제 모두 깎습니다(2026-10-09).
 // 겹치지 않는 건물은 원래 윤곽을 그대로 씁니다.
 type Box = [minX: number, maxX: number, minZ: number, maxZ: number]
-let carriageways: { polygon: polygonClipping.Polygon; box: Box }[] | undefined
+type RoadShape = { polygon: polygonClipping.Polygon; box: Box; foot: boolean; id?: number }
+let carriageways: RoadShape[] | undefined
 function carriagewayShapes() {
   if (carriageways) return carriageways
-  const runs = (mapSurfaces.roads as unknown as { type: string; width?: number; points: StreetPoint[] }[])
-    .map((way) => ({ points: way.points.map(streetMeters), width: roadWidth(way), type: way.type, gaps: [] }))
+  const runs: { points: [number, number][]; width: number; type: string; gaps: [number, number][]; id?: number }[] =
+    (mapRoads as unknown as { id?: number; type: string; width?: number; points: StreetPoint[] }[])
+      .map((way) => ({ points: way.points.map(streetMeters), width: roadWidth(way), type: way.type, gaps: [], id: way.id }))
   runs.push({ points: PHOTOGRAPHED_STREET.map(streetMeters), width: PHOTOGRAPHED_ROAD_WIDTH, type: 'photographed', gaps: [] })
-  carriageways = roadOutlines(runs.map((run) => ({ ...run, points: clearRoadOfKeptBuildings(run.points, run.width) })))
-    .map((polygon) => ({ polygon, box: ringBox(polygon[0]) }))
+  const nudged = runs.map((run) => ({ ...run, points: clearRoadOfKeptBuildings(run.points, run.width) }))
+  const shape = (foot: boolean, id?: number) => (polygon: polygonClipping.Polygon): RoadShape => ({ polygon, box: ringBox(polygon[0]), foot, id })
+  carriageways = [
+    ...roadOutlines(nudged.filter((run) => !FOOT_ROAD_TYPES.has(run.type)), true).map(shape(false)),
+    // roadOutlines는 footway를 건너뛰므로 종류 이름만 바꿔 넘깁니다. 길 번호를 남기려고 길마다 따로 만듭니다.
+    ...nudged.filter((run) => FOOT_ROAD_TYPES.has(run.type))
+      .flatMap((run) => roadOutlines([{ ...run, type: 'foot', width: run.width + ALLEY_EDGE }]).map(shape(true, run.id))),
+  ]
   return carriageways
 }
 
@@ -1174,6 +1188,42 @@ export function clearRoadOfKeptBuildings(points: [number, number][], width: numb
     || Math.hypot(point[0] - dense[index - 1][0], point[1] - dense[index - 1][1]) > 0.05)
 }
 
+// 직접 만든 3D 모델(그린하우스 등)은 윤곽을 깎을 수 없으므로, 차도(돌 포장 테두리 포함)와 겹치지 않을 때까지
+// 겹친 부분의 반대쪽으로 조금씩 옮깁니다. 장면 미터 윤곽을 받아 옮길 거리 [dx, dz]를 돌려줍니다(최대 maxShift m).
+// footIds: 비켜야 할 골목길(예: 실제로는 넓은 골목인 감내1로175번안길). 'all'이면 모든 골목길을 비킵니다.
+export function shiftOffCarriageways(outline: [number, number][], maxShift = 4, footIds: ReadonlySet<number> | 'all' = new Set()): [number, number] {
+  const shapes = carriagewayShapes().filter((shape) => !shape.foot || footIds === 'all'
+    || (shape.id !== undefined && footIds.has(shape.id)))
+  let dx = 0, dz = 0
+  for (let step = 0; step < 80; step++) {
+    const moved = outline.map(([x, z]) => [x + dx, z + dz] as [number, number])
+    const [minX, maxX, minZ, maxZ] = ringBox(moved)
+    const ring = [...moved, moved[0]]
+    let overlap = 0, ox = 0, oz = 0
+    for (const { polygon, box } of shapes) {
+      if (!(box[0] < maxX && box[1] > minX && box[2] < maxZ && box[3] > minZ)) continue
+      let pieces: polygonClipping.MultiPolygon = []
+      try { pieces = polygonClipping.intersection([ring], polygon) } catch { continue }
+      for (const piece of pieces) {
+        const points = piece[0].slice(0, -1) as [number, number][]
+        const area = polygonArea(points)
+        overlap += area
+        ox += points.reduce((sum, [x]) => sum + x, 0) / points.length * area
+        oz += points.reduce((sum, [, z]) => sum + z, 0) / points.length * area
+      }
+    }
+    if (overlap < 0.05) break
+    const cx = moved.reduce((sum, [x]) => sum + x, 0) / moved.length
+    const cz = moved.reduce((sum, [, z]) => sum + z, 0) / moved.length
+    const vx = cx - ox / overlap, vz = cz - oz / overlap
+    const length = Math.hypot(vx, vz)
+    if (length < 1e-6 || Math.hypot(dx, dz) >= maxShift) break
+    dx += vx / length * 0.1
+    dz += vz / length * 0.1
+  }
+  return [dx, dz]
+}
+
 export function clearOfCarriageways(outline: StreetPoint[]): StreetPoint[] | null {
   const meters = outline.map(streetMeters)
   const [minX, maxX, minZ, maxZ] = ringBox(meters)
@@ -1182,7 +1232,10 @@ export function clearOfCarriageways(outline: StreetPoint[]): StreetPoint[] | nul
   const snap = ([x, z]: [number, number]): [number, number] => [Math.round(x * 1000) / 1000, Math.round(z * 1000) / 1000]
   // 한 번에 여러 면을 빼면 부동소수점 교차가 쌓여 계산이 실패할 수 있어, 한 면씩 빼고 결과를 1mm 격자에 맞춥니다.
   let remaining: polygonClipping.MultiPolygon = [[[...meters, meters[0]].map(snap)]]
-  for (const { polygon } of nearby) {
+  const areaOf = (polygon: polygonClipping.Polygon) => polygonArea(polygon[0].slice(0, -1) as [number, number][])
+  const original = polygonArea(meters)
+  // 차도를 먼저 깎고, 보행로는 나중에 깎습니다.
+  for (const { polygon } of [...nearby.filter((shape) => !shape.foot), ...nearby.filter((shape) => shape.foot)]) {
     try {
       remaining = polygonClipping.difference(remaining, polygon)
         .map((piece) => piece.map((ring) => ring.map(snap)))
@@ -1190,8 +1243,7 @@ export function clearOfCarriageways(outline: StreetPoint[]): StreetPoint[] | nul
       // 계산이 실패한 면은 건너뜁니다(그 부분만 보정되지 않음).
     }
   }
-  const areaOf = (polygon: polygonClipping.Polygon) => polygonArea(polygon[0].slice(0, -1) as [number, number][])
-  const before = polygonArea(meters)
+  const before = original
   const after = remaining.reduce((sum, polygon) => sum + areaOf(polygon), 0)
   if (before - after < 0.01) return outline
   // 여러 조각으로 갈라지면 가장 큰 조각을 건물로 남깁니다.

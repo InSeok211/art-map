@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ARTIST_WORKSHOP_PLACE } from './artistWorkshop'
+import { sanitizeAlleys } from './alleys'
+import type { Alley } from './alleys'
 import { GamcheonMap } from './GamcheonMap'
 import { isInsideGamcheonMap } from './gamcheonBoundary'
 import type { Place } from './types'
@@ -35,8 +37,23 @@ function toPlace(value: unknown): Place | null {
 const post = (message: Record<string, unknown>) =>
   window.parent.postMessage({ source: 'gamcheon-artist-map', ...message }, window.location.origin)
 
+// 관리자가 확인한 골목길(손으로 그린 길과 GPS 기록으로 찾은 길)을 홈페이지에서 받아 옵니다. 못 받으면 빈 목록.
+function useSiteAlleys() {
+  const [alleys, setAlleys] = useState<Alley[]>([])
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/map-alleys')
+      .then((response) => response.ok ? response.json() : { alleys: [] })
+      .then((body: { alleys?: unknown }) => { if (!cancelled) setAlleys(sanitizeAlleys(body.alleys)) })
+      .catch(() => undefined)
+    return () => { cancelled = true }
+  }, [])
+  return alleys
+}
+
 function EmbeddedMap() {
   const [host, setHost] = useState<HostState>({ places: [], selectedId: null, canPick: false })
+  const alleys = useSiteAlleys()
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       if (event.source !== window.parent || event.origin !== window.location.origin) return
@@ -57,6 +74,7 @@ function EmbeddedMap() {
     compact={!FULL}
     className={`${FULL ? 'artist-full-map' : 'artist-embed-map'}${SITE_HOSTED ? ' is-site-hosted' : ''}`}
     places={places}
+    alleys={alleys}
     selectedPlaceId={host.selectedId}
     onPlaceSelect={(place) => post({ type: 'select', id: place.id })}
     onMapClick={host.canPick ? (longitude, latitude) => post({ type: 'pick', longitude, latitude }) : undefined}

@@ -132,6 +132,8 @@ export function useAlleyEditing(
     // 지도 스타일을 (다시) 불러온 뒤 골목길 소스를 현재 상태로 채웁니다.
     renderOnto: (map: Map) => renderAlleys(map, renderStateRef.current),
     stopDrawing,
+    // GPS 기록에서 찾은 후보를 골목길로 추가합니다(useAlleyFinder).
+    addAlley: (next: Alley) => commit([...localAlleys, next]),
     editorProps: {
       alleys: localAlleys,
       selectedId,

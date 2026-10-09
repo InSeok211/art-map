@@ -1,4 +1,5 @@
 import surfaceWays from './street-surfaces.json'
+import { RECORDED_ALLEY_WAYS } from './recordedAlleys'
 import { getPhotographedStreetBuildings, streetMeters } from './streetSceneData'
 import type { StreetPoint } from './streetSceneData'
 import { GAMCHEON_MAP_BOUNDS } from './gamcheonBoundary'
@@ -62,7 +63,11 @@ export function clipPolygonToBounds(points: [number, number][], bounds: SceneBou
   return polygon
 }
 
-export const STREET_SURFACE_WAYS = surfaceWays as unknown as {
+// OSM 도로에 관리자가 확인한 골목길(recordedAlleys.ts)을 더해 씁니다.
+export const STREET_SURFACE_WAYS = {
+  ...surfaceWays,
+  roads: [...surfaceWays.roads, ...RECORDED_ALLEY_WAYS],
+} as unknown as {
   roads: { id: number; type: string; points: StreetPoint[]; width?: number }[]
   green: { id: number; points: StreetPoint[] }[]
 }

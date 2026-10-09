@@ -7,10 +7,13 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './gamcheon-map.css'
 import { filterPlaces } from './filterPlaces'
 import { GAMCHEON_MAP_BOUNDS, isInsideGamcheon2, isInsideGamcheonMap } from './gamcheonBoundary'
-import { BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle, ROUTE_LAYER_IDS } from './mapStyle'
+import { BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle, ROUTE_LAYER_IDS, TRAIL_LAYER_IDS } from './mapStyle'
 import { AlleyEditor } from './AlleyEditor'
 import type { Alley } from './alleys'
 import { useAlleyEditing } from './useAlleyEditing'
+import { useAlleyFinder } from './useAlleyFinder'
+import type { GpsTrailStore } from './useAlleyFinder'
+import { TrailPanel } from './TrailPanel'
 import { ModelLayer, SEE_THROUGH_OPACITY } from './ModelLayer'
 import { StreetSceneLayer } from './StreetSceneLayer'
 import { RoutePanel } from './RoutePanel'
@@ -85,6 +88,8 @@ export interface GamcheonMapProps {
   onModelsChange?: (models: MapModel[]) => void
   alleys?: Alley[]
   onAlleysChange?: (alleys: Alley[]) => void
+  // 관리자가 걸으며 남긴 GPS 기록으로 골목길 후보를 찾습니다(편집 화면의 골목길 탭). 없으면 그 기능을 숨깁니다.
+  gpsTrails?: GpsTrailStore
   className?: string
   style?: CSSProperties
 }
@@ -101,6 +106,7 @@ export function GamcheonMap({
   onModelsChange,
   alleys = EMPTY_ALLEYS,
   onAlleysChange,
+  gpsTrails,
   className = '',
   style,
   initialView,
@@ -155,6 +161,9 @@ export function GamcheonMap({
   const workshopOnlyRef = useRef(workshopOnly)
   const streetLayerRef = useRef<StreetSceneLayer | null>(null)
   const alley = useAlleyEditing(mapRef, mode === 'alleys', alleys, onAlleysChange)
+  const alleyFinder = useAlleyFinder(mapRef, editable && mode === 'alleys', gpsTrails, alley.editorProps.alleys, alley.addAlley)
+  // 사용자가 그리거나 GPS 기록으로 추가한 골목길을 3D 거리 바닥에도 골목길 포장으로 그립니다.
+  useEffect(() => { streetLayerRef.current?.setExtraAlleys(alley.editorProps.alleys) }, [alley.editorProps.alleys, sceneStatus])
   // 지도를 여는 순간부터 내 위치와 방향을 보여 줍니다. 바깥 화면이 장소를 골라 열었으면 그 장소를 먼저 보여 줍니다.
   // 공개 지도의 휴대폰 화면은 처음 위치를 받으면 지도가 바라보는 방향을 따라 돌도록(방향 보기) 기본으로 켭니다.
   // 바깥 화면이 장소를 골라 열었으면 그 장소를 먼저 보여 주므로 켜지 않습니다.
@@ -282,7 +291,7 @@ export function GamcheonMap({
       setSceneStatus('ready')
     }, 0)
     // 길찾기 경로 선은 3D 건물에 가리지 않도록 3D 층보다 위에 둡니다.
-    const raiseRoute = () => { for (const id of ROUTE_LAYER_IDS) if (map.getLayer(id)) map.moveLayer(id) }
+    const raiseRoute = () => { for (const id of [...TRAIL_LAYER_IDS, ...ROUTE_LAYER_IDS]) if (map.getLayer(id)) map.moveLayer(id) }
     // 바탕 지도 타일이 늦거나 일부 실패하면 'idle'이 한참 오지 않을 수 있으므로, 스타일이 준비되고
     // STREET_LAYER_FALLBACK_MS가 지나면 바탕 지도를 기다리지 않고 3D 거리를 만듭니다.
     let fallbackTimer = 0
@@ -708,7 +717,7 @@ export function GamcheonMap({
           <button type="button" className={mode === 'route' ? 'is-active' : ''} onClick={() => switchMode('route')}>길찾기</button>
         </div>
 
-        {mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : mode === 'alleys' ? <AlleyEditor {...alley.editorProps} /> : sceneMode ? <ModelEditor
+        {mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : mode === 'alleys' ? <><AlleyEditor {...alley.editorProps} />{alleyFinder.enabled && <TrailPanel {...alleyFinder.panelProps} />}</> : sceneMode ? <ModelEditor
           assets={assets}
           models={localModels.filter((item) => isInsideGamcheon2(item.longitude, item.latitude))}
           selectedId={selectedModelId}

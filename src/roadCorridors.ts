@@ -5,28 +5,36 @@ import * as polygonClipping from 'polygon-clipping'
 
 export type RoadRun = { points: [number, number][]; width: number; type: string; gaps: [number, number][] }
 
-// OSM은 중심선만 주므로 폭이 없는 도로는 종류별 기본 폭(m)을 씁니다.
+// OSM은 중심선만 주므로 폭이 없는 도로는 종류별 기본 폭(m)을 씁니다. 3D 건물 사이에서 길이 잘 보이도록
+// 실제 표준 폭보다 조금 넓게 잡았습니다(2026-10-09). 도로를 그릴 때와 건물을 도로에서 깎아 낼 때 같은 폭을 써서,
+// 그린 길 위로 건물이 튀어나오지 않게 합니다.
 const DEFAULT_ROAD_WIDTHS: Record<string, number> = {
-  motorway: 14, trunk: 12, primary: 10, secondary: 8,
-  tertiary: 6.5, pedestrian: 4, footway: 1.65, steps: 1.65, path: 2.4, service: 2.85,
+  motorway: 15, trunk: 13, primary: 11, secondary: 9, secondary_link: 6.5,
+  tertiary: 7.6, tertiary_link: 6, residential: 5.8, living_street: 5, pedestrian: 4.8,
+  service: 3.6, track: 3.2,
+  // 골목길(보행로·좁은 길·계단)은 3D 건물 사이에서 알아볼 수 있도록 넉넉히 잡습니다.
+  path: 2.8, footway: 2.8, steps: 2.6,
+}
+// 골목길 가장자리의 밝은 돌 테두리(양쪽을 합친 폭, m). 건물은 이 테두리 바깥까지 깎습니다.
+export const ALLEY_EDGE = 0.4
+// 보행로 종류(차도와 달리 건물 사이 통로로 그려진 경우가 많음)
+export const FOOT_ROAD_TYPES = new Set(['footway', 'path', 'steps'])
+
+// 사진·현장에서 확인한 실제 폭(m)으로 덮어쓰는 길(OSM 길 번호).
+// 감내1로175번안길 들머리(그린하우스 옆 골목): OSM에는 보행로(footway)로 올라 기본 폭이 좁지만, 사용자가 찍은
+// 사진에서 사람이 오가는 폭 약 4m의 골목입니다.
+export const GAMNAE_175_LANE_ID = 1496857838
+export const ROAD_WIDTH_OVERRIDES: Record<number, number> = { [GAMNAE_175_LANE_ID]: 4 }
+
+export function roadWidth(way: { type: string; width?: number; id?: number }) {
+  if (way.id !== undefined && ROAD_WIDTH_OVERRIDES[way.id] !== undefined) return ROAD_WIDTH_OVERRIDES[way.id]
+  // 폭이 적힌 길도 15% 넓히고, 골목길도 지도에서 알아볼 만큼(2.4m) 이상으로 그립니다.
+  if (way.width !== undefined) return Math.max(2.4, way.width * 1.15)
+  return DEFAULT_ROAD_WIDTHS[way.type] ?? 5.2
 }
 
-export function roadWidth(way: { type: string; width?: number }) {
-  return way.width ?? DEFAULT_ROAD_WIDTHS[way.type] ?? 4.8
-}
-
-// At map scale, sub-metre paths vanish between 3D buildings. Widen only their
-// drawn paving; roadWidth remains the mapped width used for building outlines.
-export function displayRoadWidth(way: { type: string; width?: number }) {
-  const mapped = roadWidth(way)
-  if (way.type === 'footway' || way.type === 'path' || way.type === 'steps') {
-    return Math.max(1.8, mapped * 1.15)
-  }
-  if (way.type === 'service' || way.type === 'living_street' || way.type === 'residential') {
-    return mapped * 1.12
-  }
-  return mapped
-}
+// 예전 이름(그리는 폭). 이제 그리는 폭과 깎는 폭이 같습니다.
+export const displayRoadWidth = roadWidth
 
 // 촬영한 거리(감내1로 구간)는 영상에서 본 포장 폭으로 그립니다.
 export const PHOTOGRAPHED_ROAD_WIDTH = 5.9

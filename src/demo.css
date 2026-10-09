@@ -46,3 +46,4 @@ body { background: #edf3ed; }
   .demo-main > .gamcheon-map { border: 0; border-radius: 0; }
   .demo-note { display: none; }
 }
+.demo-note.is-alert { display: flex !important; color: #b4532a; font-size: 12px; }

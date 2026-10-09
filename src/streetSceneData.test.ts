@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import * as polygonClipping from 'polygon-clipping'
 import mapSurfaces from './street-surfaces.json'
 import buildingFootprints from './gamcheon-buildings.json'
-import { PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, roadWidth } from './roadCorridors'
+import { ALLEY_EDGE, FOOT_ROAD_TYPES, PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, roadWidth } from './roadCorridors'
 import { PHOTOGRAPHED_ROAD_POINTS } from './streetRoadGeometry'
 import { isBuildingInBuildingArea } from './gamcheonBoundary'
 import { ARTIST_WORKSHOP_ANNEX_ID, ARTIST_WORKSHOP_FOOTPRINT_ID, clearOfCarriageways, clearRoadOfKeptBuildings, genericRoof, getPhotographedStreetBuildings, KEEP_MAPPED_OUTLINE, MEETING_CIRCLE_CENTER, MEETING_CIRCLE_RADIUS, nearestStreet, osmMassing, PHOTOGRAPHED_STREET, sharedBuildingEdges, streetMeters } from './streetSceneData'
@@ -114,7 +114,8 @@ describe('photographed street scene', () => {
     expect(meters).toHaveLength(4)
     expect(side(0, 1)).toBeCloseTo(4, 3)
     expect(side(0, 3)).toBeCloseTo(3.7, 3)
-    expect(annex.outline).toHaveLength(4)
+    // 부속 건물은 넓힌 도로에 맞춰 모서리가 조금 깎일 수 있지만 남아 있습니다.
+    expect(annex.outline.length).toBeGreaterThanOrEqual(4)
     // 카카오 장소 좌표(꿈꾸는작업실, 대략적인 표시점)는 보정한 윤곽에서 1m 안에 있습니다.
     const place = streetMeters([129.009215, 35.095428])
     expect(Math.min(...meters.map((point, index) => {
@@ -141,9 +142,11 @@ describe('photographed street scene', () => {
   })
   it('keeps every building off the drawn carriageway even where OSM footprints overlap it', () => {
     // 거리 장면이 실제로 그리는 차도(분홍 주택·공방 옆은 중심선을 보정한 도로)와 비교합니다.
+    // 차도와 골목길(가장자리 돌 테두리 포함) 모두에서 건물이 물러나 있어야 합니다.
     const runs = mapSurfaces.roads.map((way) => ({
       points: clearRoadOfKeptBuildings((way.points as [number, number][]).map(streetMeters), roadWidth(way)),
-      width: roadWidth(way), type: way.type, gaps: [],
+      width: roadWidth(way) + (FOOT_ROAD_TYPES.has(way.type) ? ALLEY_EDGE : 0),
+      type: FOOT_ROAD_TYPES.has(way.type) ? 'foot' : way.type, gaps: [],
     }))
     runs.push({ points: PHOTOGRAPHED_ROAD_POINTS, width: PHOTOGRAPHED_ROAD_WIDTH, type: 'photographed', gaps: [] })
     const roads = roadOutlines(runs)
@@ -177,11 +180,12 @@ describe('photographed street scene', () => {
     expect(clearOfCarriageways(untouched)).toBe(untouched)
     // 곧은 벽으로 정리하며 남는 차이는 폭 4cm 이하의 가는 띠뿐입니다.
     const buildings = getPhotographedStreetBuildings()
-    expect(Math.max(...buildings.map((building) => overlapWithRoads(building.outline)))).toBeLessThan(0.35)
-    // 분홍 주택과 공방은 윤곽 대신 도로를 고쳐, 겹침이 거의 없습니다.
-    for (const id of KEEP_MAPPED_OUTLINE) {
-      expect(overlapWithRoads(buildings.find((building) => building.id === id)!.outline)).toBeLessThan(0.05)
-    }
+    expect(Math.max(...buildings.filter((building) => !KEEP_MAPPED_OUTLINE.has(building.id))
+      .map((building) => overlapWithRoads(building.outline)))).toBeLessThan(0.35)
+    // 분홍 주택과 공방은 윤곽을 그대로 두고 도로를 비켜 그립니다. 공방은 겹침이 거의 없고, 분홍 주택은 양쪽 골목
+    // 사이에 끼어 넓힌 도로를 다 비키지 못해 4㎡ 미만이 남습니다(도로 바닥은 건물 자리를 빼고 그려 벽에서 멈춤).
+    expect(overlapWithRoads(buildings.find((building) => building.id === ARTIST_WORKSHOP_FOOTPRINT_ID)!.outline)).toBeLessThan(0.05)
+    expect(overlapWithRoads(buildings.find((building) => building.id === 1468590633)!.outline)).toBeLessThan(4)
   }, 30000)
 
   it('keeps the round paving at the junction clear of every building', () => {

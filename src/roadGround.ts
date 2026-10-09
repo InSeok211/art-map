@@ -1,5 +1,5 @@
 import * as polygonClipping from 'polygon-clipping'
-import { displayRoadWidth, PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, unionRoadAreas } from './roadCorridors'
+import { ALLEY_EDGE, displayRoadWidth, FOOT_ROAD_TYPES, PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, unionRoadAreas } from './roadCorridors'
 import type { RoadRun } from './roadCorridors'
 import { clearRoadOfKeptBuildings, MEETING_CIRCLE_CENTER, MEETING_CIRCLE_RADIUS, streetMeters } from './streetSceneData'
 import type { StreetBuilding } from './streetSceneData'
@@ -15,7 +15,7 @@ import type { SceneBounds } from './streetSurfaceData'
 export interface RoadGround {
   roads: polygonClipping.MultiPolygon // 차도
   outer: polygonClipping.MultiPolygon // 차도 가장자리 아래로 보이는 돌 포장
-  footways: polygonClipping.MultiPolygon // 보도·골목길
+  footways: polygonClipping.MultiPolygon // 골목길(보행로·좁은 길·계단), 차도와 다른 색으로 그림
   kerbStone: polygonClipping.MultiPolygon // 촬영 거리 양옆 보도 띠
   kerbLine: polygonClipping.MultiPolygon // 촬영 거리 가장자리 선
   meeting: polygonClipping.MultiPolygon // 갈림길 원형 포장
@@ -113,12 +113,15 @@ export function computeRoadGround(buildings: StreetBuilding[], bounds: SceneBoun
   const kerbPieces = roadPieces(PHOTOGRAPHED_ROAD_POINTS, photographedGaps)
   const kerb = ({ width, offset }: { width: number; offset: number }) => clear(kerbPieces.flatMap((piece) =>
     [-1, 1].flatMap((side) => ribbonPolygons(piece, width, offset * side))))
+  // 차도와 골목길을 나눠 그립니다. 골목길은 roadOutlines가 footway를 건너뛰므로 종류 이름을 바꿔 넘깁니다.
+  const vehicleRuns = roadRuns.filter((road) => !FOOT_ROAD_TYPES.has(road.type))
+  const alleyRuns = roadRuns.filter((road) => FOOT_ROAD_TYPES.has(road.type)).map((road) => ({ ...road, type: 'foot' }))
   return {
     // 차도 면 하나로 합쳐 교차로가 끊김 없는 한 윤곽이 되게 합니다. 그보다 조금 넓은 돌 포장이 아래에 깔려
-    // 가장자리에서만 보입니다.
-    roads: clear(roadOutlines(roadRuns)),
-    outer: clear(roadOutlines(roadRuns, true)),
-    footways: clear(roadRuns.filter((road) => road.type === 'footway').flatMap((road) => ribbonPolygons(road.points, road.width))),
+    // 차도와 골목길 가장자리에서만 보입니다.
+    roads: clear(roadOutlines(vehicleRuns)),
+    outer: clear([...roadOutlines(vehicleRuns, true), ...roadOutlines(alleyRuns.map((road) => ({ ...road, width: road.width + ALLEY_EDGE })))]),
+    footways: clear(roadOutlines(alleyRuns)),
     kerbStone: kerb(KERB_STONE),
     kerbLine: kerb(KERB_LINE),
     meeting: clear([circle(streetMeters(MEETING_CIRCLE_CENTER), MEETING_CIRCLE_RADIUS)]),

@@ -4,14 +4,17 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import * as polygonClipping from 'polygon-clipping'
-import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings, MEETING_CIRCLE_CENTER, nearestStreet, PHOTOGRAPHED_STREET, STREET_ORIGIN, streetMeters } from './streetSceneData'
-import { BEAUTIFUL_HANGUL_CENTER, BEAUTIFUL_HANGUL_FOOTPRINT_ID, BEAUTIFUL_HANGUL_ROTATION } from './beautifulHangul'
+import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings, shiftOffCarriageways, MEETING_CIRCLE_CENTER, nearestStreet, PHOTOGRAPHED_STREET, STREET_ORIGIN, streetMeters } from './streetSceneData'
+import { BEAUTIFUL_HANGUL_CENTER, BEAUTIFUL_HANGUL_FOOTPRINT_ID, BEAUTIFUL_HANGUL_OUTLINE, BEAUTIFUL_HANGUL_ROTATION } from './beautifulHangul'
 import type { FacadeOpening } from './streetSceneData'
 import { clipPolygonToBounds, getStreetSceneBounds, STREET_SURFACE_WAYS } from './streetSurfaceData'
 import { isSafeGableOutline, roofInteriorPoint } from './streetRoofGeometry'
 import { distanceToRoad } from './streetRoadGeometry'
 import { conceptTexture } from './streetTextures'
 import roadGroundCache from './generated/road-ground.json'
+import { ALLEY_EDGE, roadOutlines, unionRoadAreas } from './roadCorridors'
+import { isBakedAlley } from './recordedAlleys'
+import type { Alley } from './alleys'
 import type { RoadGround } from './roadGround'
 // 길을 가리는 건물 반투명(findRoadOccluders)은 2026-10-09 주석 처리했습니다. 되살릴 때 아래 두 줄의 주석을 풉니다.
 // import { buildRoadRuns } from './roadGround'
@@ -78,26 +81,33 @@ export function buildingRuns(attribute: THREE.BufferAttribute | THREE.Interleave
 export const GREEN_HOUSE_FOOTPRINT_IDS = new Set([1468551429, 1468551431, 1468551433])
 const GREEN_HOUSE_URL = new URL('./assets/models/custom/greenhouse-sixpence-connected.glb', import.meta.url).href
 const BEAUTIFUL_HANGUL_URL = new URL('./assets/models/custom/beautiful-hangul-studio.glb', import.meta.url).href
-// scripts/build-greenhouse-from-plan.mjs의 외곽 trace x 39..263, y 40..327을 월드 미터로 변환한 범위.
-const GREEN_HOUSE_PLAN_BOUNDS = { minX: (39 - 151) * 0.076, maxX: (263 - 151) * 0.076,
-  minZ: (40 - 183) * 0.076, maxZ: (327 - 183) * 0.076 }
+// scripts/build-greenhouse-from-plan.mjs의 외곽 trace(A~J, 평면도 픽셀)와 월드 미터 변환. 평면도를 실제 축척(1:1)으로
+// 옮긴 모델이라 늘이거나 줄이지 않습니다(2026-10-09, 예전에는 OSM 세 윤곽 범위에 맞춰 늘였음).
+const GREEN_HOUSE_TRACE: [number, number][] = [[39, 153], [145, 65], [209, 40], [254, 143], [263, 280], [188, 283], [174, 190], [139, 213], [169, 281], [126, 327]]
+const GREEN_HOUSE_EAVES = 0.9
+const GREEN_HOUSE_PLAN = GREEN_HOUSE_TRACE.map(([px, py]) => [(px - 151) * 0.076, (py - 183) * 0.076] as [number, number])
+// 실제 비율 그대로 OSM 세 윤곽을 합친 범위의 가운데에 두고, 골목(감내1로175번길) 차도와 겹치면 겹치지 않을 때까지
+// 반대쪽으로 비켜 놓습니다. OSM 윤곽 51433의 동쪽 벽이 골목 중심선 위에 그려져 있어 그대로 두면 골목을 덮습니다.
 export function greenHouseOsmPlacement() {
   const points = buildingFootprints.features
     .filter((feature) => GREEN_HOUSE_FOOTPRINT_IDS.has(feature.properties.id))
     .flatMap((feature) => feature.geometry.coordinates[0].map(([longitude, latitude]) => streetMeters([longitude, latitude])))
   if (!points.length) throw new Error('Green House OSM footprints are missing')
-  const minX = Math.min(...points.map(([x]) => x))
-  const maxX = Math.max(...points.map(([x]) => x))
-  const minZ = Math.min(...points.map(([, z]) => z))
-  const maxZ = Math.max(...points.map(([, z]) => z))
-  const scaleX = (maxX - minX) / (GREEN_HOUSE_PLAN_BOUNDS.maxX - GREEN_HOUSE_PLAN_BOUNDS.minX)
-  const scaleZ = (maxZ - minZ) / (GREEN_HOUSE_PLAN_BOUNDS.maxZ - GREEN_HOUSE_PLAN_BOUNDS.minZ)
-  return {
-    scaleX, scaleZ,
-    x: (minX + maxX) / 2 - (GREEN_HOUSE_PLAN_BOUNDS.minX + GREEN_HOUSE_PLAN_BOUNDS.maxX) / 2 * scaleX,
-    z: (minZ + maxZ) / 2 - (GREEN_HOUSE_PLAN_BOUNDS.minZ + GREEN_HOUSE_PLAN_BOUNDS.maxZ) / 2 * scaleZ,
-  }
+  const xs = points.map(([x]) => x), zs = points.map(([, z]) => z)
+  const planXs = GREEN_HOUSE_PLAN.map(([x]) => x), planZs = GREEN_HOUSE_PLAN.map(([, z]) => z)
+  const x = (Math.min(...xs) + Math.max(...xs)) / 2 - (Math.min(...planXs) + Math.max(...planXs)) / 2
+  const z = (Math.min(...zs) + Math.max(...zs)) / 2 - (Math.min(...planZs) + Math.max(...planZs)) / 2
+  // 처마·차양이 평면 윤곽 밖으로 최대 0.9m 나오므로, 윤곽을 그만큼 바깥으로 넓혀 차도와 겹치는지 봅니다.
+  const reach = GREEN_HOUSE_PLAN.map(([px, pz]) => {
+    const length = Math.hypot(px, pz) || 1
+    return [px + px / length * GREEN_HOUSE_EAVES + x, pz + pz / length * GREEN_HOUSE_EAVES + z] as [number, number]
+  })
+  const [dx, dz] = shiftOffCarriageways(reach, 4, 'all')
+  return { scaleX: 1, scaleZ: 1, x: x + dx, z: z + dz }
 }
+
+// 골목길 포장 색(따뜻한 베이지)
+const ALLEY_PAVING_COLOR = 0xead2ad
 
 export const SCENE_BUILD_MEASURE = 'gamcheon-map:street-scene-build'
 const isTouchDevice = () => typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
@@ -173,6 +183,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
   // 고리 안에서 그림자를 드리우는 메시(애니메이션 중에만 잠시 그림자를 끕니다)
   private ringShadowCasters: THREE.Mesh[] = []
   private group: 'scene' | number = 'scene'
+  private extraAlleyMeshes: THREE.Mesh[] = []
+  private extraAlleyTexture?: THREE.DataTexture
   private workshopCenter: [number, number] = [0, 0]
   private pendingDistrict: { building: StreetBuilding; outline: [number, number][]; distance: number }[] = []
 
@@ -500,6 +512,51 @@ export class StreetSceneLayer implements CustomLayerInterface {
     if (next && current && Math.hypot(next[0] - current[0], next[1] - current[1]) < 0.5) return
     this.myPosition = next
     this.scheduleOcclusion()
+  }
+
+  // 도로 바닥에 아직 구워지지 않은 골목길(배포 뒤 새로 추가하거나 고친 길)을 바닥 위에 골목길 포장으로 그립니다.
+  // 구워진 골목길과 같은 모양(돌 테두리 + 베이지 포장)이지만, 그 위에 걸친 건물은 다음 배포 때 깎입니다.
+  setExtraAlleys(alleys: Alley[]) {
+    for (const mesh of this.extraAlleyMeshes) {
+      mesh.removeFromParent()
+      mesh.geometry.dispose()
+    }
+    this.extraAlleyMeshes = []
+    const runs = alleys.filter((alley) => !isBakedAlley(alley)).map((alley) => ({
+      points: alley.coordinates.map(streetMeters), width: alley.widthMeters, type: 'foot', gaps: [],
+    }))
+    if (runs.length) {
+      this.extraAlleyTexture ??= conceptTexture('ground-stone')
+      const layers: [polygonClipping.MultiPolygon, number, number][] = [
+        [unionRoadAreas(roadOutlines(runs.map((run) => ({ ...run, width: run.width + ALLEY_EDGE })))), 0.052, 0xffffff],
+        [unionRoadAreas(roadOutlines(runs)), 0.062, ALLEY_PAVING_COLOR],
+      ]
+      for (const [polygons, y, color] of layers) {
+        const geometries = polygons.filter((polygon) => polygon[0]?.length >= 4).map((polygon) => {
+          const shape = new THREE.Shape()
+          polygon[0].forEach(([x, z], index) => index === 0 ? shape.moveTo(x, -z) : shape.lineTo(x, -z))
+          for (const ring of polygon.slice(1)) {
+            const hole = new THREE.Path()
+            ring.forEach(([x, z], index) => index === 0 ? hole.moveTo(x, -z) : hole.lineTo(x, -z))
+            shape.holes.push(hole)
+          }
+          const geometry = new THREE.ShapeGeometry(shape)
+          const uv = geometry.getAttribute('uv')
+          for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / 20, uv.getY(i) / 20)
+          geometry.rotateX(-Math.PI / 2)
+          geometry.translate(0, y, 0)
+          return geometry
+        })
+        if (!geometries.length) continue
+        const mesh = new THREE.Mesh(mergeGeometries(geometries), new THREE.MeshLambertMaterial({ color, map: this.extraAlleyTexture }))
+        geometries.forEach((geometry) => geometry.dispose())
+        mesh.receiveShadow = true
+        mesh.frustumCulled = false
+        this.scene.add(mesh)
+        this.extraAlleyMeshes.push(mesh)
+      }
+    }
+    this.map?.triggerRepaint()
   }
 
   // 켜져 있으면 지금 카메라에서 내 위치(GPS)를 가리는 근처 건물만 반투명하게 그립니다.
@@ -918,8 +975,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const ground = ROAD_GROUND
     this.roadArea(ground.outer, 0.05, 0xffffff, 'ground-stone')
     this.roadArea(ground.roads, 0.07, 0xffffff, 'ground-lane')
-    // 보도는 차도 윗면보다 살짝 낮게 깔아 밝은 끝부분이 어두운 차도를 둥글게 파먹지 않게 합니다.
-    this.roadArea(ground.footways, 0.058, 0xffffff, 'ground-stone')
+    // 골목길은 차도와 구별되는 따뜻한 베이지 포장으로 그리고, 차도보다 살짝 낮게 깔아 교차하는 곳에서는 차도가
+    // 위로 보이게 합니다. 가장자리에는 아래 돌 포장(outer)이 밝은 테두리로 드러납니다.
+    this.roadArea(ground.footways, 0.06, ALLEY_PAVING_COLOR, 'ground-stone')
   }
 
   private sign(text: string, x: number, y: number, z: number, rotation: number, nx: number, nz: number, width: number, color: string) {
@@ -2090,8 +2148,10 @@ export class StreetSceneLayer implements CustomLayerInterface {
       if (this.map !== map) return
       const model = gltf.scene
       model.name = 'beautiful-hangul'
+      // OSM 윤곽 그대로 두면 넓힌 골목(감내1로175번안길 등)과 겹치므로, 차도·골목길에서 비켜 놓습니다.
       const [x, z] = streetMeters(BEAUTIFUL_HANGUL_CENTER)
-      model.position.set(x, 0, z)
+      const [dx, dz] = shiftOffCarriageways(BEAUTIFUL_HANGUL_OUTLINE.map(streetMeters), 3, 'all')
+      model.position.set(x + dx, 0, z + dz)
       // The GLB's vertices already follow the OSM quadrilateral at metre scale.
       // Rotate its west-facing entrance toward the alley and place its centre.
       model.rotation.y = BEAUTIFUL_HANGUL_ROTATION

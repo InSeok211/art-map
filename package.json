@@ -23,7 +23,8 @@
     "build:road-ground": "node scripts/build-road-ground.mjs",
     "build:greenhouse": "node scripts/build-greenhouse-from-plan.mjs",
     "build:beautiful-hangul": "node scripts/build-beautiful-hangul.mjs",
-    "export:site": "node scripts/export-to-site.mjs"
+    "export:site": "node scripts/export-to-site.mjs",
+    "pull:alleys": "node scripts/pull-site-alleys.mjs"
   },
   "dependencies": {
     "maplibre-gl": "^6.11.2",
