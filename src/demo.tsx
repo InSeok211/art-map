@@ -30,7 +30,8 @@ const reviewView = Number(reviewId) === ARTIST_WORKSHOP_FOOTPRINT_ID ? {
 // 홈페이지의 '작가 위치·공개'에서 관리). 예전의 브라우저 전용 장소·3D 배치 편집은 공개 지도와 연결되지 않아 뺐습니다.
 const PLACES: Place[] = [ARTIST_WORKSHOP_PLACE, BEAUTIFUL_HANGUL_PLACE]
 const EDIT_TOOLS: EditTool[] = ['alleys']
-// 홈페이지 안(iframe)에서 열리면 홈페이지가 제목과 메뉴를 보여 주므로, 이 화면의 머리글은 휴대폰의 편집 전환만 남깁니다.
+// 홈페이지 안(iframe)에서 열리면 홈페이지가 제목과 메뉴를 보여 주므로 이 화면의 머리글을 빼고, 늘 편집 상태로 엽니다.
+// (휴대폰에서도 아래 시트를 내리면 지도를 넓게 볼 수 있습니다.)
 const EMBEDDED = window.self !== window.top
 
 function Demo() {
@@ -45,11 +46,11 @@ function Demo() {
     return () => query.removeEventListener('change', update)
   }, [])
 
-  const editing = !phoneLayout || mobileEditing
+  const editing = EMBEDDED || !phoneLayout || mobileEditing
   const saveState = alleyStore.server ? '홈페이지에 저장됨' : '이 브라우저에만 저장(미리보기)'
   return (
     <div className={`demo-shell${EMBEDDED ? ' is-embedded' : ''}`}>
-      {(!EMBEDDED || phoneLayout) && <header className="demo-header">
+      {!EMBEDDED && <header className="demo-header">
         <div className="demo-brand">
           <span className="demo-brand-icon">G</span>
           <span><strong>골목지도 작업실</strong><small>{saveState}</small></span>
