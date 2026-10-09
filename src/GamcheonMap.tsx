@@ -181,19 +181,15 @@ export function GamcheonMap({
   const workshopOnlyRef = useRef(workshopOnly)
   const streetLayerRef = useRef<StreetSceneLayer | null>(null)
   // 평지 / 3D 지형(언덕 높낮이). 이 기기에 기억해 두고, 바꾸면 3D 거리를 지형에 맞춰 다시 만듭니다.
-  const [savedTerrainMode, setTerrainMode] = useState(loadTerrainMode)
-  // 편집 화면(관리자 작업실)은 골목길·기록 선이 지형에 가리지 않도록 늘 평지로 봅니다.
-  const terrainMode = savedTerrainMode && !editable
+  const [terrainMode, setTerrainMode] = useState(loadTerrainMode)
   const terrainModeRef = useRef(terrainMode)
   const rebuildStreetRef = useRef<((terrain: boolean) => void) | null>(null)
   useEffect(() => {
     if (terrainModeRef.current === terrainMode) return
     terrainModeRef.current = terrainMode
+    try { localStorage.setItem(TERRAIN_MODE_KEY, terrainMode ? '1' : '0') } catch { /* 이 기기에 기억하지 못해도 됩니다. */ }
     rebuildStreetRef.current?.(terrainMode)
   }, [terrainMode])
-  useEffect(() => {
-    try { localStorage.setItem(TERRAIN_MODE_KEY, savedTerrainMode ? '1' : '0') } catch { /* 이 기기에 기억하지 못해도 됩니다. */ }
-  }, [savedTerrainMode])
   const alley = useAlleyEditing(mapRef, mode === 'alleys', alleys, onAlleysChange)
   // 골목길 탭 안의 두 도구: 지도에 점을 찍어 그리기(draw) / 걸으며 기록해 찾기(walk)
   const [alleyTool, setAlleyTool] = useState<'draw' | 'walk'>('draw')
@@ -217,13 +213,6 @@ export function GamcheonMap({
   const routeFinder = useRouteFinder(mapRef, mode === 'route',
     localPlaces.filter((place) => isInsideGamcheonMap(place.longitude, place.latitude)),
     alley.editorProps.alleys, myLocation.gps, ARTIST_WORKSHOP_PLACE.id)
-  // 3D 지형에서는 바탕 지도의 경로 선이 지형 면에 붙어 거리 장면에 가리므로, 거리 장면이 경로를 땅 위에 그립니다.
-  const routeLine = routeFinder.routeLine
-  useEffect(() => {
-    const map = mapRef.current
-    streetLayerRef.current?.setRouteLine(terrainMode ? routeLine : null)
-    if (map) for (const id of ROUTE_LAYER_IDS) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', terrainMode ? 'none' : 'visible')
-  }, [routeLine, terrainMode, sceneStatus])
   const assets = useMemo(() => [...BUILTIN_MODELS, ...customAssets], [customAssets])
   const selectedPlace = localPlaces.find((place) => place.id === selectedId && isInsideGamcheonMap(place.longitude, place.latitude))
 
@@ -879,10 +868,10 @@ export function GamcheonMap({
 
       <div className="gamcheon-map__map-tools">
         <span className="gamcheon-map__area-badge"><span /> 부산 사하구 · 감천2동</span>
-        {!editable && <div className="gamcheon-map__terrain-switch" role="group" aria-label="지형 보기">
+        <div className="gamcheon-map__terrain-switch" role="group" aria-label="지형 보기">
           <button type="button" className={terrainMode ? '' : 'is-active'} aria-pressed={!terrainMode} onClick={() => setTerrainMode(false)} title="땅을 평평하게 보기">평지</button>
           <button type="button" className={terrainMode ? 'is-active' : ''} aria-pressed={terrainMode} onClick={() => setTerrainMode(true)} title="언덕 높낮이를 살려 3D로 보기" aria-label="3D 지형">3D<span className="gamcheon-map__terrain-long"> 지형</span></button>
-        </div>}
+        </div>
         {/* 휴대폰에서는 자주 쓰지 않는 보기 버튼을 '더보기' 메뉴로 옮깁니다(is-secondary). */}
         <button type="button" className="gamcheon-map__street-focus is-secondary" onClick={showWholeMap} title="지도 전체 보기">전체 지도 보기</button>
         <button type="button" className="gamcheon-map__street-focus is-secondary" onClick={showPhotographedStreet} title="촬영한 거리 보기">촬영 거리 보기</button>

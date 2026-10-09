@@ -2213,50 +2213,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
     // 그림자 패스가 끝난 뒤 뷰포트를 지도 캔버스 크기로 되돌리도록 매번 맞춥니다.
     this.renderer.setViewport(0, 0, _gl.drawingBufferWidth, _gl.drawingBufferHeight)
-    // 3D 지형: 바탕 지도는 멀리 있는 땅을 한 단계 거친 고도로 그려 오목한 골짜기를 실제보다 높게 메웁니다. 그 면이
-    // 건물·길을 덮지 않도록, 거리 장면은 바탕 지형의 깊이를 지우고 그 위에 그립니다(장면 안에서는 서로 가립니다).
-    if (this.terrain) this.renderer.clearDepth()
     this.renderer.render(this.scene, this.camera)
-  }
-
-  // 3D 지형에서 길찾기 경로(경도·위도 선)를 땅을 따라 그립니다. 평지의 경로 선처럼 건물에 가리지 않고 늘 위에 보입니다. 바탕 지도의 경로 선은 지형 면에 붙어 거리 장면에
-  // 가리므로, 지형을 켠 동안에는 GamcheonMap이 그 선을 숨기고 이 띠를 씁니다. null이면 지웁니다.
-  private routeMeshes: THREE.Mesh[] = []
-  setRouteLine(coordinates: [number, number][] | null) {
-    for (const mesh of this.routeMeshes) {
-      mesh.removeFromParent()
-      mesh.geometry.dispose()
-      ;(mesh.material as THREE.Material).dispose()
-    }
-    this.routeMeshes = []
-    const terrain = this.terrain
-    if (terrain && coordinates && coordinates.length >= 2) {
-      const points = coordinates.map(streetMeters)
-      for (const [width, lift, color, order] of [[3.4, 0.55, 0xffffff, 7], [2.2, 0.62, 0x2f6fd6, 8]] as const) {
-        const geometries = unionRoadAreas(roadOutlines([{ points, width, type: 'route', gaps: [] }]))
-          .filter((polygon) => polygon[0]?.length >= 4)
-          .map((polygon) => {
-            const shape = new THREE.Shape()
-            polygon[0].forEach(([x, z], index) => index === 0 ? shape.moveTo(x, -z) : shape.lineTo(x, -z))
-            for (const ring of polygon.slice(1)) {
-              const hole = new THREE.Path()
-              ring.forEach(([x, z], index) => index === 0 ? hole.moveTo(x, -z) : hole.lineTo(x, -z))
-              shape.holes.push(hole)
-            }
-            const geometry = new THREE.ShapeGeometry(shape)
-            geometry.rotateX(-Math.PI / 2)
-            return drapeOnTerrain(geometry, terrain, lift, 3)
-          })
-        if (!geometries.length) continue
-        const mesh = new THREE.Mesh(mergeGeometries(geometries), new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false }))
-        geometries.forEach((geometry) => geometry.dispose())
-        mesh.frustumCulled = false
-        mesh.renderOrder = order
-        this.scene.add(mesh)
-        this.routeMeshes.push(mesh)
-      }
-    }
-    this.map?.triggerRepaint()
   }
 
   // 그린하우스 전용 모델을 불러와 장면에 바로 둡니다(공방처럼 '다른 건물 숨기기'와 상관없이 늘 보임).
