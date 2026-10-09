@@ -196,6 +196,8 @@ export function useRouteFinder(
   }, [])
 
   return {
+    // 지금 그리는 경로(경도·위도). 3D 지형에서는 거리 장면이 이 선을 땅 위에 직접 그립니다.
+    routeLine: active && route ? route.coordinates as [number, number][] : null,
     panelProps: {
       places,
       origin,

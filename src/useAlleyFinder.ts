@@ -19,6 +19,18 @@ export interface GpsTrailStore {
   onRecord: (trail: GpsTrail) => Promise<void> | void
   onDeleteTrail: (id: string) => void
   onDismiss: (line: LngLat[]) => void
+  // 관리자로 로그인해 있으면 걸은 길을 버튼 없이 자동으로 기록합니다(useAutoTrailRecorder). 켜져 있으면 수동
+  // 기록 버튼 대신 이 상태를 보여 줍니다(같은 걸음이 두 번 세어지지 않게).
+  auto?: AutoTrailStatus
+}
+
+export interface AutoTrailStatus {
+  recording: boolean
+  paused: boolean
+  pointCount: number
+  lastSaved: Date | null
+  pause: () => void
+  resume: () => void
 }
 
 const THRESHOLD_KEY = 'gamcheon-trail-threshold-v1'
@@ -88,6 +100,7 @@ export function useAlleyFinder(
     enabled: Boolean(store),
     panelProps: {
       recorder,
+      auto: store?.auto,
       trails,
       candidates,
       selectedId,

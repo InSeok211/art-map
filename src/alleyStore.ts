@@ -4,6 +4,8 @@ import type { Alley, LngLat } from './alleys'
 import { sanitizeTrails } from './gpsTrails'
 import type { GpsTrail } from './gpsTrails'
 import type { GpsTrailStore } from './useAlleyFinder'
+import { postTrail } from './adminTrailApi'
+import { useAutoTrailRecorder } from './useAutoTrailRecorder'
 
 // 관리자 골목지도 작업실의 골목길·GPS 기록 저장소입니다.
 //  - 홈페이지(/admin/art-map) 안에서 열리면 홈페이지 데이터베이스(D1)에 저장합니다. 관리자로 로그인해야 쓸 수
@@ -106,8 +108,7 @@ export function useAlleyStore() {
     dismissed,
     onRecord: async (trail) => {
       if (server) {
-        const response = await fetch(TRAILS_API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(trail) })
-        if (!response.ok) throw new Error(String(response.status))
+        const response = await postTrail(trail)
         const saved = sanitizeTrails([(await response.json() as { trail?: unknown }).trail])
         setTrails((current) => [...current.filter((item) => item.id !== trail.id), ...(saved.length ? saved : [trail])])
       } else {
@@ -136,6 +137,15 @@ export function useAlleyStore() {
       scheduleSave()
     },
   }
+
+  // 홈페이지(관리자 로그인)에서 열리면 걸은 길을 자동으로 기록해 올리고, 올린 기록을 목록에도 반영합니다.
+  const auto = useAutoTrailRecorder(server, async (trail, { keepalive }) => {
+    const response = await postTrail(trail, keepalive)
+    if (keepalive) return
+    const saved = sanitizeTrails([(await response.json() as { trail?: unknown }).trail])
+    setTrails((current) => [...current.filter((item) => item.id !== trail.id), ...(saved.length ? saved : [trail])])
+  })
+  if (server) gpsTrails.auto = auto
 
   return { alleys, updateAlleys, gpsTrails, server, notice }
 }

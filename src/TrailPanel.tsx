@@ -2,7 +2,10 @@ import type { AlleyCandidate, GpsTrail } from './gpsTrails'
 import { PASS_THRESHOLD_RANGE, trailLengthMeters } from './gpsTrails'
 import type { useTrailRecorder } from './useTrailRecorder'
 
+import type { AutoTrailStatus } from './useAlleyFinder'
+
 interface TrailPanelProps {
+  auto?: AutoTrailStatus
   recorder: ReturnType<typeof useTrailRecorder>
   trails: GpsTrail[]
   candidates: AlleyCandidate[]
@@ -26,7 +29,7 @@ const when = (iso: string) => {
 
 // 골목길 탭 아래쪽의 "걸어서 골목길 찾기" 영역입니다.
 export function TrailPanel({
-  recorder, trails, candidates, selectedId, threshold, showTrails,
+  recorder, auto, trails, candidates, selectedId, threshold, showTrails,
   onThresholdChange, onShowTrailsChange, onSelect, onApprove, onDismiss, onDeleteTrail, onRecordStart,
 }: TrailPanelProps) {
   const selected = candidates.find((candidate) => candidate.id === selectedId)
@@ -34,10 +37,22 @@ export function TrailPanel({
 
   return <div className="gamcheon-map__model-editor gamcheon-map__trail-panel">
     <p className="gamcheon-map__model-help">
-      기록을 켜고 골목을 걸어 주세요. 서로 다른 기록에서 같은 곳을 <b>{threshold}번 이상</b> 지나간, 지도에 없는 길이
+      {auto ? '관리자로 로그인해 지도를 열어 두면 걸은 길이 자동으로 기록됩니다(공개 지도에서도).' : '기록을 켜고 골목을 걸어 주세요.'}
+      {' '}서로 다른 기록에서 같은 곳을 <b>{threshold}번 이상</b> 지나간, 지도에 없는 길이
       주황 점선 후보로 나타납니다. 확인한 후보만 골목길로 추가됩니다.
     </p>
-    <div className="gamcheon-map__model-primary-actions">
+    {auto && <div className="gamcheon-map__model-inspector gamcheon-map__auto-trail">
+      <strong>{auto.recording ? '● 자동 기록 중' : '자동 기록 일시정지'}</strong>
+      <p className="gamcheon-map__model-help">
+        {auto.recording ? `이번 기록 ${auto.pointCount}점` : '다시 켜면 이어서 기록합니다.'}
+        {auto.lastSaved && ` · ${String(auto.lastSaved.getHours()).padStart(2, '0')}:${String(auto.lastSaved.getMinutes()).padStart(2, '0')} 저장`}
+        {' · '}가만히 있을 때의 흔들림과 30m 미만의 기록은 저장하지 않습니다.
+      </p>
+      <div className="gamcheon-map__model-item-actions">
+        {auto.recording ? <button type="button" onClick={auto.pause}>일시정지</button> : <button type="button" className="gamcheon-map__model-place" onClick={auto.resume}>자동 기록 다시 켜기</button>}
+      </div>
+    </div>}
+    {!auto && <><div className="gamcheon-map__model-primary-actions">
       {recorder.recording
         ? <button type="button" className="gamcheon-map__model-place gamcheon-map__trail-recording" onClick={() => void recorder.finish()}>■ 기록 끝내고 저장 ({draftPoints}점)</button>
         : <button type="button" className="gamcheon-map__model-place" onClick={() => { recorder.start(); onRecordStart?.() }}>{draftPoints ? `● 기록 이어가기 (${draftPoints}점)` : '● 걸으며 기록 시작'}</button>}
@@ -52,7 +67,7 @@ export function TrailPanel({
     {recorder.status && <p className="gamcheon-map__model-help" role="status">{recorder.status}</p>}
     {recorder.pendingCount > 0 && <div className="gamcheon-map__model-primary-actions">
       <button type="button" onClick={() => void recorder.retry()}>올리지 못한 기록 {recorder.pendingCount}개 다시 올리기</button>
-    </div>}
+    </div>}</>}
 
     <div className="gamcheon-map__model-inspector gamcheon-map__trail-settings">
       <label>골목길로 볼 기준 <span>{threshold}번 이상</span>

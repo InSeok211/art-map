@@ -2293,7 +2293,73 @@ export class StreetSceneLayer implements CustomLayerInterface {
     // MapLibre 지형의 먼 거리 깊이값이 실제보다 높은 면으로 건물과 길을 가릴 수 있습니다.
     // 거리 장면 내부의 깊이 관계는 유지하면서, 바탕 지형의 깊이값만 지운 뒤 그립니다.
     if (this.terrain) this.renderer.clearDepth()
+    // 경로 띠는 화면 기준 굵기를 지키도록, 줌이 꽤 바뀌면 그 굵기로 다시 만듭니다.
+    if (this.routeLine && Math.abs(this.map.getZoom() - this.routeZoom) > 0.35) this.buildRouteLine()
     this.renderer.render(this.scene, this.camera)
+  }
+
+  // 3D 지형에서 길찾기 경로(경도·위도 선)를 땅 높이를 따라 그립니다. 바탕 지도의 경로 선은 지형 면에 붙어 거리
+  // 장면에 가려 보이지 않으므로, 지형을 켠 동안에는 GamcheonMap이 그 선을 숨기고 이 띠를 씁니다. 평지의 경로
+  // 선처럼 건물에 가리지 않고 늘 위에 보입니다. null이면 지웁니다.
+  private routeMeshes: THREE.Mesh[] = []
+  private routeLine: [number, number][] | null = null
+  private routeZoom = 0
+  setRouteLine(coordinates: [number, number][] | null) {
+    this.routeLine = this.terrain && coordinates && coordinates.length >= 2 ? coordinates : null
+    this.buildRouteLine()
+    this.map?.triggerRepaint()
+  }
+
+  // 바탕 지도의 경로 선(mapStyle의 route-casing·route-line)과 같은 화면 굵기(px)를 지금 줌의 미터로 바꿔 그립니다.
+  private buildRouteLine() {
+    for (const mesh of this.routeMeshes) {
+      mesh.removeFromParent()
+      mesh.geometry.dispose()
+      ;(mesh.material as THREE.Material).dispose()
+    }
+    this.routeMeshes = []
+    const terrain = this.terrain, coordinates = this.routeLine
+    if (terrain && coordinates) {
+      const points = coordinates.map(streetMeters)
+      const zoom = this.map?.getZoom() ?? 18
+      this.routeZoom = zoom
+      const metersPerPixel = 40_075_016.686 * Math.cos(STREET_ORIGIN[1] * Math.PI / 180) / (512 * 2 ** zoom)
+      const pixels = (stops: [number, number][]) => {
+        if (zoom <= stops[0][0]) return stops[0][1]
+        for (let i = 1; i < stops.length; i++) if (zoom <= stops[i][0]) {
+          const [z0, w0] = stops[i - 1], [z1, w1] = stops[i]
+          return w0 + (w1 - w0) * (zoom - z0) / (z1 - z0)
+        }
+        return stops[stops.length - 1][1]
+      }
+      const casing = Math.max(3.4, pixels([[14, 5], [18, 11], [21, 18]]) * metersPerPixel)
+      const line = Math.max(2.2, pixels([[14, 3], [18, 7], [21, 12]]) * metersPerPixel)
+      // 흰 테두리 위에 파란 선(바탕 지도의 경로 선과 같은 색)
+      for (const [width, color, order] of [[casing, 0xffffff, 7], [line, 0x2f6fd6, 8]] as const) {
+        const geometries = unionRoadAreas(roadOutlines([{ points, width, type: 'route', gaps: [] }]))
+          .filter((polygon) => polygon[0]?.length >= 4)
+          .map((polygon) => {
+            const shape = new THREE.Shape()
+            polygon[0].forEach(([x, z], index) => index === 0 ? shape.moveTo(x, -z) : shape.lineTo(x, -z))
+            for (const ring of polygon.slice(1)) {
+              const hole = new THREE.Path()
+              ring.forEach(([x, z], index) => index === 0 ? hole.moveTo(x, -z) : hole.lineTo(x, -z))
+              shape.holes.push(hole)
+            }
+            const geometry = new THREE.ShapeGeometry(shape)
+            geometry.rotateX(-Math.PI / 2)
+            return drapeOnTerrain(geometry, terrain, TERRAIN_GROUND_LIFT + 0.6, Math.max(3, width / 2))
+          })
+        if (!geometries.length) continue
+        const mesh = new THREE.Mesh(mergeGeometries(geometries), new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false }))
+        geometries.forEach((geometry) => geometry.dispose())
+        mesh.frustumCulled = false
+        mesh.renderOrder = order
+        this.scene.add(mesh)
+        this.routeMeshes.push(mesh)
+      }
+    }
+    this.map?.triggerRepaint()
   }
 
   // 그린하우스 전용 모델을 불러와 장면에 바로 둡니다(공방처럼 '다른 건물 숨기기'와 상관없이 늘 보임).

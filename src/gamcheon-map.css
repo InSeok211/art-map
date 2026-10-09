@@ -956,3 +956,9 @@
   .gamcheon-map__map-tools .gamcheon-map__terrain-switch button { height: 30px; padding: 0; border-radius: 11px; font-size: 11px; }
   .gamcheon-map__terrain-long { display: none; }
 }
+/* PC: 도구 줄의 둥근 버튼 고정 폭(42px)이 전환 버튼까지 좁혀 '3D 지형'이 두 줄로 꺾이지 않게 합니다. */
+@media (min-width: 721px) {
+  .gamcheon-map .gamcheon-map__map-tools .gamcheon-map__terrain-switch button { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 0; height: 32px; padding: 0 12px; border: 0; box-shadow: none; background: transparent; color: #5d6577; }
+  .gamcheon-map .gamcheon-map__map-tools .gamcheon-map__terrain-switch button.is-active { background: #5b6cf0; color: #fff; }
+}
+.gamcheon-map__terrain-long { margin-left: .25em; }

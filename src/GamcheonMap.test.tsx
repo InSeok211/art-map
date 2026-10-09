@@ -16,7 +16,7 @@ const mapClick = vi.hoisted(() => ({ current: null as null | ((event: { lngLat: 
 
 // These tests exercise map controls against a mocked MapLibre canvas. Real
 // district geometry is checked separately and in the browser.
-vi.mock('./StreetSceneLayer', () => ({ StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d'; setOtherBuildingsHidden() {}; setBuildingOpacity() {}; setMyPosition() {}; setExtraAlleys() {} } }))
+vi.mock('./StreetSceneLayer', () => ({ StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d'; setOtherBuildingsHidden() {}; setBuildingOpacity() {}; setMyPosition() {}; setExtraAlleys() {}; setRouteLine() {} } }))
 
 vi.mock('maplibre-gl', () => ({
   Map: class {

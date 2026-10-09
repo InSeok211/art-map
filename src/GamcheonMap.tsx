@@ -213,6 +213,14 @@ export function GamcheonMap({
   const routeFinder = useRouteFinder(mapRef, mode === 'route',
     localPlaces.filter((place) => isInsideGamcheonMap(place.longitude, place.latitude)),
     alley.editorProps.alleys, myLocation.gps, ARTIST_WORKSHOP_PLACE.id)
+  // 3D 지형에서는 바탕 지도의 경로 선이 지형 면에 붙어 거리 장면에 가려 보이지 않으므로, 거리 장면이 경로를
+  // 땅 위에 그리고 바탕 지도의 경로 선은 숨깁니다.
+  const routeLine = routeFinder.routeLine
+  useEffect(() => {
+    const map = mapRef.current
+    streetLayerRef.current?.setRouteLine(terrainMode ? routeLine : null)
+    if (map) for (const id of ROUTE_LAYER_IDS) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', terrainMode ? 'none' : 'visible')
+  }, [routeLine, terrainMode, sceneStatus])
   const assets = useMemo(() => [...BUILTIN_MODELS, ...customAssets], [customAssets])
   const selectedPlace = localPlaces.find((place) => place.id === selectedId && isInsideGamcheonMap(place.longitude, place.latitude))
 
