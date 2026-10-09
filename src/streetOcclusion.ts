@@ -87,3 +87,29 @@ export function findRoadOccluders(occluders: Occluder[], roads: RoadIndex, beari
   })
   return result
 }
+
+// 내 위치(GPS)를 가리는 건물: 건물이 카메라 반대쪽 땅을 가리는 범위(높이·기울기로 정해짐) 안에 내 위치가 있거나,
+// GPS 오차로 내 위치가 건물 윤곽 안에 찍혔으면 그 건물이 내 위치를 덮는다고 봅니다. 내 위치에서 카메라 쪽으로
+// 거슬러 가며 건물 윤곽에 닿는지만 보므로, 주변(radius m) 건물만 셉니다.
+export const POINT_OCCLUSION_RADIUS = 60
+
+export function findPointOccluders(occluders: Occluder[], point: [number, number], bearing: number, pitch: number): Set<number> {
+  const result = new Set<number>()
+  const [px, pz] = point
+  const radians = bearing * Math.PI / 180
+  const forward: [number, number] = [Math.sin(radians), -Math.cos(radians)]
+  const slope = Math.tan(Math.min(Math.max(pitch, 0), 85) * Math.PI / 180)
+  occluders.forEach(({ outline, height }, index) => {
+    const cx = outline.reduce((sum, [x]) => sum + x, 0) / outline.length
+    const cz = outline.reduce((sum, [, z]) => sum + z, 0) / outline.length
+    if (Math.hypot(cx - px, cz - pz) > POINT_OCCLUSION_RADIUS) return
+    if (inside(point, outline)) { result.add(index); return }
+    if (pitch < MIN_OCCLUSION_PITCH) return
+    const reach = Math.min(height * slope, MAX_HIDDEN_DISTANCE)
+    // 내 위치에서 카메라 쪽(forward의 반대)으로 0.5m 간격으로 거슬러 가며 건물 윤곽에 닿는지 봅니다.
+    for (let distance = 0.5; distance <= reach; distance += 0.5) {
+      if (inside([px - forward[0] * distance, pz - forward[1] * distance], outline)) { result.add(index); return }
+    }
+  })
+  return result
+}

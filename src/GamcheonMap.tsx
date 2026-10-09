@@ -160,6 +160,9 @@ export function GamcheonMap({
   // 바깥 화면이 장소를 골라 열었으면 그 장소를 먼저 보여 주므로 켜지 않습니다.
   const myLocation = useMyLocation(mapRef, { centerOnFirstFix: !selectedPlaceId, headingUpByDefault: !editable && !selectedPlaceId && isPhoneLayout() })
   const [locationNotice, setLocationNotice] = useState('')
+  // 내 위치를 거리 장면에 알려, 내 위치를 가리는 근처 건물을 반투명하게 합니다(지도 밖이면 끔).
+  const myStreetPosition = myLocation.gps.status === 'ok' ? myLocation.gps.position ?? null : null
+  useEffect(() => { streetLayerRef.current?.setMyPosition(myStreetPosition) }, [myStreetPosition?.[0], myStreetPosition?.[1], sceneStatus])
   const [moreOpen, setMoreOpen] = useState(false)
   const locate = () => {
     const notice = myLocation.locate()

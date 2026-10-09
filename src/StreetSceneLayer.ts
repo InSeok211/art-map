@@ -13,8 +13,10 @@ import { distanceToRoad } from './streetRoadGeometry'
 import { conceptTexture } from './streetTextures'
 import roadGroundCache from './generated/road-ground.json'
 import type { RoadGround } from './roadGround'
-import { buildRoadRuns } from './roadGround'
-import { findRoadOccluders, RoadIndex } from './streetOcclusion'
+// 길을 가리는 건물 반투명(findRoadOccluders)은 2026-10-09 주석 처리했습니다. 되살릴 때 아래 두 줄의 주석을 풉니다.
+// import { buildRoadRuns } from './roadGround'
+// import { findRoadOccluders, RoadIndex } from './streetOcclusion'
+import { findPointOccluders } from './streetOcclusion'
 import type { Occluder } from './streetOcclusion'
 import { buildArtistWorkshopModel } from './artistWorkshopModel'
 import type { WorkshopFinish } from './artistWorkshopModel'
@@ -152,7 +154,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private ringRise = BUILDING_RINGS.map(() => 1)
   private ringDepth = BUILDING_RINGS.map(() => 0)
   private riseAnimation = 0
-  // 길을 가리는 건물만 점무늬로 비치게 하는 자동 반투명. 건물마다 번호(buildingIndex 정점 속성)를 붙이고,
+  // 내 위치(GPS)를 가리는 근처 건물만 점무늬로 비치게 하는 자동 반투명(예전에는 길을 가리는 건물 기준). 건물마다 번호(buildingIndex 정점 속성)를 붙이고,
   // 번호별 비침 정도를 작은 텍스처(fadeTexture)에 담아 셰이더가 읽습니다.
   private occluders: Occluder[] = []
   private buildingContext: Occluder | null = null
@@ -160,7 +162,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private readonly fadeData = new Uint8Array(FADE_TEXTURE_SIZE * FADE_TEXTURE_SIZE * 4).fill(255)
   private readonly fadeTexture = new THREE.DataTexture(this.fadeData, FADE_TEXTURE_SIZE, FADE_TEXTURE_SIZE, THREE.RGBAFormat)
   private readonly fadeUniform = { value: this.fadeTexture }
-  private roadIndex: RoadIndex | null = null
+  // private roadIndex: RoadIndex | null = null
+  // 내 위치(GPS, 장면 미터). 이 위치를 가리는 근처 건물을 반투명하게 합니다.
+  private myPosition: [number, number] | null = null
   private autoSeeThrough = true
   private occlusionTimer: ReturnType<typeof setTimeout> | null = null
   private occluding = new Set<number>()
@@ -300,7 +304,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     })
     // 반투명할 때는 건물 그림자가 길을 어둡게 가리지 않도록 그림자도 끕니다.
     this.setRingShadows(opacity >= 1)
-    // 모두 반투명일 때는 건물별 점무늬를 풀고, 되돌리면 다시 길을 가리는 건물을 고릅니다.
+    // 모두 반투명일 때는 건물별 점무늬를 풀고, 되돌리면 다시 내 위치를 가리는 건물을 고릅니다.
     this.scheduleOcclusion()
     this.map?.triggerRepaint()
   }
@@ -390,7 +394,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     geometry.setAttribute('buildingIndex', new THREE.Float32BufferAttribute(new Float32Array(geometry.getAttribute('position').count).fill(index), 1))
   }
 
-  // 길을 가리는 건물은 4×4 베이어 점무늬로 픽셀을 걸러 비치게 합니다. 섞어 그리지 않아 겹친 건물끼리
+  // 내 위치를 가리는 건물은 4×4 베이어 점무늬로 픽셀을 걸러 비치게 합니다. 섞어 그리지 않아 겹친 건물끼리
   // 그리는 순서가 꼬이지 않고, 지도 캔버스의 알파를 건드리지 않아 바탕이 하얗게 비치지도 않습니다.
   private patchFade(material: THREE.Material) {
     const size = `${FADE_TEXTURE_SIZE}.0`
@@ -422,7 +426,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.patchFade(mesh.material as THREE.Material)
   }
 
-  // 카메라가 멈추면 길을 가리는 건물을 다시 고릅니다.
+  // 카메라가 멈추거나 내 위치가 바뀌면 내 위치를 가리는 건물을 다시 고릅니다.
   private readonly scheduleOcclusion = () => {
     if (this.occlusionTimer) clearTimeout(this.occlusionTimer)
     this.occlusionTimer = setTimeout(() => this.updateOcclusion(), 120)
@@ -434,15 +438,20 @@ export class StreetSceneLayer implements CustomLayerInterface {
     if (!map) return
     // 모두 반투명하게 했거나 자동 반투명을 끈 경우에는 건물별로 고르지 않습니다.
     let next = new Set<number>()
-    if (this.autoSeeThrough && this.buildingOpacity >= 1) {
-      this.roadIndex ??= new RoadIndex(buildRoadRuns(getStreetSceneBounds()).roadRuns)
-      // 화면 긴 변만큼의 땅(지도 중심 기준 반경)에 있는 건물만 봅니다. 기울이면 위쪽이 더 멀리 보이므로 넉넉히 잡습니다.
-      const center = map.getCenter()
-      const metersPerPixel = 40075016.686 * Math.cos(center.lat * Math.PI / 180) / (512 * 2 ** map.getZoom())
-      const canvas = map.getCanvas()
-      const [x, z] = streetMeters([center.lng, center.lat])
-      const radius = Math.max(canvas.clientWidth, canvas.clientHeight) * metersPerPixel * (1 + map.getPitch() / 60)
-      next = findRoadOccluders(this.occluders, this.roadIndex, map.getBearing(), map.getPitch(), { x, z, radius })
+    // 길을 가리는 건물 반투명(주석 처리, 2026-10-09):
+    // if (this.autoSeeThrough && this.buildingOpacity >= 1) {
+    //   this.roadIndex ??= new RoadIndex(buildRoadRuns(getStreetSceneBounds()).roadRuns)
+    //   // 화면 긴 변만큼의 땅(지도 중심 기준 반경)에 있는 건물만 봅니다. 기울이면 위쪽이 더 멀리 보이므로 넉넉히 잡습니다.
+    //   const center = map.getCenter()
+    //   const metersPerPixel = 40075016.686 * Math.cos(center.lat * Math.PI / 180) / (512 * 2 ** map.getZoom())
+    //   const canvas = map.getCanvas()
+    //   const [x, z] = streetMeters([center.lng, center.lat])
+    //   const radius = Math.max(canvas.clientWidth, canvas.clientHeight) * metersPerPixel * (1 + map.getPitch() / 60)
+    //   next = findRoadOccluders(this.occluders, this.roadIndex, map.getBearing(), map.getPitch(), { x, z, radius })
+    // }
+    // 지금은 내 위치(GPS)를 가리는 근처 건물만 반투명하게 합니다. 위치를 모르면 아무 건물도 비치지 않습니다.
+    if (this.autoSeeThrough && this.buildingOpacity >= 1 && this.myPosition) {
+      next = findPointOccluders(this.occluders, this.myPosition, map.getBearing(), map.getPitch())
     }
     const changed = next.size !== this.occluding.size || [...next].some((index) => !this.occluding.has(index))
     if (!changed) return
@@ -482,7 +491,18 @@ export class StreetSceneLayer implements CustomLayerInterface {
     split.index.needsUpdate = true
   }
 
-  // 켜져 있으면 지금 카메라에서 길을 가리는 거리 건물만 반투명하게 그립니다.
+  // 내 위치(경도·위도)를 알려 줍니다. 바뀌면 내 위치를 가리는 건물을 다시 고릅니다. null이면 모두 불투명.
+  setMyPosition(position: [number, number] | null) {
+    const next = position ? streetMeters(position) : null
+    const current = this.myPosition
+    if (!next && !current) return
+    // GPS가 제자리에서 조금 흔들리는 정도(0.5m 미만)는 다시 계산하지 않습니다.
+    if (next && current && Math.hypot(next[0] - current[0], next[1] - current[1]) < 0.5) return
+    this.myPosition = next
+    this.scheduleOcclusion()
+  }
+
+  // 켜져 있으면 지금 카메라에서 내 위치(GPS)를 가리는 근처 건물만 반투명하게 그립니다.
   setAutoSeeThrough(enabled: boolean) {
     this.autoSeeThrough = enabled
     this.scheduleOcclusion()
