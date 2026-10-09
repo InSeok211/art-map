@@ -36,6 +36,8 @@ type SlotMaterial = THREE.MeshStandardMaterial | THREE.MeshLambertMaterial
 // flushed: 이 재질로 이미 만든 메시들. 먼 동네를 나눠 만드는 동안 여러 개가 생기므로, 다 만든 뒤 하나로 합칩니다.
 type MaterialSlot = {
   material: SlotMaterial; plain?: SlotMaterial; geometries: THREE.BufferGeometry[]; ground: boolean; parent: THREE.Object3D
+  // 3D 지형에서 바닥 층을 그리는 순서(아래 층부터). 있으면 깊이값을 남기지 않고 이 순서대로 덮어 그립니다.
+  groundLayer?: number
   flushed: { geometry: THREE.BufferGeometry; meshes: THREE.Mesh[]; split?: FadeSplit }[]
 }
 // 고리 메시 하나를 '비치지 않는 건물'과 '비치는 건물' 두 메시로 나눠 그리기 위한 정보입니다. 두 메시는 꼭짓점을
@@ -113,6 +115,14 @@ const ALLEY_PAVING_COLOR = 0xead2ad
 // 3D 지형에서 바닥(길·포장)을 지형 위로 띄우는 높이(m). 바탕 지도의 지형 면과 겹쳐 깜빡이지 않게 합니다.
 const TERRAIN_GROUND_LIFT = 0.35
 const TERRAIN_BUILDING_CLEARANCE = TERRAIN_GROUND_LIFT + 0.12
+// 3D 지형의 바닥 층 순서. 층마다 삼각형을 다르게 나눠 비탈에 얹으면 높이가 몇 cm~수십 cm씩 어긋나, 몇 cm 차이로
+// 쌓은 층(흰 바닥·돌 포장·골목길·차도)이 서로 뚫고 나와 길에 얼룩(노이즈)이 생깁니다. 그래서 지형에서는 바닥이
+// 깊이값을 남기지 않고 아래 층부터 차례로 덮어 그리게 합니다(건물·나무는 그 뒤에 깊이를 비교해 그립니다).
+const TERRAIN_GROUND_ORDER: Partial<Record<ConceptSurface, number>> = {
+  'ground-pavers': -0.95, 'ground-grass': -0.9, 'ground-asphalt': -0.85, 'ground-cobble': -0.85, 'ground-stone': -0.8, 'ground-lane': -0.7,
+}
+// 배포 뒤 새로 추가한 골목길(따로 그리는 띠): 돌 포장 위, 차도 아래
+const TERRAIN_EXTRA_ALLEY_ORDER = [-0.78, -0.76]
 
 // 평평하게 만든 바닥 도형을 지형에 얹습니다. 긴 변을 maxEdge(m) 이하로 나눈 뒤 꼭짓점마다 지형 높이를 더합니다.
 // (넓은 도로 면을 그대로 올리면 큰 삼각형이 비탈을 가로질러 땅속으로 파고들기 때문입니다.)
@@ -297,7 +307,10 @@ export class StreetSceneLayer implements CustomLayerInterface {
       const shared = this.sharedMaterial(key, () => glass
         ? new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.22, metalness: 0.2, side, ...textures })
         : new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, side, ...textures }))
-      slot = { ...shared, geometries: [], ground: surface?.startsWith('ground-') ?? false, parent: this.currentParent(), flushed: [] }
+      slot = {
+        ...shared, geometries: [], ground: surface?.startsWith('ground-') ?? false, parent: this.currentParent(), flushed: [],
+        groundLayer: this.terrain && this.group === 'scene' && surface ? TERRAIN_GROUND_ORDER[surface] : undefined,
+      }
       this.slots.set(key, slot)
     }
     return slot
@@ -697,10 +710,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
         })
         if (!geometries.length) continue
         const placed = geometries.map((geometry) => this.onTerrain(geometry))
-        const mesh = new THREE.Mesh(mergeGeometries(placed), new THREE.MeshLambertMaterial({ color, map: this.extraAlleyTexture }))
+        const mesh = new THREE.Mesh(mergeGeometries(placed), new THREE.MeshLambertMaterial({ color, map: this.extraAlleyTexture, depthWrite: !this.terrain }))
         placed.forEach((geometry) => geometry.dispose())
         mesh.receiveShadow = true
         mesh.frustumCulled = false
+        if (this.terrain) mesh.renderOrder = TERRAIN_EXTRA_ALLEY_ORDER[this.extraAlleyMeshes.length % 2]
         this.scene.add(mesh)
         this.extraAlleyMeshes.push(mesh)
       }
@@ -1099,7 +1113,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     // without inventing fences or courtyards for unphotographed addresses.
     for (const building of buildings) {
       const outline = building.outline.map(streetMeters)
-      this.roof(0xd8ded8, outline.map(([x, z]) => [x + 0.55, z + 0.75]), -0.039)
+      this.roof(0xd8ded8, outline.map(([x, z]) => [x + 0.55, z + 0.75]), -0.039, this.terrain ? 'ground-pavers' : undefined)
       const [centerX, centerZ] = outlineCenter(outline)
       for (let i = 0; i < outline.length; i++) {
         const [ax, az] = outline[i]
@@ -2191,7 +2205,10 @@ export class StreetSceneLayer implements CustomLayerInterface {
     // 비치는 유리·바닥 띠는 불투명한 장면을 다 그린 뒤에 그립니다. 불투명한 메시는 같은 재질끼리 이어 그리도록
     // 재질별 순서(0~1 사이, 사진 외관·간판(3~4)보다 먼저)를 줍니다. 같은 재질 안에서는 가까운 것부터 그립니다.
     if (material.transparent) mesh.renderOrder = 6
-    else {
+    else if (slot.groundLayer !== undefined) {
+      material.depthWrite = false
+      mesh.renderOrder = slot.groundLayer
+    } else {
       if (!this.materialOrder.has(material)) this.materialOrder.set(material, (this.materialOrder.size + 1) / 1000)
       mesh.renderOrder = this.materialOrder.get(material)!
     }
