@@ -26,6 +26,11 @@ describe('terrain sampler', () => {
     expect(sampler.lowest([[2, 2], [8, 2], [8, 8], [2, 8]])).toBeCloseTo(4)
   })
 
+  it('finds the highest ground around a building so its floor clears the slope', () => {
+    expect(sampler.highest([[2, 2], [8, 2], [8, 8], [2, 8]])).toBeCloseTo(16)
+    expect(sampler.highest([])).toBe(0)
+  })
+
   it('reads the Gamcheon hillside from the baked table', () => {
     const gamcheon = new TerrainSampler(terrainData as unknown as TerrainData)
     const [x, z] = streetMeters([ARTIST_WORKSHOP_PLACE.longitude, ARTIST_WORKSHOP_PLACE.latitude])

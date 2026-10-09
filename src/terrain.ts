@@ -40,7 +40,7 @@ export class TerrainSampler {
     return (at(col, row) * (1 - tx) + at(col + 1, row) * tx) * (1 - tz) + (at(col, row + 1) * (1 - tx) + at(col + 1, row + 1) * tx) * tz
   }
 
-  // 건물을 세울 높이: 윤곽 꼭짓점과 가운데 중 가장 낮은 곳(비탈 위쪽 벽은 언덕에 묻힙니다).
+  // 윤곽에서 가장 낮은 지형 높이입니다. 경사 차이나 기초 벽의 높이를 계산할 때 사용합니다.
   lowest(outline: [number, number][]) {
     let low = Infinity, sx = 0, sz = 0
     for (const [x, z] of outline) {
@@ -48,6 +48,18 @@ export class TerrainSampler {
       sx += x; sz += z
     }
     return outline.length ? Math.min(low, this.height(sx / outline.length, sz / outline.length)) : 0
+  }
+
+  // 건물 바닥이 비탈 위쪽 땅에 묻히지 않도록 윤곽과 각 변의 가운데에서 가장 높은 지점을 찾습니다.
+  highest(outline: [number, number][]) {
+    if (!outline.length) return 0
+    let high = -Infinity, sx = 0, sz = 0
+    outline.forEach(([x, z], index) => {
+      const [nextX, nextZ] = outline[(index + 1) % outline.length]
+      high = Math.max(high, this.height(x, z), this.height((x + nextX) / 2, (z + nextZ) / 2))
+      sx += x; sz += z
+    })
+    return Math.max(high, this.height(sx / outline.length, sz / outline.length))
   }
 }
 

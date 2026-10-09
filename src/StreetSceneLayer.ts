@@ -112,6 +112,7 @@ const ALLEY_PAVING_COLOR = 0xead2ad
 
 // 3D 지형에서 바닥(길·포장)을 지형 위로 띄우는 높이(m). 바탕 지도의 지형 면과 겹쳐 깜빡이지 않게 합니다.
 const TERRAIN_GROUND_LIFT = 0.35
+const TERRAIN_BUILDING_CLEARANCE = TERRAIN_GROUND_LIFT + 0.12
 
 // 평평하게 만든 바닥 도형을 지형에 얹습니다. 긴 변을 maxEdge(m) 이하로 나눈 뒤 꼭짓점마다 지형 높이를 더합니다.
 // (넓은 도로 면을 그대로 올리면 큰 삼각형이 비탈을 가로질러 땅속으로 파고들기 때문입니다.)
@@ -250,7 +251,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private workshopCenter: [number, number] = [0, 0]
   private pendingDistrict: { building: StreetBuilding; outline: [number, number][]; distance: number }[] = []
 
-  // 3D 지형(켜져 있을 때만). 건물은 윤곽의 가장 낮은 땅 높이(buildingBase)에 세우고 바닥은 지형에 얹습니다.
+  // 3D 지형(켜져 있을 때만). 건물은 윤곽의 높은 땅 위에 세우고, 낮은 쪽은 기초 벽으로 연결합니다.
   private readonly terrain?: TerrainSampler
   private buildingBase = 0
   private occluderBases: number[] = []
@@ -454,7 +455,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
 
   // 3D 지형이면 도형을 제 높이로 올립니다: 건물(과 그 간판·장식)은 건물 바닥 높이만큼 통째로, 바닥처럼 납작한
   // 도형은 지형에 얹고, 나무 같은 작은 물체는 그 자리 땅 높이만큼 올립니다.
-  private onTerrain(geometry: THREE.BufferGeometry) {
+  private onTerrain(geometry: THREE.BufferGeometry, maxGroundEdge = 6) {
     const terrain = this.terrain
     if (!terrain) return geometry
     if (this.buildingContext) {
@@ -463,13 +464,67 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
     geometry.computeBoundingBox()
     const box = geometry.boundingBox!
-    if (box.max.y - box.min.y < 0.6) return drapeOnTerrain(geometry, terrain)
+    if (box.max.y - box.min.y < 0.6) return drapeOnTerrain(geometry, terrain, TERRAIN_GROUND_LIFT, maxGroundEdge)
     geometry.translate(0, terrain.height((box.min.x + box.max.x) / 2, (box.min.z + box.max.z) / 2), 0)
     return geometry
   }
 
-  private addGeometry(color: number, geometry: THREE.BufferGeometry, glass = false, surface?: ConceptSurface) {
-    geometry = this.onTerrain(geometry)
+  private terrainBuildingBase(outline: [number, number][]) {
+    return this.terrain ? this.terrain.highest(outline) + TERRAIN_BUILDING_CLEARANCE : 0
+  }
+
+  private terrainFoundationFaces(outline: [number, number][], base: number) {
+    const terrain = this.terrain
+    const faces: THREE.BufferGeometry[] = []
+    if (!terrain || outline.length < 3) return faces
+    const [cx, cz] = outlineCenter(outline)
+    for (let index = 0; index < outline.length; index++) {
+      const [ax, az] = outline[index], [bx, bz] = outline[(index + 1) % outline.length]
+      const length = Math.hypot(bx - ax, bz - az)
+      if (length < 0.15) continue
+      const ux = (bx - ax) / length, uz = (bz - az) / length
+      const mx = (ax + bx) / 2, mz = (az + bz) / 2
+      const outward = -uz * (mx - cx) + ux * (mz - cz) >= 0 ? 1 : -1
+      const nx = -uz * outward, nz = ux * outward
+      const flip = (bx - ax) * nz - (bz - az) * nx < 0
+      const [p, q] = flip ? [[bx, bz], [ax, az]] : [[ax, az], [bx, bz]]
+      const bottomP = terrain.height(p[0], p[1]) + TERRAIN_GROUND_LIFT - base
+      const bottomQ = terrain.height(q[0], q[1]) + TERRAIN_GROUND_LIFT - base
+      const offset = 0.08
+      const a = [p[0] + nx * offset, bottomP, p[1] + nz * offset]
+      const b = [q[0] + nx * offset, bottomQ, q[1] + nz * offset]
+      const c = [q[0] + nx * offset, 0, q[1] + nz * offset]
+      const d = [p[0] + nx * offset, 0, p[1] + nz * offset]
+      const geometry = new THREE.BufferGeometry()
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...b, ...c, ...a, ...c, ...d], 3))
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, length / 2, 0, length / 2, 1, 0, 0, length / 2, 1, 0, 1], 2))
+      geometry.setAttribute('normal', new THREE.Float32BufferAttribute(Array(6).fill([nx, 0, nz]).flat(), 3))
+      faces.push(geometry)
+    }
+    return faces
+  }
+
+  private addTerrainFoundation(outline: [number, number][]) {
+    for (const geometry of this.terrainFoundationFaces(outline, this.buildingBase))
+      this.addGeometry(0xb6bfba, geometry, false, 'context-stone')
+  }
+
+  private modelFoundations: THREE.Mesh[] = []
+  private addModelFoundation(outline: [number, number][], base: number) {
+    const faces = this.terrainFoundationFaces(outline, base)
+    if (!faces.length) return
+    const geometry = mergeGeometries(faces)
+    faces.forEach((face) => face.dispose())
+    geometry.translate(0, base, 0)
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0xb6bfba, side: THREE.DoubleSide }))
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    this.modelFoundations.push(mesh)
+    this.scene.add(mesh)
+  }
+
+  private addGeometry(color: number, geometry: THREE.BufferGeometry, glass = false, surface?: ConceptSurface, maxGroundEdge = 6) {
+    geometry = this.onTerrain(geometry, maxGroundEdge)
     const plain = geometry.index ? geometry.toNonIndexed() : geometry
     if (plain !== geometry) geometry.dispose()
     this.tagBuilding(plain)
@@ -1012,10 +1067,13 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const depth = bounds.maxZ - bounds.minZ
     const cx = (bounds.minX + bounds.maxX) / 2
     const cz = (bounds.minZ + bounds.maxZ) / 2
-    // A shallow solid slab replaces the flat basemap beneath the 3D blocks.
-    // Its top is just below building walls and the modeled road paving.
-    this.box(0xd1ddd3, width, 0.85, depth, cx, -0.455, cz)
-    this.box(0xffffff, width, 0.035, depth, cx, -0.012, cz, 0, false, 'ground-pavers')
+    // The solid base belongs only to the flat map. On sloped terrain, moving
+    // this scene-wide box to one sampled height makes it bury downhill blocks.
+    if (!this.terrain) this.box(0xd1ddd3, width, 0.85, depth, cx, -0.455, cz)
+    // 지형에서는 길과 바닥판을 휴대폰 메모리에 맞게 6m 단위로 굵게 나눠 얹으므로, 굽은 비탈에서 두 면의 높이가
+    // 수십 cm까지 어긋납니다. 바닥판을 길보다 0.5m 아래에 깔아 길 위로 뚫고 올라오지 않게 합니다.
+    // (길을 2.5m로 잘게 나누면 꼭짓점이 3.5배로 늘어 브라우저가 메모리 부족으로 멈췄습니다.)
+    this.box(0xffffff, width, 0.035, depth, cx, this.terrain ? -0.5 : -0.012, cz, 0, false, 'ground-pavers')
     for (const [x, z, alongX, length] of [
       [cx, bounds.minZ, true, width], [cx, bounds.maxZ, true, width],
       [bounds.minX, cz, false, depth], [bounds.maxX, cz, false, depth],
@@ -1831,8 +1889,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
       const outline = building.outline.map(streetMeters)
       this.group = building.id === ARTIST_WORKSHOP_FOOTPRINT_ID ? 'scene' : this.ringOf(outline)
       this.buildingContext = { outline, height: building.heightMeters }
-      this.buildingBase = this.terrain?.lowest(outline) ?? 0
+      this.buildingBase = this.terrainBuildingBase(outline)
       this.currentBuilding = -1
+      this.addTerrainFoundation(outline)
       if (building.concept) {
         this.doubleSided = true
         this.buildConceptBuilding(building, outline)
@@ -2157,8 +2216,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
         const next = this.pendingDistrict.shift()!
         this.group = this.ringOf(next.outline)
         this.buildingContext = { outline: next.outline, height: next.building.heightMeters }
-        this.buildingBase = this.terrain?.lowest(next.outline) ?? 0
+        this.buildingBase = this.terrainBuildingBase(next.outline)
         this.currentBuilding = -1
+        this.addTerrainFoundation(next.outline)
         this.buildDistrictBuilding(next.building, next.outline)
         sinceFlush++
       }
@@ -2213,6 +2273,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
     // 그림자 패스가 끝난 뒤 뷰포트를 지도 캔버스 크기로 되돌리도록 매번 맞춥니다.
     this.renderer.setViewport(0, 0, _gl.drawingBufferWidth, _gl.drawingBufferHeight)
+    // MapLibre 지형의 먼 거리 깊이값이 실제보다 높은 면으로 건물과 길을 가릴 수 있습니다.
+    // 거리 장면 내부의 깊이 관계는 유지하면서, 바탕 지형의 깊이값만 지운 뒤 그립니다.
+    if (this.terrain) this.renderer.clearDepth()
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -2227,7 +2290,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
       model.name = 'green-house'
       const placement = greenHouseOsmPlacement()
       model.scale.set(placement.scaleX, 1, placement.scaleZ)
-      const base = this.terrain?.lowest(GREEN_HOUSE_PLAN.map(([px, pz]) => [px + placement.x, pz + placement.z] as [number, number])) ?? 0
+      const outline = GREEN_HOUSE_PLAN.map(([px, pz]) => [px + placement.x, pz + placement.z] as [number, number])
+      const base = this.terrainBuildingBase(outline)
       model.position.set(placement.x, base, placement.z)
       model.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return
@@ -2236,6 +2300,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
       })
       this.greenHouse = model
       this.scene.add(model)
+      this.addModelFoundation(outline, base)
       this.shadowsBaked = false
       map.triggerRepaint()
     }, undefined, () => { /* 모델을 못 불러와도 나머지 장면은 그대로 둡니다. */ })
@@ -2250,7 +2315,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
       // OSM 윤곽 그대로 두면 넓힌 골목(감내1로175번안길 등)과 겹치므로, 차도·골목길에서 비켜 놓습니다.
       const [x, z] = streetMeters(BEAUTIFUL_HANGUL_CENTER)
       const [dx, dz] = shiftOffCarriageways(BEAUTIFUL_HANGUL_OUTLINE.map(streetMeters), 3, 'all')
-      const base = this.terrain?.lowest(BEAUTIFUL_HANGUL_OUTLINE.map(streetMeters).map(([px, pz]) => [px + dx, pz + dz] as [number, number])) ?? 0
+      const outline = BEAUTIFUL_HANGUL_OUTLINE.map(streetMeters).map(([px, pz]) => [px + dx, pz + dz] as [number, number])
+      const base = this.terrainBuildingBase(outline)
       model.position.set(x + dx, base, z + dz)
       // The GLB's vertices already follow the OSM quadrilateral at metre scale.
       // Rotate its west-facing entrance toward the alley and place its centre.
@@ -2262,12 +2328,19 @@ export class StreetSceneLayer implements CustomLayerInterface {
       })
       this.beautifulHangul = model
       this.scene.add(model)
+      this.addModelFoundation(outline, base)
       this.shadowsBaked = false
       map.triggerRepaint()
     }, undefined, () => { /* Keep the rest of the map available if this model fails to load. */ })
   }
 
   onRemove() {
+    this.modelFoundations.forEach((mesh) => {
+      mesh.removeFromParent()
+      mesh.geometry.dispose()
+      ;(mesh.material as THREE.Material).dispose()
+    })
+    this.modelFoundations = []
     if (this.beautifulHangul) {
       this.beautifulHangul.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return
