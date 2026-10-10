@@ -1,3 +1,5 @@
+import { pathLengthMeters } from './streetCoordinates'
+
 export type LngLat = [number, number]
 
 export interface Alley {
@@ -54,13 +56,4 @@ export function draftToGeoJSON(points: LngLat[]) {
   }
 }
 
-export function alleyLengthMeters(coordinates: LngLat[]): number {
-  let total = 0
-  for (let index = 1; index < coordinates.length; index++) {
-    const [lng1, lat1] = coordinates[index - 1]
-    const [lng2, lat2] = coordinates[index]
-    const x = (lng2 - lng1) * Math.cos(((lat1 + lat2) / 2) * Math.PI / 180)
-    total += Math.hypot(x, lat2 - lat1) * 111_320
-  }
-  return total
-}
+export const alleyLengthMeters = (coordinates: LngLat[]): number => pathLengthMeters(coordinates)

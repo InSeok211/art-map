@@ -17,7 +17,7 @@ import { useAlleyFinder } from './useAlleyFinder'
 import type { GpsTrailStore } from './useAlleyFinder'
 import { TrailPanel } from './TrailPanel'
 import { ModelLayer, SEE_THROUGH_OPACITY } from './ModelLayer'
-import { StreetSceneLayer } from './StreetSceneLayer'
+import { prefetchStreetModels, StreetSceneLayer } from './StreetSceneLayer'
 import { RoutePanel } from './RoutePanel'
 import { MobileMapUI } from './MobileMapUI'
 import type { MobileView } from './MobileMapUI'
@@ -310,6 +310,8 @@ export function GamcheonMap({
     // 개발 서버에서만: 성능 측정 스크립트가 지도를 찾을 수 있게 둡니다.
     if (import.meta.env.DEV) (window as unknown as { __gamcheonMap?: Map }).__gamcheonMap = map
 
+    // 3D 거리를 만드는 동안 그린하우스·아름다운한글 모델 파일을 미리 받아 둡니다.
+    prefetchStreetModels()
     const modelLayer = new ModelLayer((name) => setModelError(`${name} 모델을 불러오지 못했습니다.`))
     modelLayerRef.current = modelLayer
     // 3D 거리 장면은 만드는 데 몇 초가 걸리므로, 바탕 지도를 먼저 그린 뒤에 만들어 빈 화면으로 기다리지 않게 합니다.

@@ -84,6 +84,32 @@ export function buildingRuns(attribute: THREE.BufferAttribute | THREE.Interleave
 export const GREEN_HOUSE_FOOTPRINT_IDS = new Set([1468551429, 1468551431, 1468551433])
 const GREEN_HOUSE_URL = new URL('./assets/models/custom/greenhouse-sixpence-connected.glb', import.meta.url).href
 const BEAUTIFUL_HANGUL_URL = new URL('./assets/models/custom/beautiful-hangul-studio.glb', import.meta.url).href
+
+// 그린하우스·아름다운한글 모델(약 1.9MB)은 예전에는 3D 거리를 다 만든 뒤에야 받기 시작해 마지막에 몇 초를
+// 더 기다렸습니다. 지도를 열자마자 받기 시작하고(GamcheonMap), 거리가 준비되면 받아 둔 파일을 바로 읽습니다.
+const modelDownloads = new globalThis.Map<string, Promise<ArrayBuffer>>()
+function downloadModel(url: string) {
+  let download = modelDownloads.get(url)
+  if (!download) {
+    download = fetch(url).then((response) => {
+      if (!response.ok) throw new Error(`${response.status} ${url}`)
+      return response.arrayBuffer()
+    })
+    // 실패하면 다음에 다시 받을 수 있게 비웁니다.
+    download.catch(() => modelDownloads.delete(url))
+    modelDownloads.set(url, download)
+  }
+  return download
+}
+export function prefetchStreetModels() {
+  downloadModel(GREEN_HOUSE_URL).catch(() => undefined)
+  downloadModel(BEAUTIFUL_HANGUL_URL).catch(() => undefined)
+}
+function loadModel(url: string, onLoad: (gltf: { scene: THREE.Group }) => void, onError: () => void) {
+  downloadModel(url)
+    .then((buffer) => new GLTFLoader().parse(buffer, '', onLoad, onError))
+    .catch(onError)
+}
 // scripts/build-greenhouse-from-plan.mjs의 외곽 trace(A~J, 평면도 픽셀)와 월드 미터 변환. 평면도를 실제 축척(1:1)으로
 // 옮긴 모델이라 늘이거나 줄이지 않습니다(2026-10-09, 예전에는 OSM 세 윤곽 범위에 맞춰 늘였음).
 const GREEN_HOUSE_TRACE: [number, number][] = [[39, 153], [145, 65], [209, 40], [254, 143], [263, 280], [188, 283], [174, 190], [139, 213], [169, 281], [126, 327]]
@@ -182,6 +208,9 @@ export function drapeOnTerrain(geometry: THREE.BufferGeometry, terrain: Pick<Ter
   return result
 }
 
+const SHADOW_BAKE_DELAY_MS = 400
+
+export const SCENE_VISIBLE_MARK = 'gamcheon-map:street-scene-visible'
 export const SCENE_BUILD_MEASURE = 'gamcheon-map:street-scene-build'
 const isTouchDevice = () => typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
   && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
@@ -2269,12 +2298,29 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true })
     // 장면이 움직이지 않으므로 그림자 지도는 첫 프레임에 한 번만 계산합니다.
     configureRenderer(this.renderer)
+    // 처음 그릴 때 셰이더 수십 개를 한꺼번에 컴파일하느라 화면이 몇 초 멈췄습니다(휴대폰에서 특히). 그래픽
+    // 드라이버가 뒤에서 컴파일하도록(KHR_parallel_shader_compile) 미리 맡겨 두고, 끝나면 그리기 시작합니다.
+    // 그동안 바탕 지도는 그대로 보이고 움직일 수 있습니다.
+    this.shadersReady = false
+    const renderer = this.renderer
+    renderer.compileAsync(this.scene, this.camera)
+      .catch(() => undefined)
+      .then(() => {
+        if (this.renderer !== renderer) return
+        this.shadersReady = true
+        // 성능 확인용: 3D 거리가 처음 그려지기 시작한 때(performance.getEntriesByName)
+        performance.mark(SCENE_VISIBLE_MARK)
+        map.triggerRepaint()
+      })
     this.loadGreenHouse(map)
     this.loadBeautifulHangul(map)
   }
 
+  private shadersReady = false
+  private shadowBakeAt = 0
+
   render(_gl: WebGL2RenderingContext, options: { defaultProjectionData: { mainMatrix: ArrayLike<number> } }) {
-    if (!this.renderer || !this.map) return
+    if (!this.renderer || !this.map || !this.shadersReady) return
     const origin = MercatorCoordinate.fromLngLat(STREET_ORIGIN, 0)
     const scale = origin.meterInMercatorCoordinateUnits()
     const transform = new THREE.Matrix4()
@@ -2284,9 +2330,18 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.camera.projectionMatrix.fromArray(options.defaultProjectionData.mainMatrix)
     this.camera.projectionMatrix.multiply(transform)
     this.renderer.resetState()
+    // 그림자 지도를 처음 구울 때 그림자용 셰이더 컴파일로 1초 가까이 멈춥니다. 건물이 먼저 보이도록 그림자 없이 한 번
+    // 그린 뒤, 조금 있다가 굽습니다(장면이 바뀌어 다시 구울 때도 같음).
     if (!this.shadowsBaked) {
-      bakeShadowMap(this.renderer, this.scene, this.camera, _gl)
-      this.shadowsBaked = true
+      const now = performance.now()
+      if (!this.shadowBakeAt) {
+        this.shadowBakeAt = now + SHADOW_BAKE_DELAY_MS
+        window.setTimeout(() => this.map?.triggerRepaint(), SHADOW_BAKE_DELAY_MS + 20)
+      } else if (now >= this.shadowBakeAt) {
+        bakeShadowMap(this.renderer, this.scene, this.camera, _gl)
+        this.shadowsBaked = true
+        this.shadowBakeAt = 0
+      }
     }
     // 그림자 패스가 끝난 뒤 뷰포트를 지도 캔버스 크기로 되돌리도록 매번 맞춥니다.
     this.renderer.setViewport(0, 0, _gl.drawingBufferWidth, _gl.drawingBufferHeight)
@@ -2367,7 +2422,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private beautifulHangul: THREE.Object3D | null = null
   private loadGreenHouse(map: Map) {
     if (this.greenHouse) return
-    new GLTFLoader().load(GREEN_HOUSE_URL, (gltf) => {
+    loadModel(GREEN_HOUSE_URL, (gltf) => {
       if (this.map !== map) return
       const model = gltf.scene
       model.name = 'green-house'
@@ -2386,12 +2441,12 @@ export class StreetSceneLayer implements CustomLayerInterface {
       this.addModelFoundation(outline, base)
       this.shadowsBaked = false
       map.triggerRepaint()
-    }, undefined, () => { /* 모델을 못 불러와도 나머지 장면은 그대로 둡니다. */ })
+    }, () => { /* 모델을 못 불러와도 나머지 장면은 그대로 둡니다. */ })
   }
 
   private loadBeautifulHangul(map: Map) {
     if (this.beautifulHangul) return
-    new GLTFLoader().load(BEAUTIFUL_HANGUL_URL, (gltf) => {
+    loadModel(BEAUTIFUL_HANGUL_URL, (gltf) => {
       if (this.map !== map) return
       const model = gltf.scene
       model.name = 'beautiful-hangul'
@@ -2414,7 +2469,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
       this.addModelFoundation(outline, base)
       this.shadowsBaked = false
       map.triggerRepaint()
-    }, undefined, () => { /* Keep the rest of the map available if this model fails to load. */ })
+    }, () => { /* Keep the rest of the map available if this model fails to load. */ })
   }
 
   onRemove() {

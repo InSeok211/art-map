@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { GpsTrail, TrailPoint } from './gpsTrails'
 import { TRAIL_ACCURACY_LIMIT } from './gpsTrails'
 import { newId } from './listUtils'
+import { distanceMeters, pathLengthMeters } from './streetCoordinates'
 
 // 관리자로 로그인해 지도를 열어 두면, 기록 버튼을 누르지 않아도 걸은 길을 자동으로 기록해 올립니다
 // (골목길 후보 찾기용, gpsTrails.ts). 일반 방문자의 위치는 기록하지 않습니다.
@@ -17,12 +18,6 @@ const MAX_POINTS = 1200
 const FLUSH_MS = 60_000
 const MIN_PATH_METERS = 30
 
-const M_LAT = 111_320
-function meters(a: TrailPoint, b: TrailPoint) {
-  const x = (b[0] - a[0]) * M_LAT * Math.cos(a[1] * Math.PI / 180), z = (b[1] - a[1]) * M_LAT
-  return Math.hypot(x, z)
-}
-const pathLength = (points: TrailPoint[]) => points.slice(1).reduce((sum, point, index) => sum + meters(points[index], point), 0)
 
 export function useAutoTrailRecorder(enabled: boolean, save: (trail: GpsTrail, options: { keepalive: boolean }) => Promise<void> | void) {
   const [paused, setPaused] = useState(false)
@@ -36,7 +31,7 @@ export function useAutoTrailRecorder(enabled: boolean, save: (trail: GpsTrail, o
 
   function flush(keepalive = false) {
     const trail = trailRef.current
-    if (!trail || !dirtyRef.current || pathLength(trail.points) < MIN_PATH_METERS) return
+    if (!trail || !dirtyRef.current || pathLengthMeters(trail.points) < MIN_PATH_METERS) return
     dirtyRef.current = false
     Promise.resolve(saveRef.current({ ...trail, points: [...trail.points] }, { keepalive }))
       .then(() => setLastSaved(new Date()))
@@ -57,7 +52,7 @@ export function useAutoTrailRecorder(enabled: boolean, save: (trail: GpsTrail, o
         trailRef.current = trail
       } else {
         // 직전 점에서 충분히 움직였을 때만 남깁니다(제자리 흔들림 제외).
-        if (meters(last, point) < Math.max(4, accuracy * 0.6)) return
+        if (distanceMeters(last, point) < Math.max(4, accuracy * 0.6)) return
         trail.points.push(point)
       }
       dirtyRef.current = true

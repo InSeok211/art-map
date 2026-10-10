@@ -1,4 +1,6 @@
 import buildingFootprints from './gamcheon-buildings.json'
+import { STREET_ORIGIN, streetLngLat, streetMeters } from './streetCoordinates'
+import bakedOutlines from './generated/building-outlines.json'
 import mapSurfaces from './street-surfaces.json'
 import { RECORDED_ALLEY_WAYS } from './recordedAlleys'
 import * as polygonClipping from 'polygon-clipping'
@@ -28,18 +30,9 @@ export const PHOTOGRAPHED_STREET: StreetPoint[] = [
 export const MEETING_CIRCLE_CENTER: StreetPoint = [129.0088756, 35.0954142]
 export const MEETING_CIRCLE_RADIUS = 2.85
 
-export const STREET_ORIGIN: StreetPoint = [129.0089, 35.0949]
-const METERS_PER_DEGREE_LAT = 111_320
-const METERS_PER_DEGREE_LON = METERS_PER_DEGREE_LAT * Math.cos(STREET_ORIGIN[1] * Math.PI / 180)
-
-// East and south axes match the shared MapLibre/Three model layer coordinates.
-export function streetMeters([longitude, latitude]: StreetPoint): [number, number] {
-  return [(longitude - STREET_ORIGIN[0]) * METERS_PER_DEGREE_LON, (STREET_ORIGIN[1] - latitude) * METERS_PER_DEGREE_LAT]
-}
-
-function streetPoint([x, z]: [number, number]): StreetPoint {
-  return [STREET_ORIGIN[0] + x / METERS_PER_DEGREE_LON, STREET_ORIGIN[1] - z / METERS_PER_DEGREE_LAT]
-}
+// 좌표 기준과 경도·위도 ↔ 장면 미터 변환은 streetCoordinates.ts에 있습니다(예전처럼 여기서도 내보냄).
+export { STREET_ORIGIN, streetMeters }
+const streetPoint = streetLngLat
 
 const LINE_METERS = PHOTOGRAPHED_STREET.map(streetMeters)
 const lengths = LINE_METERS.slice(1).map((point, index) => Math.hypot(point[0] - LINE_METERS[index][0], point[1] - LINE_METERS[index][1]))
@@ -1254,15 +1247,39 @@ export function clearOfCarriageways(outline: StreetPoint[]): StreetPoint[] | nul
   return simplified.length >= 3 ? simplified.map(streetPoint) : null
 }
 
+// 건물마다 도로·골목길과 겹친 부분을 깎는 계산(clearOfCarriageways)은 지도를 열 때 장면 만들기 시간의 큰 몫
+// (휴대폰에서 약 3초)이라, scripts/build-road-ground.mjs가 미리 계산해 src/generated/building-outlines.json에
+// 저장합니다. footprints 순서대로 0 = 원래 윤곽 그대로, null = 도로에 다 덮여 뺌, 배열 = 깎은 윤곽입니다.
+// 건물 수가 다르면(데이터가 바뀌었는데 다시 만들지 않음) 저장본을 쓰지 않고 직접 계산합니다. 입력이 바뀌면
+// 테스트(roadGround.test.ts)가 다시 만들라고 알려 줍니다.
+type BakedOutline = 0 | null | StreetPoint[]
+const BAKED_OUTLINES = (bakedOutlines as unknown as { outlines: BakedOutline[] }).outlines
+
+function mappedOutline(feature: Footprint) {
+  return feature.geometry.type === 'Polygon' ? feature.geometry.coordinates[0].slice(0, -1) as StreetPoint[] : null
+}
+
+// 저장본을 만들 때 씁니다(scripts/build-road-ground.mjs). 저장본을 보지 않고 모든 건물을 직접 깎습니다.
+export function computeBuildingOutlines(): BakedOutline[] {
+  return footprints.map((feature) => {
+    const mapped = mappedOutline(feature)
+    if (!mapped || mapped.length < 3 || KEEP_MAPPED_OUTLINE.has(feature.properties.id)) return 0
+    const outline = clearOfCarriageways(mapped)
+    return outline && outline.length === mapped.length && outline.every((point, index) => point[0] === mapped[index][0] && point[1] === mapped[index][1]) ? 0 : outline
+  })
+}
+
 let cachedBuildings: StreetBuilding[] | undefined
 export function getPhotographedStreetBuildings(): StreetBuilding[] {
   if (cachedBuildings) return cachedBuildings
   const result: StreetBuilding[] = []
-  for (const feature of footprints) {
-    if (feature.geometry.type !== 'Polygon') continue
-    const mapped = feature.geometry.coordinates[0].slice(0, -1) as StreetPoint[]
-    if (mapped.length < 3) continue
-    const outline = KEEP_MAPPED_OUTLINE.has(feature.properties.id) ? mapped : clearOfCarriageways(mapped)
+  const baked = BAKED_OUTLINES.length === footprints.length ? BAKED_OUTLINES : null
+  for (const [index, feature] of footprints.entries()) {
+    const mapped = mappedOutline(feature)
+    if (!mapped || mapped.length < 3) continue
+    const stored = baked?.[index]
+    const outline = KEEP_MAPPED_OUTLINE.has(feature.properties.id) ? mapped
+      : stored === undefined ? clearOfCarriageways(mapped) : stored === 0 ? mapped : stored
     if (!outline) continue
     const meters = outline.map(streetMeters)
     const area = polygonArea(meters)

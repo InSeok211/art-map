@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import roadGround from './generated/road-ground.json'
+import buildingOutlines from './generated/building-outlines.json'
 import { ribbonPolygons } from './roadGround'
-import { roadGroundInputsHash } from '../scripts/road-ground-inputs.mjs'
+import { buildingOutlinesInputsHash, roadGroundInputsHash } from '../scripts/road-ground-inputs.mjs'
+import { computeBuildingOutlines } from './streetSceneData'
 
 describe('precomputed road ground', () => {
   it('is up to date with the map data and geometry code (run `npm run build:road-ground` if this fails)', () => {
+    expect(buildingOutlines.inputsHash).toBe(buildingOutlinesInputsHash())
     expect(roadGround.inputsHash).toBe(roadGroundInputsHash())
+  })
+
+  it('stores exactly the outlines the map would otherwise trim on every load', () => {
+    expect(JSON.parse(JSON.stringify(computeBuildingOutlines()))).toEqual(buildingOutlines.outlines)
   })
 
   it('contains every drawn surface', () => {

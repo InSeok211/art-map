@@ -1,4 +1,5 @@
 import type { LngLat } from './alleys'
+import { streetLngLat, streetMeters } from './streetCoordinates'
 
 // 관리자가 걸으며 남긴 GPS 기록으로 지도에 없는 골목길을 찾습니다.
 //
@@ -43,15 +44,9 @@ const MIN_CELLS = 5
 const CENTER_RADIUS = 4
 const SNAP_DISTANCE = 6
 
-const ORIGIN: LngLat = [129.0089, 35.0949]
-const M_LAT = 111_320
-const M_LON = M_LAT * Math.cos(ORIGIN[1] * Math.PI / 180)
 type XZ = [number, number]
-const toXZ = ([lng, lat]: LngLat | TrailPoint): XZ => [(lng - ORIGIN[0]) * M_LON, (ORIGIN[1] - lat) * M_LAT]
-const toLngLat = ([x, z]: XZ): LngLat => [
-  Math.round((ORIGIN[0] + x / M_LON) * 1e7) / 1e7,
-  Math.round((ORIGIN[1] - z / M_LAT) * 1e7) / 1e7,
-]
+const toXZ = (point: LngLat | TrailPoint): XZ => streetMeters(point)
+const toLngLat = (point: XZ): LngLat => streetLngLat(point).map((value) => Math.round(value * 1e7) / 1e7) as LngLat
 
 const isTrailPoint = (value: unknown): value is TrailPoint =>
   Array.isArray(value) && value.length === 4 && value.every((part) => Number.isFinite(part))
