@@ -7,6 +7,7 @@ import { candidatesToGeoJSON, findAlleyCandidates, PASS_THRESHOLD_RANGE, trailsT
 import type { GpsTrail } from './gpsTrails'
 import { CANDIDATE_SOURCE_ID, TRAIL_SOURCE_ID } from './mapStyle'
 import { newId } from './listUtils'
+import { gpxToTrails } from './gpxImport'
 import { roadWidth } from './roadCorridors'
 import { STREET_SURFACE_WAYS } from './streetSurfaceData'
 import { useTrailRecorder } from './useTrailRecorder'
@@ -58,6 +59,28 @@ export function useAlleyFinder(
   const [threshold, setThreshold] = useState(loadThreshold)
   const [showTrails, setShowTrails] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [gpxStatus, setGpxStatus] = useState('')
+
+  // GPS 기록 앱에서 내보낸 GPX 파일들을 기록으로 추가합니다(자동 기록과 같은 규칙으로 거르고 나눔). 홈페이지는
+  // 감천 작업 범위 밖의 점을 버리므로, 범위 밖에서만 걸은 부분은 저장되지 않습니다.
+  async function importGpx(files: FileList | File[]) {
+    if (!store) return
+    let saved = 0, failed = 0, unreadable = 0
+    setGpxStatus('GPX 기록을 올리는 중…')
+    for (const file of Array.from(files)) {
+      let trails
+      try { trails = gpxToTrails(await file.text()) } catch { unreadable++; continue }
+      for (const trail of trails) {
+        try { await store.onRecord(trail); saved++ } catch { failed++ }
+      }
+    }
+    setGpxStatus([
+      `기록 ${saved}개를 추가했습니다.`,
+      failed ? `${failed}개는 감천 작업 범위 밖이거나 너무 짧아 저장되지 않았습니다.` : '',
+      unreadable ? `GPX가 아닌 파일 ${unreadable}개는 건너뛰었습니다.` : '',
+      !saved && !failed && !unreadable ? '30m 넘게 걸은 기록이 없습니다.' : '',
+    ].filter(Boolean).join(' '))
+  }
   const recorder = useTrailRecorder(store?.onRecord)
   const trails = store?.trails ?? []
 
@@ -127,6 +150,8 @@ export function useAlleyFinder(
         setSelectedId(null)
       },
       onDeleteTrail: (id: string) => store?.onDeleteTrail(id),
+      gpxStatus,
+      onImportGpx: importGpx,
     },
   }
 }

@@ -5,6 +5,7 @@ import { sanitizeAlleys } from './alleys'
 import type { Alley } from './alleys'
 import { isSiteAdmin, postTrail } from './adminTrailApi'
 import { useAutoTrailRecorder } from './useAutoTrailRecorder'
+import { PocketMode } from './PocketMode'
 import { GamcheonMap } from './GamcheonMap'
 import { isInsideGamcheonMap } from './gamcheonBoundary'
 import type { Place } from './types'
@@ -66,12 +67,17 @@ function useAdminAutoTrail() {
 }
 
 function AutoTrailBadge({ recorder }: { recorder: ReturnType<typeof useAutoTrailRecorder> }) {
+  const [pocket, setPocket] = useState(false)
   if (!recorder.enabled) return null
-  return <div className={`embed-auto-trail${recorder.recording ? ' is-recording' : ''}${SITE_HOSTED ? ' is-site-hosted' : ''}`} role="status">
-    <span className="embed-auto-trail__dot" aria-hidden="true" />
-    <span>{recorder.recording ? `골목길 자동 기록 중 · ${recorder.pointCount}점` : '골목길 자동 기록 꺼짐'}</span>
-    <button type="button" onClick={recorder.recording ? recorder.pause : recorder.resume}>{recorder.recording ? '일시정지' : '다시 켜기'}</button>
-  </div>
+  return <>
+    <div className={`embed-auto-trail${recorder.recording ? ' is-recording' : ''}${SITE_HOSTED ? ' is-site-hosted' : ''}`} role="status">
+      <span className="embed-auto-trail__dot" aria-hidden="true" />
+      <span>{recorder.recording ? `골목길 자동 기록 중 · ${recorder.pointCount}점` : '골목길 자동 기록 꺼짐'}</span>
+      {recorder.recording && <button type="button" onClick={() => setPocket(true)}>주머니 모드</button>}
+      <button type="button" onClick={recorder.recording ? recorder.pause : recorder.resume}>{recorder.recording ? '일시정지' : '다시 켜기'}</button>
+    </div>
+    {pocket && recorder.recording && <PocketMode pointCount={recorder.pointCount} onExit={() => setPocket(false)} />}
+  </>
 }
 
 function EmbeddedMap() {

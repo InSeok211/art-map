@@ -3,6 +3,8 @@ import { PASS_THRESHOLD_RANGE, trailLengthMeters } from './gpsTrails'
 import type { useTrailRecorder } from './useTrailRecorder'
 
 import type { AutoTrailStatus } from './useAlleyFinder'
+import { useState } from 'react'
+import { PocketMode } from './PocketMode'
 
 interface TrailPanelProps {
   auto?: AutoTrailStatus
@@ -18,6 +20,8 @@ interface TrailPanelProps {
   onApprove: () => void
   onDismiss: () => void
   onDeleteTrail: (id: string) => void
+  gpxStatus: string
+  onImportGpx: (files: FileList) => void
   // 기록을 시작하면 휴대폰에서 시트를 접어 지도를 넓게 보여 줍니다.
   onRecordStart?: () => void
 }
@@ -30,8 +34,9 @@ const when = (iso: string) => {
 // 골목길 탭 아래쪽의 "걸어서 골목길 찾기" 영역입니다.
 export function TrailPanel({
   recorder, auto, trails, candidates, selectedId, threshold, showTrails,
-  onThresholdChange, onShowTrailsChange, onSelect, onApprove, onDismiss, onDeleteTrail, onRecordStart,
+  onThresholdChange, onShowTrailsChange, onSelect, onApprove, onDismiss, onDeleteTrail, onRecordStart, gpxStatus, onImportGpx,
 }: TrailPanelProps) {
+  const [pocket, setPocket] = useState(false)
   const selected = candidates.find((candidate) => candidate.id === selectedId)
   const draftPoints = recorder.draft?.points.length ?? 0
 
@@ -49,9 +54,29 @@ export function TrailPanel({
         {' · '}가만히 있을 때의 흔들림과 30m 미만의 기록은 저장하지 않습니다.
       </p>
       <div className="gamcheon-map__model-item-actions">
-        {auto.recording ? <button type="button" onClick={auto.pause}>일시정지</button> : <button type="button" className="gamcheon-map__model-place" onClick={auto.resume}>자동 기록 다시 켜기</button>}
+        {auto.recording ? <>
+          <button type="button" onClick={() => setPocket(true)}>주머니 모드</button>
+          <button type="button" onClick={auto.pause}>일시정지</button>
+        </> : <button type="button" className="gamcheon-map__model-place" onClick={auto.resume}>자동 기록 다시 켜기</button>}
       </div>
+      {pocket && auto.recording && <PocketMode pointCount={auto.pointCount} onExit={() => setPocket(false)} />}
     </div>}
+
+    <div className="gamcheon-map__model-inspector gamcheon-map__gpx-import">
+      <strong>GPX 파일로 기록 추가</strong>
+      <p className="gamcheon-map__model-help">
+        화면을 끄고 걸으려면 휴대폰의 GPS 기록 앱(안드로이드 GPSLogger, 아이폰 Open GPX Tracker 등)으로 기록한 뒤
+        GPX 파일을 올려 주세요. 지도 기록과 같은 기준으로 거르고, 여러 파일을 한 번에 올릴 수 있습니다.
+      </p>
+      <label className="gamcheon-map__gpx-button">
+        GPX 파일 선택
+        <input type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple onChange={(event) => {
+          if (event.target.files?.length) onImportGpx(event.target.files)
+          event.target.value = ''
+        }} />
+      </label>
+      {gpxStatus && <p className="gamcheon-map__model-help" role="status">{gpxStatus}</p>}
+    </div>
     {!auto && <><div className="gamcheon-map__model-primary-actions">
       {recorder.recording
         ? <button type="button" className="gamcheon-map__model-place gamcheon-map__trail-recording" onClick={() => void recorder.finish()}>■ 기록 끝내고 저장 ({draftPoints}점)</button>

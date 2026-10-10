@@ -1,22 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import type { GpsTrail, TrailPoint } from './gpsTrails'
-import { TRAIL_ACCURACY_LIMIT } from './gpsTrails'
-import { newId } from './listUtils'
-import { distanceMeters, pathLengthMeters } from './streetCoordinates'
+import { classifyFix, isWorthSaving, newTrail } from './trailFixes'
 
 // 관리자로 로그인해 지도를 열어 두면, 기록 버튼을 누르지 않아도 걸은 길을 자동으로 기록해 올립니다
 // (골목길 후보 찾기용, gpsTrails.ts). 일반 방문자의 위치는 기록하지 않습니다.
 //
-//  - 정확도가 20m보다 나쁜 점, 제자리에서 흔들린 점(직전 점에서 몇 m 안 움직임)은 버립니다. 사무실처럼 한곳에
-//    오래 있어도 엉뚱한 골목 후보가 생기지 않게 합니다.
-//  - 10분 넘게 끊기면(또는 기록이 너무 길어지면) 새 기록으로 시작합니다. 서로 다른 기록은 "서로 다른 시간"으로 셉니다.
-//  - 1분마다, 그리고 화면을 떠날 때 지금까지의 기록을 올립니다(같은 번호로 덮어써 저장). 30m도 안 움직인 기록은
-//    올리지 않습니다.
-const NEW_TRAIL_GAP_MS = 10 * 60_000
-// 화면을 떠날 때 보내는 요청(keepalive)은 64KB까지라, 기록 하나를 약 54KB(1200점) 안으로 나눕니다.
-const MAX_POINTS = 1200
+//  - 어떤 점을 남기고 언제 새 기록으로 나눌지는 trailFixes.ts의 규칙을 따릅니다(GPX 올리기와 같음).
+//  - 1분마다, 그리고 화면을 떠날 때 지금까지의 기록을 올립니다(같은 번호로 덮어써 저장).
+//  - 기록하는 동안 화면이 저절로 꺼지지 않게 합니다(화면이 꺼지면 브라우저가 GPS를 멈춥니다).
 const FLUSH_MS = 60_000
-const MIN_PATH_METERS = 30
+
+type WakeLockSentinelLike = { release: () => Promise<void> }
 
 
 export function useAutoTrailRecorder(enabled: boolean, save: (trail: GpsTrail, options: { keepalive: boolean }) => Promise<void> | void) {
@@ -31,7 +25,7 @@ export function useAutoTrailRecorder(enabled: boolean, save: (trail: GpsTrail, o
 
   function flush(keepalive = false) {
     const trail = trailRef.current
-    if (!trail || !dirtyRef.current || pathLengthMeters(trail.points) < MIN_PATH_METERS) return
+    if (!trail || !dirtyRef.current || !isWorthSaving(trail.points)) return
     dirtyRef.current = false
     Promise.resolve(saveRef.current({ ...trail, points: [...trail.points] }, { keepalive }))
       .then(() => setLastSaved(new Date()))
@@ -42,24 +36,31 @@ export function useAutoTrailRecorder(enabled: boolean, save: (trail: GpsTrail, o
     if (!active || !('geolocation' in navigator)) return
     const watch = navigator.geolocation.watchPosition((position) => {
       const { longitude, latitude, accuracy } = position.coords
-      if (accuracy > TRAIL_ACCURACY_LIMIT) return
       const point: TrailPoint = [Math.round(longitude * 1e7) / 1e7, Math.round(latitude * 1e7) / 1e7, Math.round(accuracy * 10) / 10, position.timestamp]
       let trail = trailRef.current
-      const last = trail?.points[trail.points.length - 1]
-      if (!trail || !last || point[3] - last[3] > NEW_TRAIL_GAP_MS || trail.points.length >= MAX_POINTS) {
+      const action = classifyFix(trail?.points, point)
+      if (action === 'skip') return
+      if (action === 'new') {
         flush()
-        trail = { id: newId('trail'), startedAt: new Date(point[3]).toISOString(), points: [point] }
+        trail = newTrail(point)
         trailRef.current = trail
-      } else {
-        // 직전 점에서 충분히 움직였을 때만 남깁니다(제자리 흔들림 제외).
-        if (distanceMeters(last, point) < Math.max(4, accuracy * 0.6)) return
-        trail.points.push(point)
-      }
+      } else trail!.points.push(point)
       dirtyRef.current = true
-      setPointCount(trail.points.length)
+      setPointCount(trail!.points.length)
     }, () => { /* 위치를 못 받으면 기록하지 않습니다. */ }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30_000 })
     const timer = window.setInterval(() => flush(), FLUSH_MS)
-    const onHide = () => { if (document.visibilityState === 'hidden') flush(true) }
+    // 화면 꺼짐 방지: 화면이 다시 보일 때마다 다시 요청합니다(브라우저가 숨겨지면 풀어 버림).
+    let wakeLock: WakeLockSentinelLike | null = null
+    const keepAwake = () => {
+      const api = (navigator as Navigator & { wakeLock?: { request: (type: 'screen') => Promise<WakeLockSentinelLike> } }).wakeLock
+      if (!api || document.visibilityState !== 'visible') return
+      api.request('screen').then((lock) => { wakeLock = lock }).catch(() => { /* 지원하지 않거나 거절되면 그대로 둡니다. */ })
+    }
+    keepAwake()
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') flush(true)
+      else keepAwake()
+    }
     const onPageHide = () => flush(true)
     document.addEventListener('visibilitychange', onHide)
     window.addEventListener('pagehide', onPageHide)
@@ -68,6 +69,7 @@ export function useAutoTrailRecorder(enabled: boolean, save: (trail: GpsTrail, o
       window.clearInterval(timer)
       document.removeEventListener('visibilitychange', onHide)
       window.removeEventListener('pagehide', onPageHide)
+      wakeLock?.release().catch(() => undefined)
       flush(true)
     }
   }, [active])
