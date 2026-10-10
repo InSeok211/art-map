@@ -35,6 +35,7 @@ vi.mock('maplibre-gl', () => ({
     triggerRepaint() {}
     getLayer() { return {} }
     getSource() { return { setData() {} } }
+    getCenter() { return { toArray: () => [129.00905, 35.09512] } }
     setTerrain() {}
     getTerrain() { return null }
     setLayoutProperty(id: string, _name: string, value: unknown) { layerVisibility[id] = value }

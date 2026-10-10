@@ -10,18 +10,23 @@ const SCENE_BUILD_BUDGET_MS = 9000
 
 let layer: StreetSceneLayer
 let elapsed = 0
+let deferred = 0
 beforeAll(() => {
   getPhotographedStreetBuildings()
   const started = performance.now()
   layer = new StreetSceneLayer()
   elapsed = performance.now() - started
-}, 60000)
+  deferred = (layer as unknown as { pendingBuildings: unknown[] }).pendingBuildings.length
+  // 지도에 붙으면 나눠 만들 나머지 건물을 테스트에서는 한 번에 채웁니다.
+  layer.completePendingBuildings()
+}, 120000)
 
 describe('street scene', () => {
-  it(`builds the first view within ${SCENE_BUILD_BUDGET_MS / 1000}s and defers the distant district`, () => {
+  it(`builds the first view within ${SCENE_BUILD_BUDGET_MS / 1000}s and defers the rest`, () => {
     expect(elapsed).toBeLessThan(SCENE_BUILD_BUDGET_MS)
-    // 거리에서 먼 건물은 생성자에서 만들지 않고 지도에 붙은 뒤 나눠 만듭니다.
-    expect((layer as unknown as { pendingDistrict: unknown[] }).pendingDistrict.length).toBeGreaterThan(1000)
+    // 화면 중심에서 먼 건물은 생성자에서 만들지 않고 지도에 붙은 뒤 가까운 순서로 나눠 만듭니다.
+    expect(deferred).toBeGreaterThan(getPhotographedStreetBuildings().length / 2)
+    expect((layer as unknown as { pendingBuildings: unknown[] }).pendingBuildings.length).toBe(0)
   })
 
   it('hides every building except the artist workshop on request', () => {

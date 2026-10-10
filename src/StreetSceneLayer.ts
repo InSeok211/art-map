@@ -210,6 +210,9 @@ export function drapeOnTerrain(geometry: THREE.BufferGeometry, terrain: Pick<Ter
 
 const SHADOW_BAKE_DELAY_MS = 400
 
+// 처음에 바로 만드는 건물의 범위(화면 중심에서, m)
+const FIRST_BUILD_RADIUS = 60
+
 export const SCENE_VISIBLE_MARK = 'gamcheon-map:street-scene-visible'
 export const SCENE_BUILD_MEASURE = 'gamcheon-map:street-scene-build'
 const isTouchDevice = () => typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
@@ -288,16 +291,20 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private extraAlleyMeshes: THREE.Mesh[] = []
   private extraAlleyTexture?: THREE.DataTexture
   private workshopCenter: [number, number] = [0, 0]
-  private pendingDistrict: { building: StreetBuilding; outline: [number, number][]; distance: number }[] = []
+  // 첫 화면 뒤에 나눠 만들 건물(화면 중심에서 가까운 순서)
+  private pendingBuildings: { building: StreetBuilding; outline: [number, number][]; distance: number }[] = []
+  private readonly focus?: [number, number]
 
   // 3D 지형(켜져 있을 때만). 건물은 윤곽의 높은 땅 위에 세우고, 낮은 쪽은 기초 벽으로 연결합니다.
   private readonly terrain?: TerrainSampler
   private buildingBase = 0
   private occluderBases: number[] = []
 
-  constructor(options: { terrain?: TerrainSampler } = {}) {
+  // focus: 처음 화면 중심(경도·위도). 이 근처 건물부터 만듭니다(없으면 작가님 공방 근처).
+  constructor(options: { terrain?: TerrainSampler; focus?: [number, number] } = {}) {
     const started = performance.now()
     this.terrain = options.terrain
+    this.focus = options.focus
     // 휴대폰·태블릿(터치 화면)은 그림자 지도를 2048로 줄여 그래픽 메모리와 그리기 부담을 덜어 줍니다.
     addSceneLights(this.scene, SHADOW_CENTER, SHADOW_EXTENT, isTouchDevice() ? 2048 : 4096)
     this.buildingRings.forEach((ring) => this.scene.add(ring))
@@ -1928,196 +1935,18 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const workshop = buildings.find((building) => building.id === ARTIST_WORKSHOP_FOOTPRINT_ID)
     if (workshop) this.workshopCenter = outlineCenter(workshop.outline.map(streetMeters))
     this.buildGroundAndSideRoads(buildings)
+    // 처음에는 지금 화면 중심 근처 건물(과 공방)만 만들어 3D 거리를 빨리 띄우고, 나머지는 가까운 순서로 나눠
+    // 만듭니다(scheduleDistrictBuild). 예전에는 촬영 거리 75m 안의 건물을 모두 한 번에 만들어, 휴대폰에서
+    // 화면이 5초 넘게 멈췄습니다.
+    const focus = this.focus ? streetMeters(this.focus) : this.workshopCenter
     for (const building of buildings) {
       const outline = building.outline.map(streetMeters)
-      this.group = building.id === ARTIST_WORKSHOP_FOOTPRINT_ID ? 'scene' : this.ringOf(outline)
-      this.buildingContext = { outline, height: building.heightMeters }
-      this.buildingBase = this.terrainBuildingBase(outline)
-      this.currentBuilding = -1
-      this.addTerrainFoundation(outline)
-      if (building.concept) {
-        this.doubleSided = true
-        this.buildConceptBuilding(building, outline)
-        this.doubleSided = false
-        continue
-      }
-      if (building.id === ARTIST_WORKSHOP_FOOTPRINT_ID) {
-        this.doubleSided = true
-        buildArtistWorkshopModel({
-          box: this.box.bind(this), beam: this.beam.bind(this), roof: this.roof.bind(this),
-          geometry: this.addFinishedGeometry.bind(this),
-        }, outline)
-        this.doubleSided = false
-        continue
-      }
-      if (building.observed || building.roadview || (building.inferred && building.detail === 'featured')) {
-        this.buildObservedBuilding(building, outline)
-        continue
-      }
-      const center: [number, number] = [
-        building.outline.reduce((sum, [x]) => sum + x, 0) / building.outline.length,
-        building.outline.reduce((sum, [, z]) => sum + z, 0) / building.outline.length,
-      ]
-      const streetDistance = nearestStreet(center).distanceMeters
-      if (streetDistance > 75) {
-        // 거리에서 먼 건물은 첫 화면을 먼저 띄운 뒤 나눠서 만듭니다(scheduleDistrictBuild).
-        this.pendingDistrict.push({ building, outline, distance: streetDistance })
-        continue
-      }
-      if (building.detail === 'context' || building.id !== 1469906540) {
-        this.buildContextBuilding(building, outline)
-        continue
-      }
-      const { heightMeters: height, wallColor, roofColor, accentColor } = building
-      this.detailedRoof(roofColor, wallColor, outline, height, building.id, building.roofStyle)
-      const centerX = outline.reduce((sum, point) => sum + point[0], 0) / outline.length
-      const centerZ = outline.reduce((sum, point) => sum + point[1], 0) / outline.length
-
-      let facadeIndex = -1
-      let facadeDistance = Infinity
-      for (let index = 0; index < outline.length; index++) {
-        const a = outline[index]
-        const b = outline[(index + 1) % outline.length]
-        const length = Math.hypot(b[0] - a[0], b[1] - a[1])
-        const midpoint: [number, number] = [
-          (building.outline[index][0] + building.outline[(index + 1) % outline.length][0]) / 2,
-          (building.outline[index][1] + building.outline[(index + 1) % outline.length][1]) / 2,
-        ]
-        const distance = nearestStreet(midpoint).distanceMeters
-        if (length >= 2.1 && distance < facadeDistance) {
-          facadeDistance = distance
-          facadeIndex = index
-        }
-      }
-
-      for (let index = 0; index < outline.length; index++) {
-        const [ax, az] = outline[index]
-        const [bx, bz] = outline[(index + 1) % outline.length]
-        const dx = bx - ax
-        const dz = bz - az
-        const length = Math.hypot(dx, dz)
-        if (length < 0.18) continue
-        const x = (ax + bx) / 2
-        const z = (az + bz) / 2
-        const rotation = -Math.atan2(dz, dx)
-        const outwardX = x - centerX
-        const outwardZ = z - centerZ
-        const outwardLength = Math.hypot(outwardX, outwardZ) || 1
-        const outerNx = outwardX / outwardLength
-        const outerNz = outwardZ / outwardLength
-        this.box(wallColor, length, height, 0.16, x, height / 2, z, rotation, false,
-          building.brickFacade ? 'lane-brick' : 'lane-plaster')
-        this.box(this.shade(wallColor, 0.7), length, 0.43, 0.19, x, 0.25, z, rotation)
-        this.box(this.shade(wallColor, 0.8), length, 0.16, 0.2, x, height - 0.09, z, rotation)
-        for (let band = 3.25; band < height - 0.5; band += 2.65) {
-          this.box(this.shade(wallColor, 0.83), length, 0.075, 0.2, x, band, z, rotation)
-        }
-        if (building.brickFacade && length > 1.5) {
-          const grout = this.shade(wallColor, 0.72)
-          for (let course = 0.63, row = 0; course < height - 0.24; course += 0.31, row++) {
-            this.box(grout, length, 0.012, 0.19, x, course, z, rotation)
-            if (index === facadeIndex) for (let offset = -length / 2 + 0.5 + row % 2 * 0.48; offset < length / 2 - 0.14; offset += 0.96) {
-              this.box(grout, 0.018, 0.3, 0.19,
-                x + dx / length * offset, course + 0.16,
-                z + dz / length * offset, rotation)
-            }
-          }
-        }
-        if (index !== facadeIndex || facadeDistance > 12) {
-          if (length > 3.2) {
-            const sideX = x + outerNx * 0.12
-            const sideZ = z + outerNz * 0.12
-            const count = Math.min(3, Math.max(1, Math.floor(length / 2.7)))
-            for (let story = 0; 4.15 + story * 2.65 < height - 0.75; story++) {
-              for (let pane = 0; pane < count; pane++) {
-                const offset = (pane - (count - 1) / 2) * Math.min(2.7, length / count)
-                const wx = sideX + dx / length * offset
-                const wz = sideZ + dz / length * offset
-                this.framedWindow(wx, 4.15 + story * 2.65, wz, rotation, outerNx, outerNz, 0.82, 1.06, !building.brickFacade)
-              }
-            }
-          }
-          continue
-        }
-
-        const nearest = nearestStreet([
-          (building.outline[index][0] + building.outline[(index + 1) % outline.length][0]) / 2,
-          (building.outline[index][1] + building.outline[(index + 1) % outline.length][1]) / 2,
-        ])
-        const towardX = nearest.point[0] - x
-        const towardZ = nearest.point[1] - z
-        const normalLength = Math.hypot(towardX, towardZ) || 1
-        const nx = towardX / normalLength
-        const nz = towardZ / normalLength
-        const faceX = x + nx * 0.12
-        const faceZ = z + nz * 0.12
-        const glassWidth = Math.min(length - 0.55, 5.5)
-        if (building.storefront && glassWidth > 1.5) {
-          const frameColor = building.brickFacade ? 0x353e3e : 0xe5e7de
-          this.box(frameColor, glassWidth + 0.18, 2.33, 0.07, faceX, 1.57, faceZ, rotation)
-          if (building.shopfrontStyle === 'shutter') {
-            this.box(0x71838a, glassWidth - 0.1, 2.12, 0.08, faceX + nx * 0.07, 1.51, faceZ + nz * 0.07, rotation)
-            for (let rail = 0.58; rail < 2.57; rail += 0.23) {
-              this.box(0x9caaad, glassWidth - 0.1, 0.025, 0.105, faceX + nx * 0.08, rail, faceZ + nz * 0.08, rotation)
-            }
-            for (const edge of [-1, 1]) this.box(0x506166, 0.12, 2.2, 0.14,
-              faceX + dx / length * glassWidth * 0.5 * edge, 1.51,
-              faceZ + dz / length * glassWidth * 0.5 * edge, rotation)
-          } else {
-            this.box(0x405e66, glassWidth - 0.12, 2.12, 0.055, faceX + nx * 0.06, 1.55, faceZ + nz * 0.06, rotation, true)
-            this.box(0x9bb8b9, glassWidth * 0.65, 0.35, 0.015, faceX + nx * 0.095, 1.98, faceZ + nz * 0.095, rotation, true)
-            for (const fraction of [-0.22, 0, 0.22]) {
-              this.box(frameColor, 0.065, 2.18, 0.12,
-                faceX + dx / length * glassWidth * fraction + nx * 0.08, 1.55,
-                faceZ + dz / length * glassWidth * fraction + nz * 0.08, rotation)
-            }
-            this.box(frameColor, glassWidth, 0.06, 0.12, faceX + nx * 0.08, 1.17, faceZ + nz * 0.08, rotation)
-          }
-          const doorOffset = glassWidth > 3.7 ? glassWidth * 0.34 : 0
-          this.shopDoor(faceX + dx / length * doorOffset + nx * 0.12,
-            faceZ + dz / length * doorOffset + nz * 0.12, rotation, nx, nz,
-            building.shopfrontStyle === 'shutter')
-          const signWidth = Math.min(length - 0.24, 6.2)
-          this.box(this.shade(accentColor, 0.58), signWidth + 0.12, 0.54, 0.12, faceX, 2.99, faceZ, rotation)
-          this.box(accentColor, signWidth, 0.39, 0.14, faceX + nx * 0.075, 3, faceZ + nz * 0.075, rotation)
-          this.box(accentColor, signWidth, 0.09, 0.9, x + nx * 0.5, 2.69, z + nz * 0.5, rotation)
-          for (let stripe = -signWidth / 2 + 0.32; stripe < signWidth / 2; stripe += 0.64) {
-            this.box(0xe9e3d0, 0.27, 0.018, 0.84,
-              x + dx / length * stripe + nx * 0.5, 2.745,
-              z + dz / length * stripe + nz * 0.5, rotation)
-          }
-        } else if (glassWidth > 1.3) {
-          this.framedWindow(faceX, 1.9, faceZ, rotation, nx, nz, Math.min(glassWidth, 2.5), 1.14, true)
-          if (length > 3.5) {
-            const doorX = faceX + dx / length * Math.min(1.65, length * 0.3)
-            const doorZ = faceZ + dz / length * Math.min(1.65, length * 0.3)
-            this.shopDoor(doorX, doorZ, rotation, nx, nz, false)
-          }
-        }
-        const upperStories = Math.floor((height - 0.7) / 2.65) - 1
-        const count = Math.max(1, Math.min(4, Math.floor(length / 2.2)))
-        for (let story = 0; story < upperStories; story++) {
-          const y = 4.15 + story * 2.65
-          for (let pane = 0; pane < count; pane++) {
-            const offset = (pane - (count - 1) / 2) * Math.min(2.2, (length - 0.8) / count)
-            const wx = faceX + dx / length * offset
-            const wz = faceZ + dz / length * offset
-            this.framedWindow(wx, y, wz, rotation, nx, nz, 0.98, 1.25, !building.brickFacade)
-          }
-          if (building.id % 4 === 0 && length > 4.2) {
-            const balconyY = y - 0.81
-            this.box(0xd8d6cb, Math.min(length - 0.6, 4.3), 0.12, 0.74, faceX + nx * 0.38, balconyY, faceZ + nz * 0.38, rotation)
-            const railWidth = Math.min(length - 0.7, 4.2)
-            for (let rail = -railWidth / 2; rail <= railWidth / 2 + 0.01; rail += 0.7) {
-              this.box(0x667675, 0.045, 0.75, 0.045,
-                faceX + dx / length * rail + nx * 0.76, balconyY + 0.39,
-                faceZ + dz / length * rail + nz * 0.76, rotation)
-            }
-            this.box(0x667675, railWidth, 0.05, 0.05, faceX + nx * 0.76, balconyY + 0.78, faceZ + nz * 0.76, rotation)
-          }
-        }
-      }
+      const [cx, cz] = outlineCenter(outline)
+      const distance = Math.hypot(cx - focus[0], cz - focus[1])
+      if (building.id === ARTIST_WORKSHOP_FOOTPRINT_ID || distance <= FIRST_BUILD_RADIUS) this.buildOne(building, outline)
+      else this.pendingBuildings.push({ building, outline, distance })
     }
+
 
     this.group = 'scene'
     this.buildingContext = null
@@ -2155,8 +1984,211 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
     this.landscape(buildings)
     this.flushSlots()
-    // 가까운 동네부터 채워지도록 거리에서 가까운 순서로 만듭니다.
-    this.pendingDistrict.sort((a, b) => a.distance - b.distance)
+    // 화면에 가까운 건물부터 채워지도록 가까운 순서로 만듭니다.
+    this.pendingBuildings.sort((a, b) => a.distance - b.distance)
+  }
+
+  // 나눠 만들려고 미뤄 둔 건물을 한 번에 모두 만듭니다(지도에 붙지 않은 장면을 채울 때, 테스트).
+  completePendingBuildings() {
+    while (this.pendingBuildings.length) {
+      const next = this.pendingBuildings.shift()!
+      this.buildOne(next.building, next.outline)
+    }
+    this.group = 'scene'
+    this.buildingContext = null
+    this.flushSlots()
+    this.consolidateSlots()
+  }
+
+  // 건물 하나를 만듭니다. 바로 만들 때(build)와 나눠 만들 때(scheduleDistrictBuild) 함께 씁니다.
+  private buildOne(building: StreetBuilding, outline: [number, number][]) {
+    this.group = building.id === ARTIST_WORKSHOP_FOOTPRINT_ID ? 'scene' : this.ringOf(outline)
+    this.buildingContext = { outline, height: building.heightMeters }
+    this.buildingBase = this.terrainBuildingBase(outline)
+    this.currentBuilding = -1
+    this.addTerrainFoundation(outline)
+    if (building.concept) {
+      this.doubleSided = true
+      this.buildConceptBuilding(building, outline)
+      this.doubleSided = false
+      return
+    }
+    if (building.id === ARTIST_WORKSHOP_FOOTPRINT_ID) {
+      this.doubleSided = true
+      buildArtistWorkshopModel({
+        box: this.box.bind(this), beam: this.beam.bind(this), roof: this.roof.bind(this),
+        geometry: this.addFinishedGeometry.bind(this),
+      }, outline)
+      this.doubleSided = false
+      return
+    }
+    if (building.observed || building.roadview || (building.inferred && building.detail === 'featured')) {
+      this.buildObservedBuilding(building, outline)
+      return
+    }
+    const center: [number, number] = [
+      building.outline.reduce((sum, [x]) => sum + x, 0) / building.outline.length,
+      building.outline.reduce((sum, [, z]) => sum + z, 0) / building.outline.length,
+    ]
+    const streetDistance = nearestStreet(center).distanceMeters
+    if (streetDistance > 75) {
+      // 거리에서 먼 건물은 창과 장식을 줄인 간단한 모양으로 만듭니다.
+      this.buildDistrictBuilding(building, outline)
+      return
+    }
+    if (building.detail === 'context' || building.id !== 1469906540) {
+      this.buildContextBuilding(building, outline)
+      return
+    }
+    const { heightMeters: height, wallColor, roofColor, accentColor } = building
+    this.detailedRoof(roofColor, wallColor, outline, height, building.id, building.roofStyle)
+    const centerX = outline.reduce((sum, point) => sum + point[0], 0) / outline.length
+    const centerZ = outline.reduce((sum, point) => sum + point[1], 0) / outline.length
+
+    let facadeIndex = -1
+    let facadeDistance = Infinity
+    for (let index = 0; index < outline.length; index++) {
+      const a = outline[index]
+      const b = outline[(index + 1) % outline.length]
+      const length = Math.hypot(b[0] - a[0], b[1] - a[1])
+      const midpoint: [number, number] = [
+        (building.outline[index][0] + building.outline[(index + 1) % outline.length][0]) / 2,
+        (building.outline[index][1] + building.outline[(index + 1) % outline.length][1]) / 2,
+      ]
+      const distance = nearestStreet(midpoint).distanceMeters
+      if (length >= 2.1 && distance < facadeDistance) {
+        facadeDistance = distance
+        facadeIndex = index
+      }
+    }
+
+    for (let index = 0; index < outline.length; index++) {
+      const [ax, az] = outline[index]
+      const [bx, bz] = outline[(index + 1) % outline.length]
+      const dx = bx - ax
+      const dz = bz - az
+      const length = Math.hypot(dx, dz)
+      if (length < 0.18) continue
+      const x = (ax + bx) / 2
+      const z = (az + bz) / 2
+      const rotation = -Math.atan2(dz, dx)
+      const outwardX = x - centerX
+      const outwardZ = z - centerZ
+      const outwardLength = Math.hypot(outwardX, outwardZ) || 1
+      const outerNx = outwardX / outwardLength
+      const outerNz = outwardZ / outwardLength
+      this.box(wallColor, length, height, 0.16, x, height / 2, z, rotation, false,
+        building.brickFacade ? 'lane-brick' : 'lane-plaster')
+      this.box(this.shade(wallColor, 0.7), length, 0.43, 0.19, x, 0.25, z, rotation)
+      this.box(this.shade(wallColor, 0.8), length, 0.16, 0.2, x, height - 0.09, z, rotation)
+      for (let band = 3.25; band < height - 0.5; band += 2.65) {
+        this.box(this.shade(wallColor, 0.83), length, 0.075, 0.2, x, band, z, rotation)
+      }
+      if (building.brickFacade && length > 1.5) {
+        const grout = this.shade(wallColor, 0.72)
+        for (let course = 0.63, row = 0; course < height - 0.24; course += 0.31, row++) {
+          this.box(grout, length, 0.012, 0.19, x, course, z, rotation)
+          if (index === facadeIndex) for (let offset = -length / 2 + 0.5 + row % 2 * 0.48; offset < length / 2 - 0.14; offset += 0.96) {
+            this.box(grout, 0.018, 0.3, 0.19,
+              x + dx / length * offset, course + 0.16,
+              z + dz / length * offset, rotation)
+          }
+        }
+      }
+      if (index !== facadeIndex || facadeDistance > 12) {
+        if (length > 3.2) {
+          const sideX = x + outerNx * 0.12
+          const sideZ = z + outerNz * 0.12
+          const count = Math.min(3, Math.max(1, Math.floor(length / 2.7)))
+          for (let story = 0; 4.15 + story * 2.65 < height - 0.75; story++) {
+            for (let pane = 0; pane < count; pane++) {
+              const offset = (pane - (count - 1) / 2) * Math.min(2.7, length / count)
+              const wx = sideX + dx / length * offset
+              const wz = sideZ + dz / length * offset
+              this.framedWindow(wx, 4.15 + story * 2.65, wz, rotation, outerNx, outerNz, 0.82, 1.06, !building.brickFacade)
+            }
+          }
+        }
+        continue
+      }
+
+      const nearest = nearestStreet([
+        (building.outline[index][0] + building.outline[(index + 1) % outline.length][0]) / 2,
+        (building.outline[index][1] + building.outline[(index + 1) % outline.length][1]) / 2,
+      ])
+      const towardX = nearest.point[0] - x
+      const towardZ = nearest.point[1] - z
+      const normalLength = Math.hypot(towardX, towardZ) || 1
+      const nx = towardX / normalLength
+      const nz = towardZ / normalLength
+      const faceX = x + nx * 0.12
+      const faceZ = z + nz * 0.12
+      const glassWidth = Math.min(length - 0.55, 5.5)
+      if (building.storefront && glassWidth > 1.5) {
+        const frameColor = building.brickFacade ? 0x353e3e : 0xe5e7de
+        this.box(frameColor, glassWidth + 0.18, 2.33, 0.07, faceX, 1.57, faceZ, rotation)
+        if (building.shopfrontStyle === 'shutter') {
+          this.box(0x71838a, glassWidth - 0.1, 2.12, 0.08, faceX + nx * 0.07, 1.51, faceZ + nz * 0.07, rotation)
+          for (let rail = 0.58; rail < 2.57; rail += 0.23) {
+            this.box(0x9caaad, glassWidth - 0.1, 0.025, 0.105, faceX + nx * 0.08, rail, faceZ + nz * 0.08, rotation)
+          }
+          for (const edge of [-1, 1]) this.box(0x506166, 0.12, 2.2, 0.14,
+            faceX + dx / length * glassWidth * 0.5 * edge, 1.51,
+            faceZ + dz / length * glassWidth * 0.5 * edge, rotation)
+        } else {
+          this.box(0x405e66, glassWidth - 0.12, 2.12, 0.055, faceX + nx * 0.06, 1.55, faceZ + nz * 0.06, rotation, true)
+          this.box(0x9bb8b9, glassWidth * 0.65, 0.35, 0.015, faceX + nx * 0.095, 1.98, faceZ + nz * 0.095, rotation, true)
+          for (const fraction of [-0.22, 0, 0.22]) {
+            this.box(frameColor, 0.065, 2.18, 0.12,
+              faceX + dx / length * glassWidth * fraction + nx * 0.08, 1.55,
+              faceZ + dz / length * glassWidth * fraction + nz * 0.08, rotation)
+          }
+          this.box(frameColor, glassWidth, 0.06, 0.12, faceX + nx * 0.08, 1.17, faceZ + nz * 0.08, rotation)
+        }
+        const doorOffset = glassWidth > 3.7 ? glassWidth * 0.34 : 0
+        this.shopDoor(faceX + dx / length * doorOffset + nx * 0.12,
+          faceZ + dz / length * doorOffset + nz * 0.12, rotation, nx, nz,
+          building.shopfrontStyle === 'shutter')
+        const signWidth = Math.min(length - 0.24, 6.2)
+        this.box(this.shade(accentColor, 0.58), signWidth + 0.12, 0.54, 0.12, faceX, 2.99, faceZ, rotation)
+        this.box(accentColor, signWidth, 0.39, 0.14, faceX + nx * 0.075, 3, faceZ + nz * 0.075, rotation)
+        this.box(accentColor, signWidth, 0.09, 0.9, x + nx * 0.5, 2.69, z + nz * 0.5, rotation)
+        for (let stripe = -signWidth / 2 + 0.32; stripe < signWidth / 2; stripe += 0.64) {
+          this.box(0xe9e3d0, 0.27, 0.018, 0.84,
+            x + dx / length * stripe + nx * 0.5, 2.745,
+            z + dz / length * stripe + nz * 0.5, rotation)
+        }
+      } else if (glassWidth > 1.3) {
+        this.framedWindow(faceX, 1.9, faceZ, rotation, nx, nz, Math.min(glassWidth, 2.5), 1.14, true)
+        if (length > 3.5) {
+          const doorX = faceX + dx / length * Math.min(1.65, length * 0.3)
+          const doorZ = faceZ + dz / length * Math.min(1.65, length * 0.3)
+          this.shopDoor(doorX, doorZ, rotation, nx, nz, false)
+        }
+      }
+      const upperStories = Math.floor((height - 0.7) / 2.65) - 1
+      const count = Math.max(1, Math.min(4, Math.floor(length / 2.2)))
+      for (let story = 0; story < upperStories; story++) {
+        const y = 4.15 + story * 2.65
+        for (let pane = 0; pane < count; pane++) {
+          const offset = (pane - (count - 1) / 2) * Math.min(2.2, (length - 0.8) / count)
+          const wx = faceX + dx / length * offset
+          const wz = faceZ + dz / length * offset
+          this.framedWindow(wx, y, wz, rotation, nx, nz, 0.98, 1.25, !building.brickFacade)
+        }
+        if (building.id % 4 === 0 && length > 4.2) {
+          const balconyY = y - 0.81
+          this.box(0xd8d6cb, Math.min(length - 0.6, 4.3), 0.12, 0.74, faceX + nx * 0.38, balconyY, faceZ + nz * 0.38, rotation)
+          const railWidth = Math.min(length - 0.7, 4.2)
+          for (let rail = -railWidth / 2; rail <= railWidth / 2 + 0.01; rail += 0.7) {
+            this.box(0x667675, 0.045, 0.75, 0.045,
+              faceX + dx / length * rail + nx * 0.76, balconyY + 0.39,
+              faceZ + dz / length * rail + nz * 0.76, rotation)
+          }
+          this.box(0x667675, railWidth, 0.05, 0.05, faceX + nx * 0.76, balconyY + 0.78, faceZ + nz * 0.76, rotation)
+        }
+      }
+    }
   }
 
   // 모아 둔 도형을 재질별로 하나의 메시로 합쳐 장면에 넣습니다.
@@ -2258,31 +2290,27 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const step = () => {
       if (!this.map) return
       const deadline = performance.now() + 12
-      while (this.pendingDistrict.length && performance.now() < deadline) {
-        const next = this.pendingDistrict.shift()!
-        this.group = this.ringOf(next.outline)
-        this.buildingContext = { outline: next.outline, height: next.building.heightMeters }
-        this.buildingBase = this.terrainBuildingBase(next.outline)
-        this.currentBuilding = -1
-        this.addTerrainFoundation(next.outline)
-        this.buildDistrictBuilding(next.building, next.outline)
+      while (this.pendingBuildings.length && performance.now() < deadline) {
+        const next = this.pendingBuildings.shift()!
+        this.buildOne(next.building, next.outline)
         sinceFlush++
       }
       this.group = 'scene'
-      if (sinceFlush >= 300 || !this.pendingDistrict.length) {
+      this.buildingContext = null
+      if (sinceFlush >= 300 || !this.pendingBuildings.length) {
         // 새 메시는 이미 고리 묶음 안에 들어가므로, 숨긴 상태면 함께 숨겨진 채로 붙습니다.
         this.flushSlots()
         // 새로 붙은 먼 동네 건물도 길을 가리는지 다시 봅니다.
         this.scheduleOcclusion()
         sinceFlush = 0
         // 그림자 지도는 전체 장면을 한 번 더 그려야 해서 무겁습니다. 먼 동네를 다 붙인 뒤 한 번만 다시 계산합니다.
-        if (!this.pendingDistrict.length) {
+        if (!this.pendingBuildings.length) {
           this.shadowsBaked = false
           this.consolidateSlots()
         }
         this.map.triggerRepaint()
       }
-      if (this.pendingDistrict.length) setTimeout(step, 0)
+      if (this.pendingBuildings.length) setTimeout(step, 0)
       else performance.measure(DISTRICT_BUILD_MEASURE, { start: started, end: performance.now() })
     }
     setTimeout(step, 0)
@@ -2292,7 +2320,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.map = map
     // 그래픽 연결이 다시 붙어 층을 다시 추가한 경우에도 그림자 지도를 새로 계산합니다.
     this.shadowsBaked = false
-    if (this.pendingDistrict.length) this.scheduleDistrictBuild()
+    if (this.pendingBuildings.length) this.scheduleDistrictBuild()
     map.on('moveend', this.scheduleOcclusion)
     this.scheduleOcclusion()
     this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true })

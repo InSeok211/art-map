@@ -326,7 +326,8 @@ export function GamcheonMap({
     // 3D 거리를 (다시) 만듭니다. 지형을 넘기면 건물·길을 언덕 높이에 맞추고 바탕 지도에도 지형을 켭니다.
     const createStreetLayer = (terrain?: TerrainSampler) => {
       if (streetLayer && map.getLayer(streetLayer.id)) map.removeLayer(streetLayer.id)
-      streetLayer = new StreetSceneLayer({ terrain })
+      // 지금 화면 중심 근처 건물부터 만들어 3D 거리를 빨리 띄웁니다.
+      streetLayer = new StreetSceneLayer({ terrain, focus: map.getCenter().toArray() as [number, number] })
       streetLayer.setOtherBuildingsHidden(workshopOnlyRef.current, false)
       streetLayer.setBuildingOpacity(modelsSeeThroughRef.current ? SEE_THROUGH_OPACITY : 1)
       streetLayerRef.current = streetLayer
