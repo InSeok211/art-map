@@ -138,6 +138,8 @@ export function greenHouseOsmPlacement() {
 // 골목길 포장 색(따뜻한 베이지)
 const ALLEY_PAVING_COLOR = 0xead2ad
 
+// 바닥 무늬(돌·포장 질감) 한 장이 덮는 크기(m)
+const GROUND_TEXTURE_METERS = 20
 // 3D 지형에서 바닥(길·포장)을 지형 위로 띄우는 높이(m). 바탕 지도의 지형 면과 겹쳐 깜빡이지 않게 합니다.
 const TERRAIN_GROUND_LIFT = 0.35
 const TERRAIN_BUILDING_CLEARANCE = TERRAIN_GROUND_LIFT + 0.12
@@ -149,6 +151,32 @@ const TERRAIN_GROUND_ORDER: Partial<Record<ConceptSurface, number>> = {
 }
 // 배포 뒤 새로 추가한 골목길(따로 그리는 띠): 돌 포장 위, 차도 아래
 const TERRAIN_EXTRA_ALLEY_ORDER = [-0.78, -0.76]
+
+// 장면 미터 다각형(바깥 고리 + 구멍 고리들)을 높이 y에 눕힌 납작한 도형으로 만듭니다. 바닥 무늬처럼 질감 한
+// 장이 여러 m를 덮어야 하면 uvMeters(질감 한 장의 크기, m)를 줍니다. closeOuter: 바깥 고리를 닫아 그립니다(지붕).
+// 닫느냐에 따라 삼각형 나누는 방식이 달라지므로 예전 결과를 그대로 유지하려고 따로 둡니다.
+type PlanePolygon = readonly (readonly [number, number][])[]
+export const isDrawablePolygon = (polygon: PlanePolygon) => (polygon[0]?.length ?? 0) >= 4
+export function flatPolygonGeometry(polygon: PlanePolygon, y = 0, uvMeters?: number, closeOuter = false) {
+  const trace = (path: THREE.Path, ring: readonly [number, number][]) =>
+    ring.forEach(([x, z], index) => index === 0 ? path.moveTo(x, -z) : path.lineTo(x, -z))
+  const shape = new THREE.Shape()
+  trace(shape, polygon[0])
+  if (closeOuter) shape.closePath()
+  for (const ring of polygon.slice(1)) {
+    const hole = new THREE.Path()
+    trace(hole, ring)
+    shape.holes.push(hole)
+  }
+  const geometry = new THREE.ShapeGeometry(shape)
+  if (uvMeters) {
+    const uv = geometry.getAttribute('uv')
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / uvMeters, uv.getY(i) / uvMeters)
+  }
+  geometry.rotateX(-Math.PI / 2)
+  geometry.translate(0, y, 0)
+  return geometry
+}
 
 // 평평하게 만든 바닥 도형을 지형에 얹습니다. 긴 변을 maxEdge(m) 이하로 나눈 뒤 꼭짓점마다 지형 높이를 더합니다.
 // (넓은 도로 면을 그대로 올리면 큰 삼각형이 비탈을 가로질러 땅속으로 파고들기 때문입니다.)
@@ -729,21 +757,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
         [unionRoadAreas(roadOutlines(runs)), 0.062, ALLEY_PAVING_COLOR],
       ]
       for (const [polygons, y, color] of layers) {
-        const geometries = polygons.filter((polygon) => polygon[0]?.length >= 4).map((polygon) => {
-          const shape = new THREE.Shape()
-          polygon[0].forEach(([x, z], index) => index === 0 ? shape.moveTo(x, -z) : shape.lineTo(x, -z))
-          for (const ring of polygon.slice(1)) {
-            const hole = new THREE.Path()
-            ring.forEach(([x, z], index) => index === 0 ? hole.moveTo(x, -z) : hole.lineTo(x, -z))
-            shape.holes.push(hole)
-          }
-          const geometry = new THREE.ShapeGeometry(shape)
-          const uv = geometry.getAttribute('uv')
-          for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / 20, uv.getY(i) / 20)
-          geometry.rotateX(-Math.PI / 2)
-          geometry.translate(0, y, 0)
-          return geometry
-        })
+        const geometries = polygons.filter(isDrawablePolygon).map((polygon) => flatPolygonGeometry(polygon, y, GROUND_TEXTURE_METERS))
         if (!geometries.length) continue
         const placed = geometries.map((geometry) => this.onTerrain(geometry))
         const mesh = new THREE.Mesh(mergeGeometries(placed), new THREE.MeshLambertMaterial({ color, map: this.extraAlleyTexture, depthWrite: !this.terrain }))
@@ -793,31 +807,12 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   private roof(color: number, outline: [number, number][], height: number, surface?: ConceptSurface) {
-    const shape = new THREE.Shape()
-    outline.forEach(([x, z], index) => index === 0 ? shape.moveTo(x, -z) : shape.lineTo(x, -z))
-    shape.closePath()
-    const geometry = new THREE.ShapeGeometry(shape)
-    geometry.rotateX(-Math.PI / 2)
-    geometry.translate(0, height + 0.05, 0)
-    this.addGeometry(color, geometry, false, surface)
+    this.addGeometry(color, flatPolygonGeometry([outline], height + 0.05, undefined, true), false, surface)
   }
 
   private roadArea(polygons: polygonClipping.MultiPolygon, y: number, color: number, surface?: ConceptSurface) {
     for (const polygon of polygons) {
-      if (!polygon[0] || polygon[0].length < 4) continue
-      const shape = new THREE.Shape()
-      polygon[0].forEach(([x, z], index) => index === 0 ? shape.moveTo(x, -z) : shape.lineTo(x, -z))
-      for (const ring of polygon.slice(1)) {
-        const hole = new THREE.Path()
-        ring.forEach(([x, z], index) => index === 0 ? hole.moveTo(x, -z) : hole.lineTo(x, -z))
-        shape.holes.push(hole)
-      }
-      const geometry = new THREE.ShapeGeometry(shape)
-      const uv = geometry.getAttribute('uv')
-      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / 20, uv.getY(i) / 20)
-      geometry.rotateX(-Math.PI / 2)
-      geometry.translate(0, y, 0)
-      this.addGeometry(color, geometry, false, surface)
+      if (isDrawablePolygon(polygon)) this.addGeometry(color, flatPolygonGeometry(polygon, y, GROUND_TEXTURE_METERS), false, surface)
     }
   }
 
@@ -2420,19 +2415,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
       // 흰 테두리 위에 파란 선(바탕 지도의 경로 선과 같은 색)
       for (const [width, color, order] of [[casing, 0xffffff, 7], [line, 0x2f6fd6, 8]] as const) {
         const geometries = unionRoadAreas(roadOutlines([{ points, width, type: 'route', gaps: [] }]))
-          .filter((polygon) => polygon[0]?.length >= 4)
-          .map((polygon) => {
-            const shape = new THREE.Shape()
-            polygon[0].forEach(([x, z], index) => index === 0 ? shape.moveTo(x, -z) : shape.lineTo(x, -z))
-            for (const ring of polygon.slice(1)) {
-              const hole = new THREE.Path()
-              ring.forEach(([x, z], index) => index === 0 ? hole.moveTo(x, -z) : hole.lineTo(x, -z))
-              shape.holes.push(hole)
-            }
-            const geometry = new THREE.ShapeGeometry(shape)
-            geometry.rotateX(-Math.PI / 2)
-            return drapeOnTerrain(geometry, terrain, TERRAIN_GROUND_LIFT + 0.6, Math.max(3, width / 2))
-          })
+          .filter(isDrawablePolygon)
+          .map((polygon) => drapeOnTerrain(flatPolygonGeometry(polygon), terrain, TERRAIN_GROUND_LIFT + 0.6, Math.max(3, width / 2)))
         if (!geometries.length) continue
         const mesh = new THREE.Mesh(mergeGeometries(geometries), new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false }))
         geometries.forEach((geometry) => geometry.dispose())

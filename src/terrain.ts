@@ -4,6 +4,8 @@
 // 고도: Terrain Tiles(Mapzen/Tilezen, AWS Open Data) — SRTM·GMTED2010(미국 지질조사국), ETOPO1(NOAA).
 // 바탕 지도의 MapLibre 지형도 같은 타일(TERRAIN_TILE_URL)을 써서 두 높이가 맞습니다.
 
+import { outlineCenter } from './planGeometry'
+
 export const TERRAIN_TILE_URL = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'
 export const TERRAIN_ATTRIBUTION = '지형: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a> (USGS SRTM·GMTED2010, NOAA ETOPO1)'
 
@@ -40,26 +42,15 @@ export class TerrainSampler {
     return (at(col, row) * (1 - tx) + at(col + 1, row) * tx) * (1 - tz) + (at(col, row + 1) * (1 - tx) + at(col + 1, row + 1) * tx) * tz
   }
 
-  // 윤곽에서 가장 낮은 지형 높이입니다. 경사 차이나 기초 벽의 높이를 계산할 때 사용합니다.
-  lowest(outline: [number, number][]) {
-    let low = Infinity, sx = 0, sz = 0
-    for (const [x, z] of outline) {
-      low = Math.min(low, this.height(x, z))
-      sx += x; sz += z
-    }
-    return outline.length ? Math.min(low, this.height(sx / outline.length, sz / outline.length)) : 0
-  }
-
-  // 건물 바닥이 비탈 위쪽 땅에 묻히지 않도록 윤곽과 각 변의 가운데에서 가장 높은 지점을 찾습니다.
+  // 건물 바닥이 비탈 위쪽 땅에 묻히지 않도록 윤곽의 꼭짓점·각 변의 가운데·한가운데 중 가장 높은 땅 높이를
+  // 찾습니다(낮은 쪽은 StreetSceneLayer가 기초 벽으로 땅까지 잇습니다).
   highest(outline: [number, number][]) {
     if (!outline.length) return 0
-    let high = -Infinity, sx = 0, sz = 0
-    outline.forEach(([x, z], index) => {
+    const edgeMiddles = outline.map(([x, z], index): [number, number] => {
       const [nextX, nextZ] = outline[(index + 1) % outline.length]
-      high = Math.max(high, this.height(x, z), this.height((x + nextX) / 2, (z + nextZ) / 2))
-      sx += x; sz += z
+      return [(x + nextX) / 2, (z + nextZ) / 2]
     })
-    return Math.max(high, this.height(sx / outline.length, sz / outline.length))
+    return Math.max(...[...outline, ...edgeMiddles, outlineCenter(outline)].map(([x, z]) => this.height(x, z)))
   }
 }
 

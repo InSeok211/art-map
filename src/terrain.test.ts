@@ -22,10 +22,6 @@ describe('terrain sampler', () => {
     expect(sampler.height(80, 3)).toBeCloseTo(20, 0)
   })
 
-  it('stands a building at its lowest corner', () => {
-    expect(sampler.lowest([[2, 2], [8, 2], [8, 8], [2, 8]])).toBeCloseTo(4)
-  })
-
   it('finds the highest ground around a building so its floor clears the slope', () => {
     expect(sampler.highest([[2, 2], [8, 2], [8, 8], [2, 8]])).toBeCloseTo(16)
     expect(sampler.highest([])).toBe(0)

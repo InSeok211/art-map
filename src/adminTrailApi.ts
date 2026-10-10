@@ -11,8 +11,10 @@ export async function isSiteAdmin() {
   }
 }
 
+const TRAILS_API = '/api/admin/gps-trails'
+
 export async function postTrail(trail: GpsTrail, keepalive = false) {
-  const response = await fetch('/api/admin/gps-trails', {
+  const response = await fetch(TRAILS_API, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(trail),
@@ -20,4 +22,9 @@ export async function postTrail(trail: GpsTrail, keepalive = false) {
   })
   if (!response.ok) throw new Error(String(response.status))
   return response
+}
+
+export async function deleteTrail(id: string) {
+  const response = await fetch(`${TRAILS_API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error(String(response.status))
 }

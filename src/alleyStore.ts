@@ -4,7 +4,7 @@ import type { Alley, LngLat } from './alleys'
 import { sanitizeTrails } from './gpsTrails'
 import type { GpsTrail } from './gpsTrails'
 import type { GpsTrailStore } from './useAlleyFinder'
-import { postTrail } from './adminTrailApi'
+import { deleteTrail, postTrail } from './adminTrailApi'
 import { useAutoTrailRecorder } from './useAutoTrailRecorder'
 
 // 관리자 골목지도 작업실의 골목길·GPS 기록 저장소입니다.
@@ -37,6 +37,8 @@ async function json(response: Response) {
   if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error(String(response.status))
   return response.json() as Promise<Record<string, unknown>>
 }
+
+const putTrail = (trails: GpsTrail[], trail: GpsTrail) => [...trails.filter((item) => item.id !== trail.id), trail]
 
 export function useAlleyStore() {
   const [alleys, setAlleys] = useState<Alley[]>(() => readLocal(ALLEYS_KEY, sanitizeAlleys, []))
@@ -103,31 +105,35 @@ export function useAlleyStore() {
     scheduleSave()
   }
 
+  // 기록을 저장합니다(수동 기록·자동 기록 공통). 홈페이지에서는 올린 뒤 서버가 정리해 돌려준 기록(범위 밖 점 제외)으로
+  // 목록을 바꾸고, 개발 미리보기에서는 이 브라우저에 둡니다. 같은 번호의 기록은 새것으로 바꿉니다.
+  async function saveTrail(trail: GpsTrail, keepalive = false) {
+    if (!server) {
+      setTrails((current) => {
+        const next = putTrail(current, trail)
+        writeLocal(TRAILS_KEY, next)
+        return next
+      })
+      return
+    }
+    const response = await postTrail(trail, keepalive)
+    // 화면을 떠나는 중(keepalive)에는 응답을 읽지 않습니다.
+    if (keepalive) return
+    const [saved] = sanitizeTrails([(await response.json() as { trail?: unknown }).trail])
+    setTrails((current) => putTrail(current, saved ?? trail))
+  }
+
   const gpsTrails: GpsTrailStore = {
     trails,
     dismissed,
-    onRecord: async (trail) => {
-      if (server) {
-        const response = await postTrail(trail)
-        const saved = sanitizeTrails([(await response.json() as { trail?: unknown }).trail])
-        setTrails((current) => [...current.filter((item) => item.id !== trail.id), ...(saved.length ? saved : [trail])])
-      } else {
-        setTrails((current) => {
-          const next = [...current.filter((item) => item.id !== trail.id), trail]
-          writeLocal(TRAILS_KEY, next)
-          return next
-        })
-      }
-    },
+    onRecord: (trail) => saveTrail(trail),
     onDeleteTrail: (id) => {
       setTrails((current) => {
         const next = current.filter((trail) => trail.id !== id)
         if (!server) writeLocal(TRAILS_KEY, next)
         return next
       })
-      if (server) fetch(`${TRAILS_API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
-        .then((response) => { if (!response.ok) throw new Error() })
-        .catch(() => setNotice('기록을 지우지 못했습니다. 새로고침 후 다시 시도해 주세요.'))
+      if (server) deleteTrail(id).catch(() => setNotice('기록을 지우지 못했습니다. 새로고침 후 다시 시도해 주세요.'))
     },
     onDismiss: (line) => {
       const next = [...dismissed, line]
@@ -139,12 +145,7 @@ export function useAlleyStore() {
   }
 
   // 홈페이지(관리자 로그인)에서 열리면 걸은 길을 자동으로 기록해 올리고, 올린 기록을 목록에도 반영합니다.
-  const auto = useAutoTrailRecorder(server, async (trail, { keepalive }) => {
-    const response = await postTrail(trail, keepalive)
-    if (keepalive) return
-    const saved = sanitizeTrails([(await response.json() as { trail?: unknown }).trail])
-    setTrails((current) => [...current.filter((item) => item.id !== trail.id), ...(saved.length ? saved : [trail])])
-  })
+  const auto = useAutoTrailRecorder(server, (trail, { keepalive }) => saveTrail(trail, keepalive))
   if (server) gpsTrails.auto = auto
 
   return { alleys, updateAlleys, gpsTrails, server, notice }
