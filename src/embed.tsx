@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { ARTIST_WORKSHOP_PLACE } from './artistWorkshop'
 import { sanitizeAlleys } from './alleys'
 import type { Alley } from './alleys'
+import { EMPTY_BUILDING_EDITS, sanitizeBuildingEdits } from './buildingEdits'
+import type { BuildingEdits } from './buildingEdits'
 import { isSiteAdmin, postTrail } from './adminTrailApi'
 import { useAutoTrailRecorder } from './useAutoTrailRecorder'
 import { PocketMode } from './PocketMode'
@@ -41,6 +43,26 @@ const post = (message: Record<string, unknown>) =>
   window.parent.postMessage({ source: 'gamcheon-artist-map', ...message }, window.location.origin)
 
 // 관리자가 확인한 골목길(손으로 그린 길과 GPS 기록으로 찾은 길)을 홈페이지에서 받아 옵니다. 못 받으면 빈 목록.
+// 관리자가 고쳐 공개한 건물(높이·색·지붕·숨기기)입니다. 3D 거리를 처음 만들 때 바로 반영하도록 지도 코드를
+// 실행하자마자 받기 시작하고, 받거나 1.5초가 지나면 지도를 띄웁니다(늦게 받아 3D 거리를 다시 만들지 않게).
+const publishedBuildingEdits: Promise<BuildingEdits> = Promise.race([
+  fetch('/api/map-buildings')
+    .then((response) => response.ok && response.headers.get('content-type')?.includes('application/json') ? response.json() : null)
+    .then((body: { edits?: unknown } | null) => sanitizeBuildingEdits(body?.edits))
+    .catch(() => EMPTY_BUILDING_EDITS),
+  new Promise<BuildingEdits>((resolve) => window.setTimeout(() => resolve(EMPTY_BUILDING_EDITS), 1500)),
+])
+
+function useSiteBuildingEdits() {
+  const [edits, setEdits] = useState<BuildingEdits | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    publishedBuildingEdits.then((value) => { if (!cancelled) setEdits(value) })
+    return () => { cancelled = true }
+  }, [])
+  return edits
+}
+
 function useSiteAlleys() {
   const [alleys, setAlleys] = useState<Alley[]>([])
   useEffect(() => {
@@ -83,6 +105,7 @@ function AutoTrailBadge({ recorder }: { recorder: ReturnType<typeof useAutoTrail
 function EmbeddedMap() {
   const [host, setHost] = useState<HostState>({ places: [], selectedId: null, canPick: false })
   const alleys = useSiteAlleys()
+  const buildingEdits = useSiteBuildingEdits()
   const autoTrail = useAdminAutoTrail()
   useEffect(() => {
     const receive = (event: MessageEvent) => {
@@ -99,18 +122,19 @@ function EmbeddedMap() {
     return () => window.removeEventListener('message', receive)
   }, [])
 
-  const map = <EmbeddedMapView host={host} alleys={alleys} />
+  const map = buildingEdits && <EmbeddedMapView host={host} alleys={alleys} buildingEdits={buildingEdits} />
   return <>{map}<AutoTrailBadge recorder={autoTrail} /></>
 }
 
 // 자동 기록 표시가 GPS 점마다 바뀌어도 지도는 다시 그리지 않도록 따로 둡니다.
-const EmbeddedMapView = memo(function EmbeddedMapView({ host, alleys }: { host: HostState; alleys: Alley[] }) {
+const EmbeddedMapView = memo(function EmbeddedMapView({ host, alleys, buildingEdits }: { host: HostState; alleys: Alley[]; buildingEdits: BuildingEdits }) {
   const places = FULL ? [ARTIST_WORKSHOP_PLACE, ...host.places.filter((place) => place.id !== ARTIST_WORKSHOP_PLACE.id)] : host.places
   return <GamcheonMap
     compact={!FULL}
     className={`${FULL ? 'artist-full-map' : 'artist-embed-map'}${SITE_HOSTED ? ' is-site-hosted' : ''}`}
     places={places}
     alleys={alleys}
+    buildingEdits={buildingEdits}
     selectedPlaceId={host.selectedId}
     onPlaceSelect={(place) => post({ type: 'select', id: place.id })}
     onMapClick={host.canPick ? (longitude, latitude) => post({ type: 'pick', longitude, latitude }) : undefined}

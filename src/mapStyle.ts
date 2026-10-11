@@ -28,6 +28,9 @@ export const CANDIDATE_SOURCE_ID = 'gamcheonAlleyCandidates'
 export const TRAIL_LAYER_IDS = ['gps-trails-line', 'alley-candidates-casing', 'alley-candidates-line']
 // '3D 지형'을 켜면 바탕 지도도 이 고도 타일로 언덕을 세웁니다(map.setTerrain). 끄면 타일을 받지 않습니다.
 export const DEM_SOURCE_ID = 'gamcheonDem'
+// 작업실 '건물' 탭: 고른 건물(주황)과 고친 건물(보라, 숨긴 건물은 점선) 윤곽. 3D 층 위로 올립니다.
+export const BUILDING_EDIT_SOURCE_ID = 'gamcheonBuildingEdits'
+export const BUILDING_EDIT_LAYER_IDS = ['building-edit-fill', 'building-edit-line', 'building-edit-hidden-line']
 // 3D 모델이 가리면 모델을 반투명하게 만드는 길 레이어입니다(ModelLayer).
 export const ROAD_LAYER_IDS = [
   'highway_path', 'highway_minor', 'highway_major_inner',
@@ -157,6 +160,32 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       paint: { 'circle-radius': 5, 'circle-color': '#fff', 'circle-stroke-color': '#e78349', 'circle-stroke-width': 2.5 },
     },
     {
+      id: 'building-edit-fill',
+      type: 'fill',
+      source: BUILDING_EDIT_SOURCE_ID,
+      paint: {
+        'fill-color': ['match', ['get', 'state'], 'selected', '#e78349', 'hidden', '#8a8f99', '#6559ff'],
+        'fill-opacity': ['match', ['get', 'state'], 'selected', 0.4, 0.18],
+      },
+    },
+    {
+      id: 'building-edit-line',
+      type: 'line',
+      source: BUILDING_EDIT_SOURCE_ID,
+      filter: ['!=', ['get', 'state'], 'hidden'],
+      paint: {
+        'line-color': ['match', ['get', 'state'], 'selected', '#e0561b', '#5248e6'],
+        'line-width': ['match', ['get', 'state'], 'selected', 3, 2],
+      },
+    },
+    {
+      id: 'building-edit-hidden-line',
+      type: 'line',
+      source: BUILDING_EDIT_SOURCE_ID,
+      filter: ['==', ['get', 'state'], 'hidden'],
+      paint: { 'line-color': '#5d6577', 'line-width': 2, 'line-dasharray': [2, 1.5] },
+    },
+    {
       id: 'gps-trails-line',
       type: 'line',
       source: TRAIL_SOURCE_ID,
@@ -230,6 +259,7 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       [ROUTE_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
       [TRAIL_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
       [CANDIDATE_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
+      [BUILDING_EDIT_SOURCE_ID]: { type: 'geojson', data: EMPTY_COLLECTION },
       [DEM_SOURCE_ID]: { type: 'raster-dem', tiles: [TERRAIN_TILE_URL], encoding: 'terrarium', tileSize: 256, maxzoom: 15, attribution: TERRAIN_ATTRIBUTION },
     },
     layers,

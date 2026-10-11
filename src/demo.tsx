@@ -5,6 +5,7 @@ import type { EditTool } from './GamcheonMap'
 import { ARTIST_WORKSHOP_MODEL, ARTIST_WORKSHOP_PLACE } from './artistWorkshop'
 import { BEAUTIFUL_HANGUL_PLACE } from './beautifulHangul'
 import { useAlleyStore } from './alleyStore'
+import { useBuildingEditStore } from './buildingEditStore'
 import type { Place } from './types'
 import './demo.css'
 import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings } from './streetSceneData'
@@ -29,7 +30,7 @@ const reviewView = Number(reviewId) === ARTIST_WORKSHOP_FOOTPRINT_ID ? {
 // 공개 지도에 반영되는 골목길 편집만 둡니다. 장소는 공개 지도와 같은 기본 장소만 보여 줍니다(작가 위치는
 // 홈페이지의 '작가 위치·공개'에서 관리). 예전의 브라우저 전용 장소·3D 배치 편집은 공개 지도와 연결되지 않아 뺐습니다.
 const PLACES: Place[] = [ARTIST_WORKSHOP_PLACE, BEAUTIFUL_HANGUL_PLACE]
-const EDIT_TOOLS: EditTool[] = ['alleys']
+const EDIT_TOOLS: EditTool[] = ['alleys', 'buildings']
 // 홈페이지 안(iframe)에서 열리면 홈페이지가 제목과 메뉴를 보여 주므로 이 화면의 머리글을 빼고, 늘 편집 상태로 엽니다.
 // (휴대폰에서도 아래 시트를 내리면 지도를 넓게 볼 수 있습니다.)
 const EMBEDDED = window.self !== window.top
@@ -38,6 +39,7 @@ function Demo() {
   const [phoneLayout, setPhoneLayout] = useState(() => window.matchMedia('(max-width: 720px)').matches)
   const [mobileEditing, setMobileEditing] = useState(true)
   const alleyStore = useAlleyStore()
+  const buildingStore = useBuildingEditStore()
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 720px)')
@@ -58,7 +60,7 @@ function Demo() {
         {phoneLayout && <button className="demo-edit-toggle" type="button" onClick={() => setMobileEditing((current) => !current)}>{editing ? '지도만 보기' : '골목길 편집'}</button>}
       </header>}
       <main className="demo-main">
-        <GamcheonMap initialView={reviewView} places={PLACES} editable={editing} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} />
+        <GamcheonMap initialView={reviewView} places={PLACES} editable={editing} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} buildingEditor={buildingStore} />
       </main>
       {alleyStore.notice && <div className="demo-note is-alert" role="status">{alleyStore.notice}</div>}
     </div>

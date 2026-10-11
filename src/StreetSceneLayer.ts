@@ -16,6 +16,9 @@ import { ALLEY_EDGE, roadOutlines, unionRoadAreas } from './roadCorridors'
 import { isBakedAlley } from './recordedAlleys'
 import type { Alley } from './alleys'
 import type { TerrainSampler } from './terrain'
+import { applyBuildingEdits } from './buildingEdits'
+import { GREEN_HOUSE_FOOTPRINT_IDS } from './modelBuildings'
+import type { BuildingEdits } from './buildingEdits'
 import type { RoadGround } from './roadGround'
 // 길을 가리는 건물 반투명(findRoadOccluders)은 2026-10-09 주석 처리했습니다. 되살릴 때 아래 두 줄의 주석을 풉니다.
 // import { buildRoadRuns } from './roadGround'
@@ -79,9 +82,7 @@ export function buildingRuns(attribute: THREE.BufferAttribute | THREE.Interleave
   return Int32Array.from(runs)
 }
 
-// 그린하우스(감내1로175번안길 들머리)는 세 OSM 윤곽 대신 사진과 평면도를 바탕으로 만든 연결형 모델입니다.
-// 형태는 유지하되 OSM 세 윤곽의 전체 점유 범위에 맞춰 배치합니다.
-export const GREEN_HOUSE_FOOTPRINT_IDS = new Set([1468551429, 1468551431, 1468551433])
+// 그린하우스는 OSM 세 윤곽(modelBuildings.ts)의 전체 점유 범위에 맞춰 배치합니다.
 const GREEN_HOUSE_URL = new URL('./assets/models/custom/greenhouse-sixpence-connected.glb', import.meta.url).href
 const BEAUTIFUL_HANGUL_URL = new URL('./assets/models/custom/beautiful-hangul-studio.glb', import.meta.url).href
 
@@ -322,6 +323,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
   // 첫 화면 뒤에 나눠 만들 건물(화면 중심에서 가까운 순서)
   private pendingBuildings: { building: StreetBuilding; outline: [number, number][]; distance: number }[] = []
   private readonly focus?: [number, number]
+  private readonly buildingEdits?: BuildingEdits
 
   // 3D 지형(켜져 있을 때만). 건물은 윤곽의 높은 땅 위에 세우고, 낮은 쪽은 기초 벽으로 연결합니다.
   private readonly terrain?: TerrainSampler
@@ -329,9 +331,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private occluderBases: number[] = []
 
   // focus: 처음 화면 중심(경도·위도). 이 근처 건물부터 만듭니다(없으면 작가님 공방 근처).
-  constructor(options: { terrain?: TerrainSampler; focus?: [number, number] } = {}) {
+  // buildingEdits: 관리자가 고친 건물(높이·색·지붕·숨기기, buildingEdits.ts)
+  constructor(options: { terrain?: TerrainSampler; focus?: [number, number]; buildingEdits?: BuildingEdits } = {}) {
     const started = performance.now()
     this.terrain = options.terrain
+    this.buildingEdits = options.buildingEdits
     this.focus = options.focus
     // 휴대폰·태블릿(터치 화면)은 그림자 지도를 2048로 줄여 그래픽 메모리와 그리기 부담을 덜어 줍니다.
     addSceneLights(this.scene, SHADOW_CENTER, SHADOW_EXTENT, isTouchDevice() ? 2048 : 4096)
@@ -1925,7 +1929,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   private build() {
-    const buildings = getPhotographedStreetBuildings().filter((building) =>
+    const buildings = applyBuildingEdits(getPhotographedStreetBuildings(), this.buildingEdits).filter((building) =>
       !GREEN_HOUSE_FOOTPRINT_IDS.has(building.id) && building.id !== BEAUTIFUL_HANGUL_FOOTPRINT_ID)
     const workshop = buildings.find((building) => building.id === ARTIST_WORKSHOP_FOOTPRINT_ID)
     if (workshop) this.workshopCenter = outlineCenter(workshop.outline.map(streetMeters))

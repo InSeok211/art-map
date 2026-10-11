@@ -977,3 +977,22 @@
 /* GPX 파일로 기록 추가 */
 .gamcheon-map__gpx-button { position: relative; display: inline-flex !important; align-items: center; justify-content: center; min-height: 38px; padding: 0 14px; border: 1px solid #dde2fb; border-radius: 9px; background: #fff; color: #4a5ae0; font-size: 12px !important; font-weight: 800; cursor: pointer; }
 .gamcheon-map__gpx-button input { position: absolute; inset: 0; width: 100% !important; opacity: 0; cursor: pointer; }
+
+/* 작업실 '건물' 탭(BuildingEditor) */
+.gamcheon-map__building-publish { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; padding: 12px 13px; border: 1px solid #e1e5f5; border-radius: 12px; background: #f7f8fc; }
+.gamcheon-map__building-publish.is-dirty { border-color: #f3d9c4; background: #fff8f2; }
+.gamcheon-map__building-publish > strong { color: #20232a; font-size: 13px; }
+.gamcheon-map__building-publish > span { color: #6f7686; font-size: 12px; }
+.gamcheon-map__building-toggle { display: flex !important; grid-template-columns: none; align-items: center; gap: 8px; font-size: 12px !important; cursor: pointer; }
+.gamcheon-map__building-toggle input { grid-column: auto; width: 16px; height: 16px; margin: 0; }
+.gamcheon-map__building-colors { display: flex; flex-direction: column; gap: 6px; }
+.gamcheon-map__building-colors > span, .gamcheon-map__building-roof > span { color: #5d6577; font-size: 11px; font-weight: 700; }
+.gamcheon-map__building-colors > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.gamcheon-map__building-colors button { width: 26px; height: 26px; padding: 0; border: 1px solid rgba(0, 0, 0, .15); border-radius: 50%; cursor: pointer; }
+.gamcheon-map__building-colors button.is-selected { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #5b6cf0; }
+.gamcheon-map__building-color-custom { position: relative; display: grid !important; width: 26px; height: 26px; place-items: center; border: 1px dashed #9aa1b2; border-radius: 50%; background: conic-gradient(#f87171, #fbbf24, #34d399, #60a5fa, #a78bfa, #f87171); cursor: pointer; }
+.gamcheon-map__building-color-custom input { position: absolute; inset: 0; width: 100% !important; height: 100%; opacity: 0; cursor: pointer; }
+.gamcheon-map__building-roof { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.gamcheon-map__building-roof > span { width: 100%; }
+.gamcheon-map__building-roof button { min-height: 32px; padding: 0 12px; border: 1px solid #dde2fb; border-radius: 9px; background: #fff; color: #3f4656; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.gamcheon-map__building-roof button.is-active { border-color: #5b6cf0; background: #eef0ff; color: #4a5ae0; }
