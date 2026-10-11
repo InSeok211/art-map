@@ -21,7 +21,7 @@ import { useAlleyFinder } from './useAlleyFinder'
 import type { GpsTrailStore } from './useAlleyFinder'
 import { TrailPanel } from './TrailPanel'
 import { ModelLayer, SEE_THROUGH_OPACITY } from './ModelLayer'
-import { prefetchStreetModels, StreetSceneLayer } from './StreetSceneLayer'
+import { prefetchPlacedModels, prefetchStreetModels, StreetSceneLayer } from './StreetSceneLayer'
 import { RoutePanel } from './RoutePanel'
 import { MobileMapUI } from './MobileMapUI'
 import type { MobileView } from './MobileMapUI'
@@ -182,6 +182,8 @@ export function GamcheonMap({
   const [movingModelId, setMovingModelId] = useState<string | null>(null)
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const [modelError, setModelError] = useState('')
+  // 관리자가 올린 3D 모델(건물 탭)을 3D 거리에 불러오지 못했을 때
+  const [placedModelError, setPlacedModelError] = useState('')
   // 3D 거리 장면 상태: 만드는 중(loading), 그래픽 연결이 끊김(lost), 정상(ready)
   const [sceneStatus, setSceneStatus] = useState<'loading' | 'lost' | 'ready'>('loading')
   const [showBuildings, setShowBuildings] = useState(false)
@@ -206,17 +208,30 @@ export function GamcheonMap({
   const [alleyTool, setAlleyTool] = useState<'draw' | 'walk'>('draw')
   const alleyFinder = useAlleyFinder(mapRef, canEditAlleys && mode === 'alleys', gpsTrails, alley.editorProps.alleys, alley.addAlley)
   const buildingEditing = useBuildingEditing(mapRef, canEditBuildings && mode === 'buildings', buildingEditor)
-  // 3D 거리에 반영할 건물 고친 내용: 작업실은 초안, 공개 지도는 공개본. 바뀌면 잠시 기다렸다가 3D 거리를 다시 만듭니다
-  // (조절바를 끄는 동안 여러 번 다시 만들지 않게).
+  // 3D 거리에 반영할 건물 고친 내용: 작업실은 초안, 공개 지도는 공개본.
+  //  - 건물 모양이 바뀌면(고친 건물·새 건물·모델이 대신하는 건물) 잠시 기다렸다가 3D 거리를 다시 만듭니다
+  //    (조절바를 끄는 동안 여러 번 다시 만들지 않게).
+  //  - 올린 3D 모델의 위치·크기·방향만 바뀌면 다시 만들지 않고 모델만 다시 놓습니다.
   const shownBuildingEdits = buildingEditor?.draft ?? buildingEdits
   const buildingEditsRef = useRef(shownBuildingEdits)
-  const buildingEditsKey = JSON.stringify(shownBuildingEdits ?? null)
+  const sceneEditsKey = useMemo(() => shownBuildingEdits ? JSON.stringify({
+    overrides: shownBuildingEdits.overrides,
+    added: shownBuildingEdits.added,
+    replaces: shownBuildingEdits.models.map((model) => model.replaces),
+  }) : '', [shownBuildingEdits])
+  const sceneEditsKeyRef = useRef(sceneEditsKey)
   useEffect(() => {
-    if (buildingEditsRef.current === shownBuildingEdits) return
     buildingEditsRef.current = shownBuildingEdits
+    const models = shownBuildingEdits?.models ?? []
+    prefetchPlacedModels(models)
+    streetLayerRef.current?.setPlacedModels(models)
+  }, [shownBuildingEdits])
+  useEffect(() => {
+    if (sceneEditsKeyRef.current === sceneEditsKey) return
+    sceneEditsKeyRef.current = sceneEditsKey
     const timer = window.setTimeout(() => rebuildStreetRef.current?.(terrainModeRef.current), 800)
     return () => window.clearTimeout(timer)
-  }, [buildingEditsKey])
+  }, [sceneEditsKey])
   // 사용자가 그리거나 GPS 기록으로 추가한 골목길을 3D 거리 바닥에도 골목길 포장으로 그립니다.
   useEffect(() => { streetLayerRef.current?.setExtraAlleys(alley.editorProps.alleys) }, [alley.editorProps.alleys, sceneStatus])
   // 지도를 여는 순간부터 내 위치와 방향을 보여 줍니다. 바깥 화면이 장소를 골라 열었으면 그 장소를 먼저 보여 줍니다.
@@ -350,7 +365,11 @@ export function GamcheonMap({
     const createStreetLayer = (terrain?: TerrainSampler) => {
       if (streetLayer && map.getLayer(streetLayer.id)) map.removeLayer(streetLayer.id)
       // 지금 화면 중심 근처 건물부터 만들어 3D 거리를 빨리 띄웁니다.
-      streetLayer = new StreetSceneLayer({ terrain, focus: map.getCenter().toArray() as [number, number], buildingEdits: buildingEditsRef.current })
+      setPlacedModelError('')
+      streetLayer = new StreetSceneLayer({
+        terrain, focus: map.getCenter().toArray() as [number, number], buildingEdits: buildingEditsRef.current,
+        onModelError: (name) => setPlacedModelError(`3D 모델 '${name}'을(를) 불러오지 못했습니다.`),
+      })
       streetLayer.setOtherBuildingsHidden(workshopOnlyRef.current, false)
       streetLayer.setBuildingOpacity(modelsSeeThroughRef.current ? SEE_THROUGH_OPACITY : 1)
       streetLayerRef.current = streetLayer
@@ -806,7 +825,7 @@ export function GamcheonMap({
           <button type="button" className={mode === 'route' ? 'is-active' : ''} onClick={() => switchMode('route')}>길찾기</button>
         </div>
 
-        {mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : mode === 'buildings' && buildingEditing.panelProps ? <BuildingEditor {...buildingEditing.panelProps} /> : mode === 'alleys' ? <>
+        {mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : mode === 'buildings' && buildingEditing.panelProps ? <BuildingEditor {...buildingEditing.panelProps} sceneError={placedModelError} /> : mode === 'alleys' ? <>
           {alleyFinder.enabled && <div className="gamcheon-map__tool-switch" role="tablist" aria-label="골목길 도구">
             <button type="button" role="tab" aria-selected={alleyTool === 'draw'} className={alleyTool === 'draw' ? 'is-active' : ''} onClick={() => setAlleyTool('draw')}>직접 그리기 · {alley.editorProps.alleys.length}</button>
             <button type="button" role="tab" aria-selected={alleyTool === 'walk'} className={alleyTool === 'walk' ? 'is-active' : ''} onClick={() => { alley.stopDrawing(); setAlleyTool('walk') }}>

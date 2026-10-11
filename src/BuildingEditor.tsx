@@ -1,5 +1,7 @@
 import { floorsToHeight, heightToFloors } from './buildingEdits'
 import type { AddedBuilding, BuildingOverride, RoofStyle } from './buildingEdits'
+import { ModelFiles, ModelInspector, PlacingBanner } from './BuildingModelPanel'
+import type { ModelTools } from './BuildingModelPanel'
 import type { StreetBuilding } from './streetSceneData'
 
 // 작업실 '건물' 탭의 패널입니다. 고친 내용은 초안에만 들어가고 '공개하기'를 눌러야 공개 지도에 나갑니다.
@@ -11,6 +13,10 @@ interface BuildingEditorProps {
   onRoad: boolean
   // 새 건물을 그리는 중이면 찍은 꼭짓점 수
   drawingPoints: number | null
+  // 올린 3D 모델(BuildingModelPanel)
+  models: ModelTools
+  // 3D 거리에 모델을 불러오지 못했을 때
+  sceneError?: string
   notice: string
   editedIds: number[]
   addedIds: string[]
@@ -75,10 +81,11 @@ function RoofChoice({ value, onChange }: { value: RoofStyle | undefined; onChang
 }
 
 export function BuildingEditor({
-  selected, added, onRoad, drawingPoints, notice, editedIds, addedIds, editedCount, publishedCount, dirty, busy, status,
+  selected, added, onRoad, drawingPoints, models, sceneError, notice, editedIds, addedIds, editedCount, publishedCount, dirty, busy, status,
   onChange, onChangeAdded, onRemoveAdded, onTrimRoad, onSelect, onSelectAdded, onStartDrawing, onUndoPoint, onFinishDrawing, onCancelDrawing,
   onClose, onPublish, onDiscard,
 }: BuildingEditorProps) {
+  const model = models.selected
   const original = selected?.building
   const override = selected?.override ?? {}
   const change = (patch: Partial<BuildingOverride>) => {
@@ -100,8 +107,10 @@ export function BuildingEditor({
       {status && <p className="gamcheon-map__model-help" role="status">{status}</p>}
     </div>
 
+    {sceneError && <p className="gamcheon-map__model-error" role="alert">{sceneError}</p>}
+    <PlacingBanner tools={models} />
     {drawingPoints === null ? <>
-      {!original && !added && <p className="gamcheon-map__model-help">
+      {!original && !added && !model && <p className="gamcheon-map__model-help">
         지도 바닥의 건물 윤곽을 눌러 고를 건물을 정하세요. 높이·색·지붕을 바꾸거나 숨길 수 있습니다.
         지도에 없는 건물은 '새 건물 그리기'로 더할 수 있습니다.
         바꾼 내용은 초안에만 들어가고, '공개하기'를 눌러야 공개 지도에 나타납니다.
@@ -136,7 +145,11 @@ export function BuildingEditor({
         <button type="button" onClick={() => { if (window.confirm('이 새 건물을 지울까요?')) onRemoveAdded() }}>건물 지우기</button>
         <button type="button" onClick={onClose}>선택 해제</button>
       </div>
+      <div className="gamcheon-map__model-section-title">3D 모델로 바꾸기</div>
+      <ModelFiles tools={models} mode="replace" />
     </div>}
+
+    {model && <ModelInspector model={model} tools={models} onClose={onClose} />}
 
     {original && <div className="gamcheon-map__model-inspector">
       <strong>건물 {original.id}{original.concept || original.observed || original.roadview ? ' · 사진 시안 건물' : ''}</strong>
@@ -156,9 +169,17 @@ export function BuildingEditor({
         <button type="button" disabled={!Object.keys(override).length} onClick={() => onChange(null)}>원래대로</button>
         <button type="button" onClick={onClose}>선택 해제</button>
       </div>
+      <div className="gamcheon-map__model-section-title">3D 모델로 바꾸기</div>
+      <ModelFiles tools={models} mode="replace" />
     </div>}
 
-    <div className="gamcheon-map__model-section-title">고친·새 건물 <strong>{editedIds.length + addedIds.length}채</strong></div>
+    {!original && !added && !model && drawingPoints === null && <>
+      <div className="gamcheon-map__model-section-title">3D 모델 파일 <strong>{models.files.length}개</strong></div>
+      <p className="gamcheon-map__model-help">건물을 고른 뒤 '이 모델로 바꾸기'를 누르면 그 자리에 모델이 놓입니다.</p>
+      <ModelFiles tools={models} mode="place" />
+    </>}
+
+    <div className="gamcheon-map__model-section-title">고친·새 건물 <strong>{editedIds.length + addedIds.length + models.placed.length}채</strong></div>
     <div className="gamcheon-map__model-placed">
       {editedIds.map((id, index) => <button key={id} type="button" className={original?.id === id ? 'is-selected' : ''} onClick={() => onSelect(id)}>
         <span>{String(index + 1).padStart(2, '0')}</span>건물 {id}
@@ -166,7 +187,10 @@ export function BuildingEditor({
       {addedIds.map((id, index) => <button key={id} type="button" className={added?.id === id ? 'is-selected' : ''} onClick={() => onSelectAdded(id)}>
         <span>{String(editedIds.length + index + 1).padStart(2, '0')}</span>새 건물 {index + 1}
       </button>)}
-      {!editedIds.length && !addedIds.length && <p className="gamcheon-map__model-empty">아직 고치거나 더한 건물이 없습니다.</p>}
+      {models.placed.map((item, index) => <button key={item.id} type="button" className={model?.id === item.id ? 'is-selected' : ''} onClick={() => models.onSelect(item.id)}>
+        <span>{String(editedIds.length + addedIds.length + index + 1).padStart(2, '0')}</span>3D 모델 · {item.name || item.modelId}
+      </button>)}
+      {!editedIds.length && !addedIds.length && !models.placed.length && <p className="gamcheon-map__model-empty">아직 고치거나 더한 건물이 없습니다.</p>}
     </div>
   </div>
 }

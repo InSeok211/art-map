@@ -16,9 +16,9 @@ import { ALLEY_EDGE, roadOutlines, unionRoadAreas } from './roadCorridors'
 import { isBakedAlley } from './recordedAlleys'
 import type { Alley } from './alleys'
 import type { TerrainSampler } from './terrain'
-import { applyBuildingEdits } from './buildingEdits'
+import { applyBuildingEdits, resolveModelUrl } from './buildingEdits'
 import { GREEN_HOUSE_FOOTPRINT_IDS } from './modelBuildings'
-import type { BuildingEdits } from './buildingEdits'
+import type { BuildingEdits, PlacedModel } from './buildingEdits'
 import type { RoadGround } from './roadGround'
 // 길을 가리는 건물 반투명(findRoadOccluders)은 2026-10-09 주석 처리했습니다. 되살릴 때 아래 두 줄의 주석을 풉니다.
 // import { buildRoadRuns } from './roadGround'
@@ -82,6 +82,9 @@ export function buildingRuns(attribute: THREE.BufferAttribute | THREE.Interleave
   return Int32Array.from(runs)
 }
 
+// 관리자가 올린 3D 모델 원본: 바닥 가운데를 원점에, 긴 쪽을 x축에 맞춘 것과 바닥의 긴 쪽·짧은 쪽 길이(모델 단위)
+interface PlacedTemplate { object: THREE.Object3D; long: number; short: number }
+
 // 그린하우스는 OSM 세 윤곽(modelBuildings.ts)의 전체 점유 범위에 맞춰 배치합니다.
 const GREEN_HOUSE_URL = new URL('./assets/models/custom/greenhouse-sixpence-connected.glb', import.meta.url).href
 const BEAUTIFUL_HANGUL_URL = new URL('./assets/models/custom/beautiful-hangul-studio.glb', import.meta.url).href
@@ -105,6 +108,12 @@ function downloadModel(url: string) {
 export function prefetchStreetModels() {
   downloadModel(GREEN_HOUSE_URL).catch(() => undefined)
   downloadModel(BEAUTIFUL_HANGUL_URL).catch(() => undefined)
+}
+// 관리자가 올린 3D 모델도 고친 내용을 받자마자 받기 시작합니다(3D 거리를 다 만든 뒤에 받지 않게).
+export function prefetchPlacedModels(models: readonly PlacedModel[]) {
+  for (const modelId of new Set(models.map((model) => model.modelId))) {
+    resolveModelUrl(modelId).then(downloadModel).catch(() => undefined)
+  }
 }
 function loadModel(url: string, onLoad: (gltf: { scene: THREE.Group }) => void, onError: () => void) {
   downloadModel(url)
@@ -324,6 +333,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private pendingBuildings: { building: StreetBuilding; outline: [number, number][]; distance: number }[] = []
   private readonly focus?: [number, number]
   private readonly buildingEdits?: BuildingEdits
+  private readonly onModelError?: (name: string) => void
 
   // 3D 지형(켜져 있을 때만). 건물은 윤곽의 높은 땅 위에 세우고, 낮은 쪽은 기초 벽으로 연결합니다.
   private readonly terrain?: TerrainSampler
@@ -331,11 +341,14 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private occluderBases: number[] = []
 
   // focus: 처음 화면 중심(경도·위도). 이 근처 건물부터 만듭니다(없으면 작가님 공방 근처).
-  // buildingEdits: 관리자가 고친 건물(높이·색·지붕·숨기기, buildingEdits.ts)
-  constructor(options: { terrain?: TerrainSampler; focus?: [number, number]; buildingEdits?: BuildingEdits } = {}) {
+  // buildingEdits: 관리자가 고친 건물(높이·색·지붕·숨기기, 새 건물, 올린 3D 모델, buildingEdits.ts)
+  // onModelError: 관리자가 올린 3D 모델을 불러오지 못했을 때(모델 이름)
+  constructor(options: { terrain?: TerrainSampler; focus?: [number, number]; buildingEdits?: BuildingEdits; onModelError?: (name: string) => void } = {}) {
     const started = performance.now()
     this.terrain = options.terrain
     this.buildingEdits = options.buildingEdits
+    this.placedSpecs = options.buildingEdits?.models ?? []
+    this.onModelError = options.onModelError
     this.focus = options.focus
     // 휴대폰·태블릿(터치 화면)은 그림자 지도를 2048로 줄여 그래픽 메모리와 그리기 부담을 덜어 줍니다.
     addSceneLights(this.scene, SHADOW_CENTER, SHADOW_EXTENT, isTouchDevice() ? 2048 : 4096)
@@ -591,7 +604,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   private modelFoundations: THREE.Mesh[] = []
-  private addModelFoundation(outline: [number, number][], base: number) {
+  private addModelFoundation(outline: [number, number][], base: number, list = this.modelFoundations) {
     const faces = this.terrainFoundationFaces(outline, base)
     if (!faces.length) return
     const geometry = mergeGeometries(faces)
@@ -600,7 +613,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0xb6bfba, side: THREE.DoubleSide }))
     mesh.castShadow = true
     mesh.receiveShadow = true
-    this.modelFoundations.push(mesh)
+    list.push(mesh)
     this.scene.add(mesh)
   }
 
@@ -2341,6 +2354,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
       })
     this.loadGreenHouse(map)
     this.loadBeautifulHangul(map)
+    this.syncPlacedModels()
   }
 
   private shadersReady = false
@@ -2488,7 +2502,114 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }, () => { /* Keep the rest of the map available if this model fails to load. */ })
   }
 
+  // 관리자가 올린 3D 모델(GLB)을 둡니다. 모델의 바닥 가운데를 그 자리에 두고, 바닥의 긴 쪽이 widthMeters가 되게
+  // 늘이거나 줄여 rotation(도, 긴 쪽이 가리키는 방향)만큼 돌립니다. 언덕에서는 바닥의 가장 높은 땅에 올리고
+  // 아래를 기초 벽으로 채웁니다(그린하우스와 같은 방식).
+  // 모델 파일은 한 번만 읽어 원본(바닥 가운데·긴 쪽을 맞춘 것)을 두고, 배치마다 복제합니다. 위치·크기·방향만 바뀌면
+  // 3D 거리를 다시 만들지 않고 모델만 다시 놓습니다(setPlacedModels).
+  private placedSpecs: readonly PlacedModel[] = []
+  private placedTemplates = new globalThis.Map<string, Promise<PlacedTemplate | null>>()
+  private placedObjects: THREE.Object3D[] = []
+  private placedFoundations: THREE.Mesh[] = []
+  private placedVersion = 0
+
+  setPlacedModels(models: readonly PlacedModel[]) {
+    if (JSON.stringify(models) === JSON.stringify(this.placedSpecs)) return
+    this.placedSpecs = models
+    this.syncPlacedModels()
+  }
+
+  private syncPlacedModels() {
+    const map = this.map
+    if (!map) return
+    const version = ++this.placedVersion
+    this.clearPlacedModels()
+    const failed = new Set<string>()
+    for (const placed of this.placedSpecs) this.placedTemplate(placed.modelId).then((template) => {
+      if (this.map !== map || version !== this.placedVersion) return
+      if (template) return this.addPlacedModel(map, placed, template)
+      if (failed.has(placed.modelId)) return
+      failed.add(placed.modelId)
+      this.onModelError?.(placed.name || placed.modelId)
+    })
+    map.triggerRepaint()
+  }
+
+  private placedTemplate(modelId: string) {
+    let template = this.placedTemplates.get(modelId)
+    if (!template) {
+      template = resolveModelUrl(modelId).then((url) => new Promise<PlacedTemplate | null>((resolve) => loadModel(url, (gltf) => {
+        const model = gltf.scene
+        const box = new THREE.Box3().setFromObject(model)
+        if (box.isEmpty()) return resolve(null)
+        const size = box.getSize(new THREE.Vector3())
+        const center = box.getCenter(new THREE.Vector3())
+        model.position.set(-center.x, -box.min.y, -center.z)
+        model.traverse((object) => {
+          if (!(object instanceof THREE.Mesh)) return
+          object.castShadow = true
+          object.receiveShadow = true
+        })
+        // 모델의 긴 쪽을 x축에 맞춥니다.
+        const object = new THREE.Group()
+        object.add(model)
+        if (size.z > size.x) object.rotation.y = Math.PI / 2
+        resolve({ object, long: Math.max(size.x, size.z, 0.001), short: Math.min(size.x, size.z) })
+      }, () => resolve(null))))
+      this.placedTemplates.set(modelId, template)
+    }
+    return template
+  }
+
+  private addPlacedModel(map: Map, placed: PlacedModel, template: PlacedTemplate) {
+    const scale = placed.widthMeters / template.long
+    const angle = -placed.rotation * Math.PI / 180
+    const [x, z] = streetMeters([placed.longitude, placed.latitude])
+    const half = [placed.widthMeters / 2, template.short * scale / 2]
+    const cos = Math.cos(angle), sin = Math.sin(angle)
+    const outline = ([[-1, -1], [1, -1], [1, 1], [-1, 1]] as const).map(([sx, sz]) => {
+      const lx = sx * half[0], lz = sz * half[1]
+      return [x + lx * cos + lz * sin, z - lx * sin + lz * cos] as [number, number]
+    })
+    const base = this.terrainBuildingBase(outline)
+    // 원본과 도형·재질을 함께 씁니다(지울 때 원본만 정리).
+    const holder = new THREE.Group()
+    holder.name = `placed-model-${placed.id}`
+    holder.add(template.object.clone(true))
+    holder.scale.setScalar(scale)
+    holder.rotation.y = angle
+    holder.position.set(x, base, z)
+    this.placedObjects.push(holder)
+    this.scene.add(holder)
+    this.addModelFoundation(outline, base, this.placedFoundations)
+    this.shadowsBaked = false
+    map.triggerRepaint()
+  }
+
+  private clearPlacedModels() {
+    this.placedObjects.forEach((object) => object.removeFromParent())
+    this.placedObjects = []
+    for (const mesh of this.placedFoundations) {
+      mesh.removeFromParent()
+      mesh.geometry.dispose()
+      ;(mesh.material as THREE.Material).dispose()
+    }
+    this.placedFoundations = []
+    this.shadowsBaked = false
+  }
+
   onRemove() {
+    this.placedVersion++
+    this.clearPlacedModels()
+    for (const template of this.placedTemplates.values()) template.then((loaded) => loaded?.object.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return
+      object.geometry.dispose()
+      ;(Array.isArray(object.material) ? object.material : [object.material]).forEach((material: THREE.Material) => {
+        for (const value of Object.values(material)) if (value instanceof THREE.Texture) value.dispose()
+        material.dispose()
+      })
+    }))
+    this.placedTemplates = new globalThis.Map()
     this.modelFoundations.forEach((mesh) => {
       mesh.removeFromParent()
       mesh.geometry.dispose()

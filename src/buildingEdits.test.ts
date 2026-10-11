@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { addedBuildingNumber, applyBuildingEdits, floorsToHeight, heightToFloors, NEW_BUILDING_DEFAULTS, sanitizeBuildingEdits, setAdded, setOverride, EMPTY_BUILDING_EDITS } from './buildingEdits'
+import { addedBuildingNumber, applyBuildingEdits, floorsToHeight, heightToFloors, NEW_BUILDING_DEFAULTS, sanitizeBuildingEdits, setAdded, setModel, setOverride, EMPTY_BUILDING_EDITS } from './buildingEdits'
+import type { PlacedModel } from './buildingEdits'
 import type { AddedBuilding } from './buildingEdits'
 import { getPhotographedStreetBuildings } from './streetSceneData'
 
@@ -27,8 +28,8 @@ describe('building edits', () => {
       [a.id]: { heightMeters: 999, wallColor: 'red', roofStyle: 'dome', hidden: 'yes' },
       bad: { hidden: true },
       [b.id]: { roofColor: 0xffffff },
-    } })).toEqual({ overrides: { [a.id]: { heightMeters: 60 }, [b.id]: { roofColor: 0xffffff } }, added: [] })
-    expect(sanitizeBuildingEdits(null)).toEqual({ overrides: {}, added: [] })
+    } })).toEqual({ overrides: { [a.id]: { heightMeters: 60 }, [b.id]: { roofColor: 0xffffff } }, added: [], models: [] })
+    expect(sanitizeBuildingEdits(null)).toEqual({ overrides: {}, added: [], models: [] })
   })
 
   const square: [number, number][] = [[129.0095, 35.096], [129.00958, 35.096], [129.00958, 35.09607], [129.0095, 35.09607]]
@@ -61,6 +62,24 @@ describe('building edits', () => {
       { ...drawn, id: 'bad id!' },
       { ...drawn, id: 'roof', roofStyle: 'dome' },
     ] }).added.map((building) => building.id)).toEqual(['b-test'])
+  })
+
+  const placed: PlacedModel = { id: 'p-1', modelId: 'm-abcdef1234', name: '공방', longitude: 129.0095, latitude: 35.096, rotation: 370, widthMeters: 500, replaces: [] }
+
+  it('hides buildings replaced by a placed model and restores them when it is removed', () => {
+    const edits = setModel(EMPTY_BUILDING_EDITS, placed.id, { ...placed, replaces: [a.id] })
+    expect(edits.models[0]).toMatchObject({ rotation: 10, widthMeters: 120, replaces: [a.id] })
+    expect(applyBuildingEdits(buildings, edits).map((building) => building.id)).toEqual([b.id, c.id])
+    expect(applyBuildingEdits(buildings, setModel(edits, placed.id, null))).toBe(buildings)
+  })
+
+  it('drops placed models with bad file ids or positions', () => {
+    expect(sanitizeBuildingEdits({ models: [
+      placed,
+      { ...placed, id: 'p-2', modelId: '../secret' },
+      { ...placed, id: 'p-3', longitude: 128 },
+      { ...placed, id: 'p-4', replaces: [-1, 'x', a.id, a.id] },
+    ] }).models.map((model) => [model.id, model.replaces])).toEqual([['p-1', []], ['p-4', [a.id]]])
   })
 
   it('converts between floors and height like generated buildings', () => {

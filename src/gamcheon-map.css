@@ -998,3 +998,9 @@
 .gamcheon-map__building-roof button.is-active { border-color: #5b6cf0; background: #eef0ff; color: #4a5ae0; }
 .gamcheon-map__building-road { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid #f3d9c4; border-radius: 9px; background: #fff8f2; color: #9a5943; font-size: 11px; font-weight: 700; }
 .gamcheon-map__building-road button { flex: none; min-height: 28px; padding: 0 10px; border: 1px solid #e78349; border-radius: 8px; background: #fff; color: #c0612b; font: inherit; cursor: pointer; }
+.gamcheon-map__building-models { display: flex; flex-direction: column; gap: 8px; }
+.gamcheon-map__building-model-file { display: flex; flex-direction: column; gap: 6px; padding: 9px 10px; border: 1px solid #e1e5f5; border-radius: 10px; background: #fff; }
+.gamcheon-map__building-model-file > span { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; }
+.gamcheon-map__building-model-file strong { overflow: hidden; color: #20232a; text-overflow: ellipsis; white-space: nowrap; }
+.gamcheon-map__building-model-file small { flex: none; color: #8a90a0; font-size: 11px; }
+.gamcheon-map__building-models .gamcheon-map__model-import { position: relative; flex: 1; }

@@ -16,6 +16,8 @@ export interface BuildingEditStore {
   dirty: boolean
   status: string
   busy: boolean
+  // 홈페이지 저장소를 쓰는지(개발 미리보기는 false, 아직 확인 중이거나 못 읽었으면 null)
+  server: boolean | null
   onChange: (draft: BuildingEdits) => void
   onPublish: () => void
   onDiscard: () => void
@@ -115,6 +117,7 @@ export function useBuildingEditStore(): BuildingEditStore {
     dirty: !sameBuildingEdits(draft, published),
     status,
     busy: busy || mode === 'loading' || mode === 'error',
+    server: mode === 'server' ? true : mode === 'local' ? false : null,
     onChange: (next) => {
       if (busyRef.current || mode === 'loading' || mode === 'error') return
       setDraft(next)

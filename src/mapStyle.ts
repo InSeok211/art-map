@@ -31,7 +31,8 @@ export const DEM_SOURCE_ID = 'gamcheonDem'
 // 작업실 '건물' 탭: 고른 건물(주황), 고친 건물(보라, 숨긴 건물은 점선), 새 건물(초록), 그리는 윤곽(주황 점선과 꼭짓점).
 // 3D 층 위로 올립니다.
 export const BUILDING_EDIT_SOURCE_ID = 'gamcheonBuildingEdits'
-export const BUILDING_EDIT_LAYER_IDS = ['building-edit-fill', 'building-edit-line', 'building-edit-hidden-line', 'building-edit-draft-line', 'building-edit-draft-points']
+// 올린 3D 모델의 자리는 보라 점(고르면 주황), 모델이 대신하는 건물은 회색 점선입니다.
+export const BUILDING_EDIT_LAYER_IDS = ['building-edit-fill', 'building-edit-line', 'building-edit-hidden-line', 'building-edit-draft-line', 'building-edit-draft-points', 'building-edit-model-points']
 // 3D 모델이 가리면 모델을 반투명하게 만드는 길 레이어입니다(ModelLayer).
 export const ROAD_LAYER_IDS = [
   'highway_path', 'highway_minor', 'highway_major_inner',
@@ -165,7 +166,7 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       type: 'fill',
       source: BUILDING_EDIT_SOURCE_ID,
       paint: {
-        'fill-color': ['match', ['get', 'state'], 'selected', '#e78349', 'drawing', '#e78349', 'hidden', '#8a8f99', 'added', '#1f9d6b', '#6559ff'],
+        'fill-color': ['match', ['get', 'state'], 'selected', '#e78349', 'drawing', '#e78349', ['hidden', 'replaced'], '#8a8f99', 'added', '#1f9d6b', '#6559ff'],
         'fill-opacity': ['match', ['get', 'state'], 'selected', 0.4, 'added', 0.3, 0.18],
       },
     },
@@ -173,7 +174,7 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       id: 'building-edit-line',
       type: 'line',
       source: BUILDING_EDIT_SOURCE_ID,
-      filter: ['match', ['get', 'state'], ['hidden', 'drawing', 'first', 'vertex'], false, true],
+      filter: ['match', ['get', 'state'], ['hidden', 'replaced', 'drawing', 'first', 'vertex', 'model', 'model-selected'], false, true],
       paint: {
         'line-color': ['match', ['get', 'state'], 'selected', '#e0561b', 'added', '#137a52', '#5248e6'],
         'line-width': ['match', ['get', 'state'], 'selected', 3, 2],
@@ -183,7 +184,7 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       id: 'building-edit-hidden-line',
       type: 'line',
       source: BUILDING_EDIT_SOURCE_ID,
-      filter: ['==', ['get', 'state'], 'hidden'],
+      filter: ['match', ['get', 'state'], ['hidden', 'replaced'], true, false],
       paint: { 'line-color': '#5d6577', 'line-width': 2, 'line-dasharray': [2, 1.5] },
     },
     {
@@ -198,11 +199,22 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       id: 'building-edit-draft-points',
       type: 'circle',
       source: BUILDING_EDIT_SOURCE_ID,
-      filter: ['==', ['geometry-type'], 'Point'],
+      filter: ['match', ['get', 'state'], ['first', 'vertex'], true, false],
       paint: {
         'circle-radius': ['match', ['get', 'state'], 'first', 7, 5],
         'circle-color': ['match', ['get', 'state'], 'first', '#e0561b', '#fff'],
         'circle-stroke-color': '#e0561b', 'circle-stroke-width': 2.5,
+      },
+    },
+    {
+      id: 'building-edit-model-points',
+      type: 'circle',
+      source: BUILDING_EDIT_SOURCE_ID,
+      filter: ['match', ['get', 'state'], ['model', 'model-selected'], true, false],
+      paint: {
+        'circle-radius': ['match', ['get', 'state'], 'model-selected', 9, 7],
+        'circle-color': ['match', ['get', 'state'], 'model-selected', '#e78349', '#6559ff'],
+        'circle-stroke-color': '#fff', 'circle-stroke-width': 2.5,
       },
     },
     {

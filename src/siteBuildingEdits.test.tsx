@@ -21,7 +21,7 @@ it('shows the map after the startup timeout and applies a late building response
   const { result } = renderHook(() => useSiteBuildingEdits())
   expect(result.current).toBeNull()
   act(() => vi.advanceTimersByTime(1500))
-  expect(result.current).toEqual({ overrides: {}, added: [] })
+  expect(result.current).toEqual({ overrides: {}, added: [], models: [] })
   await act(async () => { pending.resolve(response({ overrides: { 123: { hidden: true } }, added: [] })); await Promise.resolve() })
   expect(result.current?.overrides['123']).toEqual({ hidden: true })
 })
