@@ -43,39 +43,60 @@ async function call(path: string, init?: RequestInit) {
 }
 
 export function useBuildingEditStore(): BuildingEditStore {
+  const hosted = document.documentElement.dataset.buildingEditServer === 'true'
   const [draft, setDraft] = useState<BuildingEdits>(() => readLocal(DRAFT_KEY))
   const [published, setPublished] = useState<BuildingEdits>(() => readLocal(PUBLISHED_KEY))
-  const [server, setServer] = useState(false)
+  const [mode, setMode] = useState<'loading' | 'server' | 'local' | 'error'>(hosted ? 'loading' : 'local')
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
+  const busyRef = useRef(false)
   const saveTimer = useRef(0)
+  const saveQueue = useRef<Promise<void>>(Promise.resolve())
   const latestDraft = useRef(draft)
   latestDraft.current = draft
 
-  // 홈페이지 안에서 열렸는지 확인하고, 그렇다면 저장된 초안·공개본을 불러옵니다.
+  // 관리자 화면에서는 API 오류를 로컬 미리보기로 취급하지 않습니다.
   useEffect(() => {
+    if (!hosted) return
     let cancelled = false
     call(API).then((saved) => {
       if (cancelled) return
-      setServer(true)
-      setDraft(sanitizeBuildingEdits(saved.draft))
+      const next = sanitizeBuildingEdits(saved.draft)
+      latestDraft.current = next
+      setMode('server')
+      setDraft(next)
       setPublished(sanitizeBuildingEdits(saved.published))
-    }).catch(() => { /* 개발 미리보기: 이 브라우저에만 저장합니다. */ })
+    }).catch((error: Error) => {
+      if (cancelled) return
+      setMode('error')
+      setStatus(`건물 편집 내용을 불러오지 못했습니다: ${error.message}. 페이지를 새로고침해 주세요.`)
+    })
     return () => { cancelled = true }
-  }, [])
+  }, [hosted])
+
+  function queueSave(next: BuildingEdits) {
+    const pending = saveQueue.current.then(async () => {
+      await call(API, { method: 'PUT', body: JSON.stringify({ draft: next }) })
+    })
+    // 실패한 자동 저장이 뒤따르는 저장·버리기를 막지 않도록 큐만 정상 상태로 되돌립니다.
+    saveQueue.current = pending.catch(() => undefined)
+    return pending
+  }
 
   function saveDraftSoon(next: BuildingEdits) {
-    if (!server) return writeLocal(DRAFT_KEY, next)
+    if (mode === 'local') return writeLocal(DRAFT_KEY, next)
     // 조절바를 끄는 동안 여러 번 바뀌므로 잠시 모았다가 저장합니다.
     window.clearTimeout(saveTimer.current)
     saveTimer.current = window.setTimeout(() => {
-      call(API, { method: 'PUT', body: JSON.stringify({ draft: latestDraft.current }) })
+      queueSave(latestDraft.current)
         .then(() => setStatus(''))
         .catch((error: Error) => setStatus(`초안을 저장하지 못했습니다: ${error.message}`))
     }, 700)
   }
 
   async function run(action: () => Promise<void>, done: string) {
+    if (busyRef.current || mode === 'loading' || mode === 'error') return
+    busyRef.current = true
     setBusy(true)
     try {
       await action()
@@ -83,6 +104,7 @@ export function useBuildingEditStore(): BuildingEditStore {
     } catch (error) {
       setStatus(`${(error as Error).message || '실패했습니다.'} 잠시 뒤 다시 시도해 주세요.`)
     } finally {
+      busyRef.current = false
       setBusy(false)
     }
   }
@@ -92,31 +114,37 @@ export function useBuildingEditStore(): BuildingEditStore {
     published,
     dirty: !sameBuildingEdits(draft, published),
     status,
-    busy,
+    busy: busy || mode === 'loading' || mode === 'error',
     onChange: (next) => {
+      if (busyRef.current || mode === 'loading' || mode === 'error') return
       setDraft(next)
       latestDraft.current = next
       saveDraftSoon(next)
     },
     onPublish: () => void run(async () => {
-      if (server) {
+      if (mode === 'server') {
         // 남아 있는 초안 저장을 먼저 끝내고 공개합니다.
         window.clearTimeout(saveTimer.current)
-        await call(API, { method: 'PUT', body: JSON.stringify({ draft: latestDraft.current }) })
+        await saveQueue.current
+        await queueSave(latestDraft.current)
         const result = await call(`${API}/publish`, { method: 'POST' })
         setPublished(sanitizeBuildingEdits(result.published))
       } else {
         writeLocal(PUBLISHED_KEY, latestDraft.current)
         setPublished(latestDraft.current)
       }
-    }, '공개 지도에 반영했습니다(1분 안에 보입니다).'),
+    }, mode === 'server' ? '공개 지도에 반영했습니다.' : '이 브라우저의 미리보기에 저장했습니다.'),
     onDiscard: () => void run(async () => {
-      if (server) {
+      if (mode === 'server') {
         window.clearTimeout(saveTimer.current)
+        await saveQueue.current
         const result = await call(`${API}/discard`, { method: 'POST' })
-        setDraft(sanitizeBuildingEdits(result.draft))
+        const restored = sanitizeBuildingEdits(result.draft)
+        latestDraft.current = restored
+        setDraft(restored)
       } else {
         writeLocal(DRAFT_KEY, published)
+        latestDraft.current = published
         setDraft(published)
       }
     }, '초안을 버리고 공개된 상태로 되돌렸습니다.'),

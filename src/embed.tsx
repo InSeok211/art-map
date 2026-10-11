@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { ARTIST_WORKSHOP_PLACE } from './artistWorkshop'
 import { sanitizeAlleys } from './alleys'
 import type { Alley } from './alleys'
-import { EMPTY_BUILDING_EDITS, sanitizeBuildingEdits } from './buildingEdits'
+import { useSiteBuildingEdits } from './siteBuildingEdits'
 import type { BuildingEdits } from './buildingEdits'
 import { isSiteAdmin, postTrail } from './adminTrailApi'
 import { useAutoTrailRecorder } from './useAutoTrailRecorder'
@@ -43,26 +43,6 @@ const post = (message: Record<string, unknown>) =>
   window.parent.postMessage({ source: 'gamcheon-artist-map', ...message }, window.location.origin)
 
 // 관리자가 확인한 골목길(손으로 그린 길과 GPS 기록으로 찾은 길)을 홈페이지에서 받아 옵니다. 못 받으면 빈 목록.
-// 관리자가 고쳐 공개한 건물(높이·색·지붕·숨기기)입니다. 3D 거리를 처음 만들 때 바로 반영하도록 지도 코드를
-// 실행하자마자 받기 시작하고, 받거나 1.5초가 지나면 지도를 띄웁니다(늦게 받아 3D 거리를 다시 만들지 않게).
-const publishedBuildingEdits: Promise<BuildingEdits> = Promise.race([
-  fetch('/api/map-buildings')
-    .then((response) => response.ok && response.headers.get('content-type')?.includes('application/json') ? response.json() : null)
-    .then((body: { edits?: unknown } | null) => sanitizeBuildingEdits(body?.edits))
-    .catch(() => EMPTY_BUILDING_EDITS),
-  new Promise<BuildingEdits>((resolve) => window.setTimeout(() => resolve(EMPTY_BUILDING_EDITS), 1500)),
-])
-
-function useSiteBuildingEdits() {
-  const [edits, setEdits] = useState<BuildingEdits | null>(null)
-  useEffect(() => {
-    let cancelled = false
-    publishedBuildingEdits.then((value) => { if (!cancelled) setEdits(value) })
-    return () => { cancelled = true }
-  }, [])
-  return edits
-}
-
 function useSiteAlleys() {
   const [alleys, setAlleys] = useState<Alley[]>([])
   useEffect(() => {

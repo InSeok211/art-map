@@ -28,9 +28,10 @@ export const CANDIDATE_SOURCE_ID = 'gamcheonAlleyCandidates'
 export const TRAIL_LAYER_IDS = ['gps-trails-line', 'alley-candidates-casing', 'alley-candidates-line']
 // '3D 지형'을 켜면 바탕 지도도 이 고도 타일로 언덕을 세웁니다(map.setTerrain). 끄면 타일을 받지 않습니다.
 export const DEM_SOURCE_ID = 'gamcheonDem'
-// 작업실 '건물' 탭: 고른 건물(주황)과 고친 건물(보라, 숨긴 건물은 점선) 윤곽. 3D 층 위로 올립니다.
+// 작업실 '건물' 탭: 고른 건물(주황), 고친 건물(보라, 숨긴 건물은 점선), 새 건물(초록), 그리는 윤곽(주황 점선과 꼭짓점).
+// 3D 층 위로 올립니다.
 export const BUILDING_EDIT_SOURCE_ID = 'gamcheonBuildingEdits'
-export const BUILDING_EDIT_LAYER_IDS = ['building-edit-fill', 'building-edit-line', 'building-edit-hidden-line']
+export const BUILDING_EDIT_LAYER_IDS = ['building-edit-fill', 'building-edit-line', 'building-edit-hidden-line', 'building-edit-draft-line', 'building-edit-draft-points']
 // 3D 모델이 가리면 모델을 반투명하게 만드는 길 레이어입니다(ModelLayer).
 export const ROAD_LAYER_IDS = [
   'highway_path', 'highway_minor', 'highway_major_inner',
@@ -164,17 +165,17 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       type: 'fill',
       source: BUILDING_EDIT_SOURCE_ID,
       paint: {
-        'fill-color': ['match', ['get', 'state'], 'selected', '#e78349', 'hidden', '#8a8f99', '#6559ff'],
-        'fill-opacity': ['match', ['get', 'state'], 'selected', 0.4, 0.18],
+        'fill-color': ['match', ['get', 'state'], 'selected', '#e78349', 'drawing', '#e78349', 'hidden', '#8a8f99', 'added', '#1f9d6b', '#6559ff'],
+        'fill-opacity': ['match', ['get', 'state'], 'selected', 0.4, 'added', 0.3, 0.18],
       },
     },
     {
       id: 'building-edit-line',
       type: 'line',
       source: BUILDING_EDIT_SOURCE_ID,
-      filter: ['!=', ['get', 'state'], 'hidden'],
+      filter: ['match', ['get', 'state'], ['hidden', 'drawing', 'first', 'vertex'], false, true],
       paint: {
-        'line-color': ['match', ['get', 'state'], 'selected', '#e0561b', '#5248e6'],
+        'line-color': ['match', ['get', 'state'], 'selected', '#e0561b', 'added', '#137a52', '#5248e6'],
         'line-width': ['match', ['get', 'state'], 'selected', 3, 2],
       },
     },
@@ -184,6 +185,25 @@ export function createMinimalStyle<T extends StyleWithLayers>(style: T): T {
       source: BUILDING_EDIT_SOURCE_ID,
       filter: ['==', ['get', 'state'], 'hidden'],
       paint: { 'line-color': '#5d6577', 'line-width': 2, 'line-dasharray': [2, 1.5] },
+    },
+    {
+      id: 'building-edit-draft-line',
+      type: 'line',
+      source: BUILDING_EDIT_SOURCE_ID,
+      filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'state'], 'drawing']],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#e0561b', 'line-width': 2.5, 'line-dasharray': [1.5, 1.2] },
+    },
+    {
+      id: 'building-edit-draft-points',
+      type: 'circle',
+      source: BUILDING_EDIT_SOURCE_ID,
+      filter: ['==', ['geometry-type'], 'Point'],
+      paint: {
+        'circle-radius': ['match', ['get', 'state'], 'first', 7, 5],
+        'circle-color': ['match', ['get', 'state'], 'first', '#e0561b', '#fff'],
+        'circle-stroke-color': '#e0561b', 'circle-stroke-width': 2.5,
+      },
     },
     {
       id: 'gps-trails-line',

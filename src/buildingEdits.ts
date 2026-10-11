@@ -1,6 +1,7 @@
 import type { StreetBuilding } from './streetSceneData'
+import { isInsideGamcheonMap } from './gamcheonBoundary'
 
-// 관리자가 작업실 '건물' 탭에서 고친 지도 건물의 내용입니다(1단계: 자동으로 만든 건물 고치기).
+// 관리자가 작업실 '건물' 탭에서 고친 지도 건물의 내용입니다(1단계: 자동으로 만든 건물 고치기, 2단계: 새 건물 그리기).
 // 홈페이지에는 초안(작업실에서만 보임)과 공개본(공개 지도) 두 벌로 저장하고, '공개하기'로 초안을 공개본에 옮깁니다.
 // 건물은 OSM 건물 번호로 가리킵니다. 따로 만든 모델 건물(공방·그린하우스·아름다운한글)은 고칠 수 없습니다.
 
@@ -14,11 +15,25 @@ export interface BuildingOverride {
   roofStyle?: RoofStyle
 }
 
-export interface BuildingEdits {
-  overrides: Record<string, BuildingOverride>
+// 관리자가 직접 윤곽을 그려 더한 건물(경도·위도 윤곽, 닫는 점 없이)
+export interface AddedBuilding {
+  id: string
+  outline: [number, number][]
+  heightMeters: number
+  wallColor: number
+  roofColor: number
+  roofStyle: RoofStyle
 }
 
-export const EMPTY_BUILDING_EDITS: BuildingEdits = { overrides: {} }
+export interface BuildingEdits {
+  overrides: Record<string, BuildingOverride>
+  added: AddedBuilding[]
+}
+
+export const EMPTY_BUILDING_EDITS: BuildingEdits = { overrides: {}, added: [] }
+// 새 건물을 처음 그렸을 때의 모양(2층, 흰 벽, 파란 지붕, 평지붕)
+export const NEW_BUILDING_DEFAULTS = { heightMeters: 6.1, wallColor: 0xf2efe6, roofColor: 0x3f8fb5, roofStyle: 'flat' as RoofStyle }
+export const ADDED_OUTLINE_POINTS = { min: 3, max: 60 } as const
 export const BUILDING_HEIGHT_RANGE = { min: 2.5, max: 60 } as const
 // 층수 ↔ 높이: 자동으로 만든 건물과 같은 기준(층 2.65m + 지붕·기단 0.8m)
 export const STORY_METERS = 2.65
@@ -26,6 +41,7 @@ export const floorsToHeight = (floors: number) => Math.round((floors * STORY_MET
 export const heightToFloors = (height: number) => Math.max(1, Math.round((height - 0.8) / STORY_METERS))
 
 const MAX_OVERRIDES = 3000
+const MAX_ADDED = 500
 const isColor = (value: unknown): value is number => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 0xffffff
 
 function sanitizeOverride(value: unknown): BuildingOverride | null {
@@ -43,6 +59,24 @@ function sanitizeOverride(value: unknown): BuildingOverride | null {
   return Object.keys(override).length ? override : null
 }
 
+function sanitizeAdded(value: unknown): AddedBuilding | null {
+  if (!value || typeof value !== 'object') return null
+  const input = value as Record<string, unknown>
+  if (typeof input.id !== 'string' || !/^[\w-]{1,80}$/.test(input.id) || !Array.isArray(input.outline)) return null
+  const outline = input.outline.filter((point): point is [number, number] => Array.isArray(point) && point.length === 2
+    && point.every((part) => Number.isFinite(part)) && isInsideGamcheonMap(point[0], point[1]))
+  if (outline.length !== input.outline.length || outline.length < ADDED_OUTLINE_POINTS.min || outline.length > ADDED_OUTLINE_POINTS.max) return null
+  const height = Number(input.heightMeters)
+  if (!Number.isFinite(height) || !isColor(input.wallColor) || !isColor(input.roofColor)) return null
+  if (input.roofStyle !== 'flat' && input.roofStyle !== 'gable') return null
+  return {
+    id: input.id,
+    outline: outline.map(([lng, lat]) => [Math.round(lng * 1e7) / 1e7, Math.round(lat * 1e7) / 1e7]),
+    heightMeters: Math.min(BUILDING_HEIGHT_RANGE.max, Math.max(BUILDING_HEIGHT_RANGE.min, height)),
+    wallColor: input.wallColor, roofColor: input.roofColor, roofStyle: input.roofStyle,
+  }
+}
+
 // 저장된 값에서 쓸 수 있는 것만 남깁니다(모르는 값·잘못된 값은 버림).
 export function sanitizeBuildingEdits(value: unknown): BuildingEdits {
   const overrides: Record<string, BuildingOverride> = {}
@@ -54,7 +88,11 @@ export function sanitizeBuildingEdits(value: unknown): BuildingEdits {
       if (override) overrides[id] = override
     }
   }
-  return { overrides }
+  const addedInput = (value as { added?: unknown } | null)?.added
+  const added = Array.isArray(addedInput)
+    ? addedInput.slice(0, MAX_ADDED).flatMap((item) => sanitizeAdded(item) ?? [])
+    : []
+  return { overrides, added }
 }
 
 // 한 건물의 고친 내용을 바꿉니다. 빈 내용이면 그 건물을 원래대로 되돌립니다.
@@ -63,13 +101,51 @@ export function setOverride(edits: BuildingEdits, id: number, override: Building
   const clean = override && sanitizeOverride(override)
   if (clean) overrides[id] = clean
   else delete overrides[id]
-  return { overrides }
+  return { ...edits, overrides }
 }
 
-// 건물 목록에 고친 내용을 덮어씌웁니다. 숨긴 건물은 빼고, 고친 건물은 복사본을 돌려줍니다(원본은 그대로).
+// 새 건물을 더하거나 바꿉니다(같은 번호면 바꿈). null이면 그 번호의 새 건물을 지웁니다.
+export function setAdded(edits: BuildingEdits, id: string, building: AddedBuilding | null): BuildingEdits {
+  const clean = building && sanitizeAdded(building)
+  const rest = edits.added.filter((item) => item.id !== id)
+  if (!clean) return { ...edits, added: rest }
+  const index = edits.added.findIndex((item) => item.id === id)
+  const added = [...edits.added]
+  if (index >= 0) added[index] = clean
+  else added.push(clean)
+  return { ...edits, added }
+}
+
+// 새 건물은 OSM 번호가 없으므로, 장면 안에서 쓸 음수 번호를 문자열 번호에서 만듭니다(OSM 번호와 겹치지 않음).
+export function addedBuildingNumber(id: string) {
+  let hash = 2166136261
+  for (let index = 0; index < id.length; index++) hash = Math.imul(hash ^ id.charCodeAt(index), 16777619)
+  return -1 - ((hash >>> 0) % 2_000_000_000)
+}
+
+// 새 건물을 자동으로 만든 일반 건물과 같은 모양 데이터로 바꿉니다(같은 3D 생성 코드로 그림).
+export function addedToStreetBuilding(building: AddedBuilding): StreetBuilding {
+  return {
+    id: addedBuildingNumber(building.id),
+    outline: building.outline,
+    heightMeters: building.heightMeters,
+    wallColor: building.wallColor,
+    roofColor: building.roofColor,
+    roofFinish: building.roofStyle === 'gable' ? 'sheet' : 'concrete',
+    accentColor: 0x828a86,
+    storefront: false,
+    shopfrontStyle: 'glass',
+    roofStyle: building.roofStyle,
+    brickFacade: false,
+    detail: 'context',
+    progress: 0,
+  }
+}
+
+// 건물 목록에 고친 내용을 덮어씌우고 새 건물을 더합니다. 숨긴 건물은 빼고, 고친 건물은 복사본을 돌려줍니다(원본은 그대로).
 export function applyBuildingEdits(buildings: StreetBuilding[], edits: BuildingEdits | undefined): StreetBuilding[] {
-  if (!edits || !Object.keys(edits.overrides).length) return buildings
-  return buildings.flatMap((building) => {
+  if (!edits || (!Object.keys(edits.overrides).length && !edits.added.length)) return buildings
+  return [...buildings.flatMap((building) => {
     const override = edits.overrides[building.id]
     if (!override) return [building]
     if (override.hidden) return []
@@ -80,8 +156,9 @@ export function applyBuildingEdits(buildings: StreetBuilding[], edits: BuildingE
       ...(override.roofColor !== undefined ? { roofColor: override.roofColor } : {}),
       ...(override.roofStyle !== undefined ? { roofStyle: override.roofStyle } : {}),
     }]
-  })
+  }), ...edits.added.map(addedToStreetBuilding)]
 }
 
-export const sameBuildingEdits = (a: BuildingEdits, b: BuildingEdits) => JSON.stringify(a.overrides) === JSON.stringify(b.overrides)
-export const editedBuildingCount = (edits: BuildingEdits) => Object.keys(edits.overrides).length
+export const sameBuildingEdits = (a: BuildingEdits, b: BuildingEdits) =>
+  JSON.stringify(a.overrides) === JSON.stringify(b.overrides) && JSON.stringify(a.added) === JSON.stringify(b.added)
+export const editedBuildingCount = (edits: BuildingEdits) => Object.keys(edits.overrides).length + edits.added.length
