@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
 
-const boundary = JSON.parse(await readFile(new URL('../src/gamcheon2-boundary.json', import.meta.url), 'utf8'))
+const boundary = JSON.parse(await readFile(new URL('../src/data/gamcheon2-boundary.json', import.meta.url), 'utf8'))
 const ring = boundary.geometry.coordinates[0]
 const west = Math.min(...ring.map(([x]) => x)) - 0.003
 const east = Math.max(...ring.map(([x]) => x)) + 0.003
@@ -22,7 +22,7 @@ for (const way of elements) {
     ...(tags.width && Number.isFinite(Number.parseFloat(tags.width)) ? { width: Number.parseFloat(tags.width) } : {}) })
   else if (points.length >= 4 && points[0].join() === points.at(-1).join()) green.push({ id: way.id, points })
 }
-await writeFile(new URL('../src/street-surfaces.json', import.meta.url), JSON.stringify({
+await writeFile(new URL('../src/data/street-surfaces.json', import.meta.url), JSON.stringify({
   source: 'OpenStreetMap contributors (ODbL), via Overpass API', fetchedAt: new Date().toISOString(),
   bounds: [[west, south], [east, north]], roads, green,
 }))

@@ -20,7 +20,7 @@ const clean = alleys.map(({ id, name, coordinates, widthMeters }) => ({
   coordinates: coordinates.map(([lng, lat]) => [Math.round(lng * 1e7) / 1e7, Math.round(lat * 1e7) / 1e7]),
 }))
 const next = `${JSON.stringify(clean, null, 2)}\n`
-const file = 'src/recorded-alleys.json'
+const file = 'src/data/recorded-alleys.json'
 const changed = readFileSync(file, 'utf8').replace(/\r\n/g, '\n') !== next
 if (changed) writeFileSync(file, next)
 console.log(`골목길 ${clean.length}개${changed ? ' 저장 — npm run build:road-ground를 다시 돌려 주세요.' : ', 바뀐 것 없음'}`)

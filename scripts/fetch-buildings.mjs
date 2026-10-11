@@ -3,7 +3,7 @@
 // 사용법: node scripts/fetch-buildings.mjs
 import { readFile, writeFile } from 'node:fs/promises'
 
-const boundary = JSON.parse(await readFile(new URL('../src/gamcheon2-boundary.json', import.meta.url), 'utf8'))
+const boundary = JSON.parse(await readFile(new URL('../src/data/gamcheon2-boundary.json', import.meta.url), 'utf8'))
 const ring = boundary.geometry.coordinates[0]
 const longitudes = ring.map(([longitude]) => longitude)
 const latitudes = ring.map(([, latitude]) => latitude)
@@ -47,5 +47,5 @@ const collection = {
   fetchedAt: new Date().toISOString().slice(0, 10),
   features,
 }
-await writeFile(new URL('../src/gamcheon-buildings.json', import.meta.url), JSON.stringify(collection))
+await writeFile(new URL('../src/data/gamcheon-buildings.json', import.meta.url), JSON.stringify(collection))
 console.log(`건물 ${features.length}개 저장`)

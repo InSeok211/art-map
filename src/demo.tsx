@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { GamcheonMap } from './GamcheonMap'
 import type { EditTool } from './GamcheonMap'
-import { ARTIST_WORKSHOP_MODEL, ARTIST_WORKSHOP_PLACE } from './artistWorkshop'
-import { BEAUTIFUL_HANGUL_PLACE } from './beautifulHangul'
-import { useAlleyStore } from './alleyStore'
-import { useBuildingEditStore } from './buildingEditStore'
+import { ARTIST_WORKSHOP_PLACE } from './places/artistWorkshop'
+import { BEAUTIFUL_HANGUL_PLACE } from './scene/beautifulHangul'
+import { useAlleyStore } from './alleys/alleyStore'
+import { useBuildingEditStore } from './buildings/buildingEditStore'
 import type { Place } from './types'
 import './demo.css'
-import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings } from './streetSceneData'
+import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings } from './scene/streetSceneData'
 
 // Survey links open the same map at the building being reviewed.
 const reviewId = new URLSearchParams(window.location.search).get('building')
@@ -17,7 +17,7 @@ const reviewPitch = Number(new URLSearchParams(window.location.search).get('pitc
 const reviewZoom = Number(new URLSearchParams(window.location.search).get('zoom'))
 const reviewBuilding = reviewId ? getPhotographedStreetBuildings().find(building => building.id === Number(reviewId)) : undefined
 const reviewView = Number(reviewId) === ARTIST_WORKSHOP_FOOTPRINT_ID ? {
-  center: [ARTIST_WORKSHOP_MODEL.longitude, ARTIST_WORKSHOP_MODEL.latitude] as [number, number],
+  center: [ARTIST_WORKSHOP_PLACE.longitude, ARTIST_WORKSHOP_PLACE.latitude] as [number, number],
   zoom: 21.1, pitch: 62, bearing: 135,
 } : reviewBuilding ? {
   center: [0, 1].map(axis => reviewBuilding.outline.reduce((sum, point) => sum + point[axis], 0) / reviewBuilding.outline.length) as [number, number],

@@ -5,38 +5,34 @@ import type { MapMouseEvent, StyleSpecification } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './gamcheon-map.css'
-import { filterPlaces } from './filterPlaces'
-import { GAMCHEON_MAP_BOUNDS, isInsideGamcheon2, isInsideGamcheonMap } from './gamcheonBoundary'
-import { BUILDING_EDIT_LAYER_IDS, BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle, DEM_SOURCE_ID, ROUTE_LAYER_IDS, TRAIL_LAYER_IDS } from './mapStyle'
-import { BuildingEditor } from './BuildingEditor'
-import { useBuildingEditing } from './useBuildingEditing'
-import type { BuildingEditStore } from './buildingEditStore'
-import type { BuildingEdits } from './buildingEdits'
-import { loadTerrain } from './terrain'
-import type { TerrainSampler } from './terrain'
-import { AlleyEditor } from './AlleyEditor'
-import type { Alley } from './alleys'
-import { useAlleyEditing } from './useAlleyEditing'
-import { useAlleyFinder } from './useAlleyFinder'
-import type { GpsTrailStore } from './useAlleyFinder'
-import { TrailPanel } from './TrailPanel'
-import { ModelLayer, SEE_THROUGH_OPACITY } from './ModelLayer'
-import { prefetchPlacedModels, prefetchStreetModels, StreetSceneLayer } from './StreetSceneLayer'
-import { RoutePanel } from './RoutePanel'
-import { MobileMapUI } from './MobileMapUI'
-import type { MobileView } from './MobileMapUI'
-import { useRouteFinder } from './useRouteFinder'
-import { useMyLocation } from './useMyLocation'
-import { useSheetDrag } from './useSheetDrag'
-import { ModelEditor } from './ModelEditor'
-import { PlaceBrowser, PlaceForm } from './PlacePanel'
-import type { PlaceDraft } from './PlacePanel'
-import { BUILTIN_MODELS } from './modelCatalog'
-import { ARTIST_WORKSHOP_MODEL, ARTIST_WORKSHOP_PLACE } from './artistWorkshop'
-import type { MapModel, ModelAsset, ModelStyle } from './modelCatalog'
-import { loadCustomModels, saveCustomModel } from './modelAssetStore'
-import { newId, replaceById } from './listUtils'
-import baseStyle from './positron-style.json'
+import { filterPlaces } from './places/filterPlaces'
+import { GAMCHEON_MAP_BOUNDS, isInsideGamcheonMap } from './map/gamcheonBoundary'
+import { BUILDING_EDIT_LAYER_IDS, BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle, DEM_SOURCE_ID, ROUTE_LAYER_IDS, TRAIL_LAYER_IDS } from './map/mapStyle'
+import { BuildingEditor } from './buildings/BuildingEditor'
+import { useBuildingEditing } from './buildings/useBuildingEditing'
+import type { BuildingEditStore } from './buildings/buildingEditStore'
+import type { BuildingEdits } from './buildings/buildingEdits'
+import { loadTerrain } from './map/terrain'
+import type { TerrainSampler } from './map/terrain'
+import { AlleyEditor } from './alleys/AlleyEditor'
+import type { Alley } from './alleys/alleys'
+import { useAlleyEditing } from './alleys/useAlleyEditing'
+import { useAlleyFinder } from './alleys/useAlleyFinder'
+import type { GpsTrailStore } from './alleys/useAlleyFinder'
+import { TrailPanel } from './alleys/TrailPanel'
+import { SEE_THROUGH_OPACITY, StreetSceneLayer } from './scene/StreetSceneLayer'
+import { prefetchPlacedModels, prefetchStreetModels } from './scene/modelFiles'
+import { RoutePanel } from './route/RoutePanel'
+import { MobileMapUI } from './map/MobileMapUI'
+import type { MobileView } from './map/MobileMapUI'
+import { useRouteFinder } from './route/useRouteFinder'
+import { useMyLocation } from './map/useMyLocation'
+import { useSheetDrag } from './map/useSheetDrag'
+import { PlaceBrowser, PlaceForm } from './places/PlacePanel'
+import type { PlaceDraft } from './places/PlacePanel'
+import { ARTIST_WORKSHOP_PLACE } from './places/artistWorkshop'
+import { newId } from './map/listUtils'
+import baseStyle from './data/positron-style.json'
 import type { CategoryFilter, Place } from './types'
 
 const CENTER: [number, number] = [129.00905, 35.09512]
@@ -44,10 +40,9 @@ const ZOOM = 18.2
 const PITCH = 61
 const BEARING = -8
 const EMPTY_PLACES: Place[] = []
-const EMPTY_MODELS: MapModel[] = []
 const EMPTY_ALLEYS: Alley[] = []
-export type EditTool = 'places' | 'models' | 'alleys' | 'buildings'
-const ALL_EDIT_TOOLS: EditTool[] = ['places', 'models', 'alleys', 'buildings']
+export type EditTool = 'places' | 'alleys' | 'buildings'
+const ALL_EDIT_TOOLS: EditTool[] = ['places', 'alleys', 'buildings']
 const MAP_STYLE = createMinimalStyle(baseStyle) as unknown as StyleSpecification
 const TERRAIN_MODE_KEY = 'gamcheon-map-terrain-v1'
 function loadTerrainMode() {
@@ -67,7 +62,7 @@ function mapPadding(element: HTMLElement, compact = false, sheetOpen = true) {
 
 setWorkerUrl(workerUrl)
 
-type EditMode = 'places' | 'models' | 'alleys' | 'buildings' | 'route'
+type EditMode = 'places' | 'alleys' | 'buildings' | 'route'
 
 // 좁은 화면(휴대폰) 배치인지. CSS의 max-width: 720px와 같습니다.
 const isPhoneLayout = () => typeof window !== 'undefined' && window.innerWidth <= 720
@@ -98,8 +93,6 @@ export interface GamcheonMapProps {
   // 편집할 수 있을 때 보여 줄 편집 도구(기본: 모두). 홈페이지 관리자 작업실은 골목길만 씁니다.
   editTools?: EditTool[]
   onPlacesChange?: (places: Place[]) => void
-  models?: MapModel[]
-  onModelsChange?: (models: MapModel[]) => void
   alleys?: Alley[]
   onAlleysChange?: (alleys: Alley[]) => void
   // 관리자가 걸으며 남긴 GPS 기록으로 골목길 후보를 찾습니다(편집 화면의 골목길 탭). 없으면 그 기능을 숨깁니다.
@@ -121,8 +114,6 @@ export function GamcheonMap({
   editable = false,
   editTools = ALL_EDIT_TOOLS,
   onPlacesChange,
-  models = EMPTY_MODELS,
-  onModelsChange,
   alleys = EMPTY_ALLEYS,
   onAlleysChange,
   gpsTrails,
@@ -135,9 +126,6 @@ export function GamcheonMap({
   const mapElementRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<Map | null>(null)
   const markersRef = useRef<Marker[]>([])
-  const modelMarkersRef = useRef<Marker[]>([])
-  const modelLayerRef = useRef<ModelLayer | null>(null)
-  const customAssetUrlsRef = useRef<string[]>([])
   const onPlaceSelectRef = useRef(onPlaceSelect)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<CategoryFilter>('all')
@@ -151,14 +139,13 @@ export function GamcheonMap({
   // 공개 지도(편집 불가)의 휴대폰 화면은 06 '지도 몰입' 시안(MobileMapUI)을 씁니다. 넓은 화면은 기존 옆 패널입니다.
   const immersive = !editable
   const canEditPlaces = editable && editTools.includes('places')
-  const canEditModels = editable && editTools.includes('models')
   const canEditAlleys = editable && editTools.includes('alleys')
   const canEditBuildings = editable && editTools.includes('buildings') && Boolean(buildingEditor)
   // 장소를 편집하지 않는 화면(골목지도 작업실)은 편집을 켜면 바로 골목길 도구를 엽니다.
-  const startsWithAlleys = canEditAlleys && !canEditPlaces && !canEditModels
+  const startsWithAlleys = canEditAlleys && !canEditPlaces
   useEffect(() => {
     if (startsWithAlleys) setMode((current) => current === 'places' ? 'alleys' : current)
-    else if (!editable) setMode((current) => current === 'alleys' || current === 'models' || current === 'buildings' ? 'places' : current)
+    else if (!editable) setMode((current) => current === 'alleys' || current === 'buildings' ? 'places' : current)
   }, [startsWithAlleys, editable])
   const [mobileView, setMobileView] = useState<MobileView>('map')
   const sheetOpenRef = useRef(sheetOpen)
@@ -173,15 +160,6 @@ export function GamcheonMap({
     }, 280)
     return () => window.clearTimeout(timer)
   }, [selectedId])
-  const sceneMode = mode === 'models'
-  const [localModels, setLocalModels] = useState<MapModel[]>(models)
-  const [customAssets, setCustomAssets] = useState<ModelAsset[]>([])
-  const [styleFilter, setStyleFilter] = useState<ModelStyle>('rounded')
-  const [chosenAssetId, setChosenAssetId] = useState<string | null>('rounded-house')
-  const [placingAssetId, setPlacingAssetId] = useState<string | null>(null)
-  const [movingModelId, setMovingModelId] = useState<string | null>(null)
-  const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
-  const [modelError, setModelError] = useState('')
   // 관리자가 올린 3D 모델(건물 탭)을 3D 거리에 불러오지 못했을 때
   const [placedModelError, setPlacedModelError] = useState('')
   // 3D 거리 장면 상태: 만드는 중(loading), 그래픽 연결이 끊김(lost), 정상(ready)
@@ -259,7 +237,6 @@ export function GamcheonMap({
     streetLayerRef.current?.setRouteLine(terrainMode ? routeLine : null)
     if (map) for (const id of ROUTE_LAYER_IDS) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', terrainMode ? 'none' : 'visible')
   }, [routeLine, terrainMode, sceneStatus])
-  const assets = useMemo(() => [...BUILTIN_MODELS, ...customAssets], [customAssets])
   const selectedPlace = localPlaces.find((place) => place.id === selectedId && isInsideGamcheonMap(place.longitude, place.latitude))
 
   const visiblePlaces = useMemo(
@@ -275,21 +252,6 @@ export function GamcheonMap({
   }, [localPlaces, query])
 
   useEffect(() => setLocalPlaces(places), [places])
-  useEffect(() => setLocalModels(models), [models])
-
-  useEffect(() => {
-    let cancelled = false
-    loadCustomModels().then((loaded) => {
-      if (cancelled) loaded.forEach((asset) => URL.revokeObjectURL(asset.url))
-      else {
-        customAssetUrlsRef.current.push(...loaded.map((asset) => asset.url))
-        setCustomAssets(loaded)
-      }
-    }).catch(() => { if (!cancelled) setModelError('저장된 사용자 에셋을 불러오지 못했습니다.') })
-    return () => { cancelled = true }
-  }, [])
-
-  useEffect(() => () => customAssetUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)), [])
 
   useEffect(() => {
     onPlaceSelectRef.current = onPlaceSelect
@@ -350,15 +312,12 @@ export function GamcheonMap({
 
     // 3D 거리를 만드는 동안 그린하우스·아름다운한글 모델 파일을 미리 받아 둡니다.
     prefetchStreetModels()
-    const modelLayer = new ModelLayer((name) => setModelError(`${name} 모델을 불러오지 못했습니다.`))
-    modelLayerRef.current = modelLayer
     // 3D 거리 장면은 만드는 데 몇 초가 걸리므로, 바탕 지도를 먼저 그린 뒤에 만들어 빈 화면으로 기다리지 않게 합니다.
     let streetLayer: StreetSceneLayer | null = null
     let disposed = false
     const addStreetLayer = () => {
       if (!streetLayer || map.getLayer(streetLayer.id)) return
-      // 거리 장면은 사용자 GLB 모델 아래에 그립니다.
-      map.addLayer(streetLayer, map.getLayer(modelLayer.id) ? modelLayer.id : undefined)
+      map.addLayer(streetLayer)
       raiseRoute()
     }
     // 3D 거리를 (다시) 만듭니다. 지형을 넘기면 건물·길을 언덕 높이에 맞추고 바탕 지도에도 지형을 켭니다.
@@ -397,15 +356,15 @@ export function GamcheonMap({
     // 바탕 지도 타일이 늦거나 일부 실패하면 'idle'이 한참 오지 않을 수 있으므로, 스타일이 준비되고
     // STREET_LAYER_FALLBACK_MS가 지나면 바탕 지도를 기다리지 않고 3D 거리를 만듭니다.
     let fallbackTimer = 0
-    const addModelLayer = () => {
-      if (!map.getLayer(modelLayer.id)) map.addLayer(modelLayer)
+    // 스타일이 (다시) 준비되면 3D 거리와 편집용 층을 붙입니다.
+    const attachLayers = () => {
       addStreetLayer()
       raiseRoute()
       applyBuildingVisibility(map, showBuildingsRef.current)
       alley.renderOnto(map)
       if (!streetLayer && !fallbackTimer) fallbackTimer = window.setTimeout(buildStreetLayer, STREET_LAYER_FALLBACK_MS)
     }
-    map.on('style.load', addModelLayer)
+    map.on('style.load', attachLayers)
     map.once('idle', buildStreetLayer)
     // 휴대폰에서 메모리가 모자라면 그래픽(WebGL) 연결이 끊길 수 있습니다. 다시 연결되면 3D 층을 새로 붙입니다.
     const handleContextLost = () => setSceneStatus('lost')
@@ -416,7 +375,7 @@ export function GamcheonMap({
         map.once('styledata', handleContextRestored)
         return
       }
-      addModelLayer()
+      attachLayers()
       setSceneStatus(streetLayer ? 'ready' : 'loading')
       map.triggerRepaint()
     }
@@ -439,16 +398,13 @@ export function GamcheonMap({
       observer.disconnect()
       markersRef.current.forEach((marker) => marker.remove())
       markersRef.current = []
-      modelMarkersRef.current.forEach((marker) => marker.remove())
-      modelMarkersRef.current = []
       disposed = true
       window.clearTimeout(fallbackTimer)
       streetLayerRef.current = null
-      map.off('style.load', addModelLayer)
+      map.off('style.load', attachLayers)
       map.off('idle', buildStreetLayer)
       map.off('webglcontextlost', handleContextLost)
       map.off('webglcontextrestored', handleContextRestored)
-      modelLayerRef.current = null
       mapRef.current = null
       map.remove()
     }
@@ -484,15 +440,9 @@ export function GamcheonMap({
   const modelsSeeThroughRef = useRef(modelsSeeThrough)
   useEffect(() => {
     modelsSeeThroughRef.current = modelsSeeThrough
-    modelLayerRef.current?.setOpacity(modelsSeeThrough ? SEE_THROUGH_OPACITY : 1)
-    // 거리 장면의 건물(공방 제외)도 함께 반투명하게 합니다.
+    // 거리 장면의 건물(공방 제외)을 반투명하게 합니다.
     streetLayerRef.current?.setBuildingOpacity(modelsSeeThrough ? SEE_THROUGH_OPACITY : 1)
   }, [modelsSeeThrough])
-
-  useEffect(() => {
-    modelLayerRef.current?.setAssets(assets)
-    modelLayerRef.current?.setItems(localModels.filter((item) => isInsideGamcheon2(item.longitude, item.latitude)))
-  }, [assets, localModels])
 
   useEffect(() => {
     const map = mapRef.current
@@ -557,87 +507,10 @@ export function GamcheonMap({
     })
   }, [visiblePlaces, selectedId])
 
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
-    modelMarkersRef.current.forEach((marker) => marker.remove())
-    modelMarkersRef.current = []
-    if (!sceneMode) return
-
-    localModels.forEach((item, index) => {
-      if (!isInsideGamcheon2(item.longitude, item.latitude)) return
-      const asset = assets.find((candidate) => candidate.id === item.assetId)
-      const element = document.createElement('button')
-      element.type = 'button'
-      element.className = `gamcheon-map__model-marker${selectedModelId === item.id ? ' is-selected' : ''}`
-      element.textContent = String(index + 1)
-      element.title = asset?.name ?? '3D 모델'
-      element.setAttribute('aria-label', `${asset?.name ?? '3D 모델'} 선택`)
-      element.addEventListener('click', (event) => {
-        event.stopPropagation()
-        setSelectedModelId(item.id)
-      })
-      const marker = new Marker({ element, anchor: 'bottom', draggable: selectedModelId === item.id })
-        .setLngLat([item.longitude, item.latitude]).addTo(map)
-      if (selectedModelId === item.id) {
-        marker.on('dragend', () => {
-          const { lng, lat } = marker.getLngLat()
-          if (!isInsideGamcheon2(lng, lat)) {
-            marker.setLngLat([item.longitude, item.latitude])
-            setModelError('감천2동 경계 안쪽으로 옮겨 주세요.')
-            return
-          }
-          commitModels(replaceById(localModels, item.id, { longitude: lng, latitude: lat }))
-        })
-      }
-      modelMarkersRef.current.push(marker)
-    })
-    return () => {
-      modelMarkersRef.current.forEach((marker) => marker.remove())
-      modelMarkersRef.current = []
-    }
-  }, [sceneMode, localModels, assets, selectedModelId, onModelsChange])
-
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !sceneMode || (!placingAssetId && !movingModelId)) return
-    const handleClick = (event: MapMouseEvent) => {
-      const { lng, lat } = event.lngLat
-      if (!isInsideGamcheon2(lng, lat)) {
-        setModelError('감천2동 경계 안쪽을 클릭해 주세요.')
-        return
-      }
-      setModelError('')
-      if (movingModelId) {
-        commitModels(replaceById(localModels, movingModelId, { longitude: lng, latitude: lat }))
-        setMovingModelId(null)
-      } else {
-        const asset = assets.find((candidate) => candidate.id === placingAssetId)
-        if (!asset) return
-        const item: MapModel = {
-          id: newId('model'),
-          assetId: asset.id,
-          longitude: lng,
-          latitude: lat,
-          widthMeters: asset.defaultWidth,
-          rotation: 0,
-          altitudeMeters: 0,
-        }
-        commitModels([...localModels, item])
-        setSelectedModelId(item.id)
-        setPlacingAssetId(null)
-      }
-    }
-    map.on('click', handleClick)
-    return () => { map.off('click', handleClick) }
-  }, [sceneMode, placingAssetId, movingModelId, localModels, assets, onModelsChange])
-
   function switchMode(next: EditMode) {
     setMode(next)
     setSheetOpen(true)
     setEditor(null)
-    setPlacingAssetId(null)
-    setMovingModelId(null)
     alley.stopDrawing()
   }
 
@@ -647,42 +520,12 @@ export function GamcheonMap({
     setMobileView(view)
   }
 
-  function commitModels(next: MapModel[]) {
-    setLocalModels(next)
-    onModelsChange?.(next)
-  }
-
-  function duplicateModel(id: string) {
-    const original = localModels.find((item) => item.id === id)
-    if (!original) return
-    const copy = { ...original, id: newId('model'), longitude: original.longitude + 0.00018, latitude: original.latitude + 0.0001 }
-    if (!isInsideGamcheon2(copy.longitude, copy.latitude)) return setModelError('경계에 가까워 복제할 공간이 없습니다.')
-    commitModels([...localModels, copy])
-    setSelectedModelId(copy.id)
-  }
-
-  async function importModels(files: FileList) {
-    const selected = Array.from(files).filter((file) => file.name.toLowerCase().endsWith('.glb'))
-    if (selected.length === 0) return setModelError('GLB 파일을 선택해 주세요.')
-    if (selected.some((file) => file.size > 20_000_000)) return setModelError('한 파일은 20MB 이하로 선택해 주세요.')
-    try {
-      const imported = await Promise.all(selected.map(saveCustomModel))
-      customAssetUrlsRef.current.push(...imported.map((asset) => asset.url))
-      setCustomAssets((current) => [...current, ...imported])
-      setStyleFilter('custom')
-      setChosenAssetId(imported[0].id)
-      setModelError('')
-    } catch {
-      setModelError('브라우저 저장소에 GLB를 저장하지 못했습니다.')
-    }
-  }
-
   function selectPlace(place: Place) {
     setSelectedId(place.id)
     if (Number.isFinite(place.latitude) && Number.isFinite(place.longitude)) {
       const map = mapRef.current
       if (place.id === ARTIST_WORKSHOP_PLACE.id) {
-        map?.flyTo({ center: [ARTIST_WORKSHOP_MODEL.longitude, ARTIST_WORKSHOP_MODEL.latitude], zoom: 19, pitch: 63, bearing: 35 })
+        map?.flyTo({ center: [ARTIST_WORKSHOP_PLACE.longitude, ARTIST_WORKSHOP_PLACE.latitude], zoom: 19, pitch: 63, bearing: 35 })
       } else {
         map?.flyTo({ center: [place.longitude, place.latitude], zoom: Math.max(map.getZoom(), 17) })
       }
@@ -782,7 +625,6 @@ export function GamcheonMap({
       <nav className="gamcheon-map__desktop-nav" aria-label="PC 지도 메뉴">
         <span className="gamcheon-map__desktop-nav-mark" aria-hidden="true">G</span>
         <button type="button" className={mode === 'places' ? 'is-active' : ''} onClick={() => switchMode('places')} aria-label="장소 탐색 메뉴"><span aria-hidden="true">⌖</span>장소</button>
-        {canEditModels && <button type="button" className={mode === 'models' ? 'is-active' : ''} onClick={() => switchMode('models')} aria-label="3D 작업 메뉴"><span aria-hidden="true">⬡</span>3D 건물</button>}
         {canEditAlleys && <button type="button" className={mode === 'alleys' ? 'is-active' : ''} onClick={() => switchMode('alleys')} aria-label="골목길 도구 메뉴"><span aria-hidden="true">⌁</span>골목길</button>}
         {canEditBuildings && <button type="button" className={mode === 'buildings' ? 'is-active' : ''} onClick={() => switchMode('buildings')} aria-label="건물 고치기 메뉴"><span aria-hidden="true">▦</span>건물</button>}
         <button type="button" className={mode === 'route' ? 'is-active' : ''} onClick={() => switchMode('route')} aria-label="길찾기 메뉴"><span aria-hidden="true">➤</span>길찾기</button>
@@ -791,7 +633,7 @@ export function GamcheonMap({
       <aside
         ref={panelRef}
         className={`gamcheon-map__panel${editor ? ' is-editing' : ''}${sheetOpen ? ' is-sheet-open' : ''}`}
-        aria-label={mode === 'route' ? '길찾기' : mode === 'alleys' ? '골목길 편집' : mode === 'buildings' ? '건물 고치기' : sceneMode ? '3D 모델 편집' : '장소 탐색'}
+        aria-label={mode === 'route' ? '길찾기' : mode === 'alleys' ? '골목길 편집' : mode === 'buildings' ? '건물 고치기' : '장소 탐색'}
         // 휴대폰에서 검색창이나 선택 상자를 누르면 시트를 펼쳐 키보드·목록이 가리지 않게 합니다.
         onFocusCapture={(event) => { if (/^(INPUT|SELECT|TEXTAREA)$/.test((event.target as HTMLElement).tagName)) setSheetOpen(true) }}
       >
@@ -807,19 +649,18 @@ export function GamcheonMap({
         >
           <span aria-hidden="true" />{sheetOpen ? '아래로 내려 지도 크게 보기' : '위로 올려 목록 보기'}
         </button>
-        {/* 편집 도구 탭(3D 배치·골목길)에서는 큰 소개 대신 짧은 제목만 두어 도구가 위로 올라오게 합니다. */}
-        {(mode === 'models' || mode === 'alleys' || mode === 'buildings') ? <div className="gamcheon-map__tool-head">
-          <h2>{mode === 'models' ? '3D 건물 배치' : mode === 'buildings' ? '건물 고치기' : '골목길 편집'}</h2>
+        {/* 편집 도구 탭(골목길·건물)에서는 큰 소개 대신 짧은 제목만 두어 도구가 위로 올라오게 합니다. */}
+        {(mode === 'alleys' || mode === 'buildings') ? <div className="gamcheon-map__tool-head">
+          <h2>{mode === 'buildings' ? '건물 고치기' : '골목길 편집'}</h2>
         </div> : <div className="gamcheon-map__intro">
           <div className="gamcheon-map__eyebrow"><span className="gamcheon-map__eyebrow-dot" /> BUSAN · GAMCHEON 2-DONG</div>
           <h1>감천 골목지도<span className="gamcheon-map__title-dot">.</span></h1>
           <p>작가님 공방을 중심으로 골목의 가게와 명소를 찾아보세요.</p>
         </div>}
 
-        {/* 길찾기는 보기 전용 지도에서도 쓰므로 탭을 늘 보이고, 편집 탭(3D 배치·골목길)은 편집할 수 있을 때만 보입니다. */}
+        {/* 길찾기는 보기 전용 지도에서도 쓰므로 탭을 늘 보이고, 편집 탭(골목길·건물)은 편집할 수 있을 때만 보입니다. */}
         <div className="gamcheon-map__mode-tabs" role="group" aria-label="지도 모드">
           <button type="button" className={mode === 'places' ? 'is-active' : ''} onClick={() => switchMode('places')}>장소</button>
-          {canEditModels && <button type="button" className={mode === 'models' ? 'is-active' : ''} onClick={() => switchMode('models')}>3D 배치</button>}
           {canEditAlleys && <button type="button" className={mode === 'alleys' ? 'is-active' : ''} onClick={() => switchMode('alleys')}>골목길</button>}
           {canEditBuildings && <button type="button" className={mode === 'buildings' ? 'is-active' : ''} onClick={() => switchMode('buildings')}>건물</button>}
           <button type="button" className={mode === 'route' ? 'is-active' : ''} onClick={() => switchMode('route')}>길찾기</button>
@@ -833,30 +674,7 @@ export function GamcheonMap({
             </button>
           </div>}
           {alleyFinder.enabled && alleyTool === 'walk' ? <TrailPanel {...alleyFinder.panelProps} onRecordStart={() => setSheetOpen(false)} /> : <AlleyEditor {...alley.editorProps} />}
-        </> : sceneMode ? <ModelEditor
-          assets={assets}
-          models={localModels.filter((item) => isInsideGamcheon2(item.longitude, item.latitude))}
-          selectedId={selectedModelId}
-          chosenAssetId={chosenAssetId}
-          movingId={movingModelId}
-          styleFilter={styleFilter}
-          error={modelError}
-          onStyleFilter={(next) => { setStyleFilter(next); setChosenAssetId(assets.find((asset) => asset.style === next)?.id ?? null) }}
-          onChooseAsset={setChosenAssetId}
-          onPlace={() => { setPlacingAssetId(chosenAssetId); setMovingModelId(null); setModelError('지도를 클릭해 모델을 배치하세요.') }}
-          onSelect={(id) => {
-            setSelectedModelId(id)
-            setPlacingAssetId(null)
-            setMovingModelId(null)
-            const item = localModels.find((model) => model.id === id)
-            if (item) mapRef.current?.flyTo({ center: [item.longitude, item.latitude], zoom: Math.max(mapRef.current.getZoom(), item.assetId === ARTIST_WORKSHOP_MODEL.assetId ? 19 : 17.5) })
-          }}
-          onUpdate={(id, patch) => commitModels(replaceById(localModels, id, patch))}
-          onMove={(id) => { setMovingModelId(id); setPlacingAssetId(null); setModelError('지도에서 새 위치를 클릭하거나 번호 표시를 드래그하세요.') }}
-          onDuplicate={duplicateModel}
-          onDelete={(id) => { commitModels(localModels.filter((item) => item.id !== id)); setSelectedModelId(null) }}
-          onImport={importModels}
-        /> : editor ? <PlaceForm
+        </> : editor ? <PlaceForm
           draft={editor}
           onChange={setEditor}
           locationError={locationError}

@@ -20,5 +20,5 @@ for (const match of xml.matchAll(/<way\b([^>]+)>([\s\S]*?)<\/way>/g)) {
     green.push({ id: Number(id), points })
   }
 }
-writeFileSync(new URL('../src/street-surfaces.json', import.meta.url), `${JSON.stringify({ roads, green }, null, 2)}\n`)
+writeFileSync(new URL('../src/data/street-surfaces.json', import.meta.url), `${JSON.stringify({ roads, green }, null, 2)}\n`)
 console.log(`Wrote ${roads.length} roads and ${green.length} green polygons`)

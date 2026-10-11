@@ -2,8 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { GamcheonMap, STREET_LAYER_FALLBACK_MS } from './GamcheonMap'
-import { ARTIST_WORKSHOP_MODEL, ARTIST_WORKSHOP_PLACE } from './artistWorkshop'
-import { ModelLayer } from './ModelLayer'
+import { ARTIST_WORKSHOP_PLACE } from './places/artistWorkshop'
+import { StreetSceneLayer } from './scene/StreetSceneLayer'
 import type { Place } from './types'
 
 const mapOptions = vi.hoisted(() => [] as unknown[])
@@ -16,7 +16,8 @@ const mapClick = vi.hoisted(() => ({ current: null as null | ((event: { lngLat: 
 
 // These tests exercise map controls against a mocked MapLibre canvas. Real
 // district geometry is checked separately and in the browser.
-vi.mock('./StreetSceneLayer', () => ({ prefetchStreetModels: () => {}, prefetchPlacedModels: () => {}, StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d'; setOtherBuildingsHidden() {}; setBuildingOpacity() {}; setMyPosition() {}; setExtraAlleys() {}; setRouteLine() {}; setPlacedModels() {} } }))
+vi.mock('./scene/modelFiles', () => ({ prefetchStreetModels: () => {}, prefetchPlacedModels: () => {} }))
+vi.mock('./scene/StreetSceneLayer', () => ({ SEE_THROUGH_OPACITY: 0.35, StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d'; setOtherBuildingsHidden() {}; setBuildingOpacity() {}; setMyPosition() {}; setExtraAlleys() {}; setRouteLine() {}; setPlacedModels() {} } }))
 
 vi.mock('maplibre-gl', () => ({
   Map: class {
@@ -31,6 +32,7 @@ vi.mock('maplibre-gl', () => ({
     addLayer() {}
     fitBounds(bounds: unknown, options: unknown) { mapFlyTo.push({ bounds, ...(options as object) }) }
     getContainer() { return { clientWidth: 1280 } }
+    getPadding() { return { top: 0, right: 0, bottom: 0, left: 0 } }
     getZoom() { return 15 }
     triggerRepaint() {}
     getLayer() { return {} }
@@ -90,27 +92,10 @@ describe('GamcheonMap', () => {
     render(<GamcheonMap places={[ARTIST_WORKSHOP_PLACE]} />)
     fireEvent.click(screen.getByRole('button', { name: /작가님 공방.*옥천로101번길 23/ }))
     expect(mapFlyTo.at(-1)).toMatchObject({
-      center: [ARTIST_WORKSHOP_MODEL.longitude, ARTIST_WORKSHOP_MODEL.latitude],
+      center: [ARTIST_WORKSHOP_PLACE.longitude, ARTIST_WORKSHOP_PLACE.latitude],
       zoom: 19,
       pitch: 63,
     })
-  })
-
-  it('zooms close enough to inspect the artist workshop from the 3D editor', () => {
-    render(<GamcheonMap models={[ARTIST_WORKSHOP_MODEL]} editable />)
-    fireEvent.click(screen.getByRole('button', { name: '3D 배치' }))
-    fireEvent.click(screen.getByRole('button', { name: /01작가님 공방/ }))
-    expect(mapFlyTo.at(-1)).toMatchObject({ zoom: 19 })
-  })
-
-  it('shows only models inside Gamcheon 2-dong even when the map rectangle is wider', () => {
-    const setItems = vi.spyOn(ModelLayer.prototype, 'setItems')
-    const outside = { ...ARTIST_WORKSHOP_MODEL, id: 'outside-dong', longitude: 129.011, latitude: 35.098 }
-    render(<GamcheonMap models={[ARTIST_WORKSHOP_MODEL, outside]} editable />)
-    expect(setItems).toHaveBeenLastCalledWith([ARTIST_WORKSHOP_MODEL])
-    fireEvent.click(screen.getByRole('button', { name: '3D 배치' }))
-    expect(screen.queryByText('outside-dong')).toBeNull()
-    setItems.mockRestore()
   })
 
   it('toggles the real building footprints on and off', () => {
@@ -124,8 +109,15 @@ describe('GamcheonMap', () => {
   })
 
   it('makes 3D buildings see-through on request and automatically while editing alleys', () => {
-    const setOpacity = vi.spyOn(ModelLayer.prototype, 'setOpacity')
-    render(<GamcheonMap editable />)
+    const setOpacity = vi.spyOn(StreetSceneLayer.prototype, 'setBuildingOpacity')
+    vi.useFakeTimers()
+    try {
+      render(<GamcheonMap editable />)
+      act(() => styleLoad.current!())
+      act(() => { vi.advanceTimersByTime(STREET_LAYER_FALLBACK_MS + 10) })
+    } finally {
+      vi.useRealTimers()
+    }
     expect(setOpacity).toHaveBeenLastCalledWith(1)
 
     fireEvent.click(screen.getByRole('button', { name: '3D 건물 모두 반투명하게' }))
@@ -173,25 +165,6 @@ describe('GamcheonMap', () => {
 
     expect(screen.getByRole('alert').textContent).toContain('사각형 지도 안쪽')
     expect(screen.getByRole('button', { name: /완료/ }).hasAttribute('disabled')).toBe(true)
-  })
-
-  it('places a 3D asset and lets the editor change its size and position', () => {
-    const onModelsChange = vi.fn()
-    render(<GamcheonMap editable models={[]} onModelsChange={onModelsChange} />)
-
-    fireEvent.click(screen.getByRole('button', { name: '3D 배치' }))
-    fireEvent.click(screen.getByRole('button', { name: '기본 에셋' }))
-    fireEvent.click(screen.getByRole('button', { name: /지도에 배치/ }))
-    act(() => mapClick.current?.({ lngLat: { lng: 129.0105, lat: 35.0978 } }))
-
-    expect(onModelsChange).toHaveBeenCalledWith([expect.objectContaining({
-      assetId: 'artist-workshop', longitude: 129.0105, latitude: 35.0978,
-    })])
-    fireEvent.change(screen.getByRole('slider', { name: '모델 크기' }), { target: { value: '30' } })
-    expect(onModelsChange).toHaveBeenLastCalledWith([expect.objectContaining({ widthMeters: 30 })])
-    fireEvent.click(screen.getByRole('button', { name: '위치 변경' }))
-    act(() => mapClick.current?.({ lngLat: { lng: 129.0107, lat: 35.0976 } }))
-    expect(onModelsChange).toHaveBeenLastCalledWith([expect.objectContaining({ longitude: 129.0107, latitude: 35.0976 })])
   })
 
   it('tells the user while the 3D street is still being built after the base map', () => {

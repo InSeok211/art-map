@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 
-const source = fs.readFileSync('src/streetSceneData.ts', 'utf8')
-const footprints = JSON.parse(fs.readFileSync('src/gamcheon-buildings.json', 'utf8')).features
+const source = fs.readFileSync('src/scene/streetSceneData.ts', 'utf8')
+const footprints = JSON.parse(fs.readFileSync('src/data/gamcheon-buildings.json', 'utf8')).features
 function idsBetween(start, end) {
   return new Set([...source.slice(source.indexOf(start), source.indexOf(end)).matchAll(/^\s+(\d{10}):/gm)].map(match => Number(match[1])))
 }

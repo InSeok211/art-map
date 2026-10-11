@@ -6,9 +6,9 @@
 
 다음 파일은 OpenStreetMap 데이터에서 받거나 가공한 데이터베이스이며 [Open Database License(ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/)을 따릅니다. 이 파일을 다시 배포하거나 고쳐 배포할 때도 같은 ODbL 조건과 위 출처 표시를 유지해야 합니다.
 
-- `src/gamcheon-buildings.json` — 건물 윤곽(OSM의 높이·층수·지붕 모양 태그 포함)
-- `src/gamcheon2-boundary.json` — 감천2동 경계(Relation 4057099)
-- `src/street-surfaces.json`, `design/street-osm.xml`, `design/street-osm-expanded.xml` — 도로·녹지
+- `src/data/gamcheon-buildings.json` — 건물 윤곽(OSM의 높이·층수·지붕 모양 태그 포함)
+- `src/data/gamcheon2-boundary.json` — 감천2동 경계(Relation 4057099)
+- `src/data/street-surfaces.json`, `design/street-osm.xml`, `design/street-osm-expanded.xml` — 도로·녹지
 - `src/generated/road-ground.json` — 위 도로·건물 자료로 계산한 3D 바닥
 
 지도 화면에는 MapLibre 출처 표시(오른쪽 아래, 휴대폰은 ⓘ 버튼)에 OpenStreetMap·OpenMapTiles·OpenFreeMap 출처가 함께 나옵니다.
@@ -16,7 +16,7 @@
 ## 배경 지도
 
 - 타일: [OpenFreeMap](https://openfreemap.org/)
-- 스타일·스키마: © [OpenMapTiles](https://openmaptiles.org/) (`src/positron-style.json`은 OpenFreeMap Positron 스타일을 고친 파일)
+- 스타일·스키마: © [OpenMapTiles](https://openmaptiles.org/) (`src/data/positron-style.json`은 OpenFreeMap Positron 스타일을 고친 파일)
 - Positron 스타일: © CARTO, © OpenMapTiles. 코드는 BSD-3-Clause, 디자인은 CC BY 4.0 조건으로, 고친 경우에도 이 출처를 유지해야 합니다.
 
 ## 지형 고도 ('3D 지형' 보기)

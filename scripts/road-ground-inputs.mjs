@@ -6,32 +6,32 @@ import { readFileSync } from 'node:fs'
 
 // 건물 윤곽 깎기(building-outlines.json): 건물 윤곽, 도로·골목길 데이터와 그 폭·깎는 규칙
 export const BUILDING_OUTLINE_INPUTS = [
-  'src/gamcheon-buildings.json',
-  'src/street-surfaces.json',
-  'src/gamcheonBoundary.ts',
-  'src/streetSceneData.ts',
-  'src/streetCoordinates.ts',
-  'src/roadCorridors.ts',
-  'src/recorded-alleys.json',
-  'src/recordedAlleys.ts',
-  'src/alleys.ts',
+  'src/data/gamcheon-buildings.json',
+  'src/data/street-surfaces.json',
+  'src/map/gamcheonBoundary.ts',
+  'src/scene/streetSceneData.ts',
+  'src/map/streetCoordinates.ts',
+  'src/scene/roadCorridors.ts',
+  'src/data/recorded-alleys.json',
+  'src/alleys/recordedAlleys.ts',
+  'src/alleys/alleys.ts',
 ]
 
 // 도로 바닥(road-ground.json): 위 입력과 깎은 윤곽, 바닥 도형 코드
 export const ROAD_GROUND_INPUTS = [
   'src/generated/building-outlines.json',
-  'src/gamcheon-buildings.json',
-  'src/street-surfaces.json',
-  'src/gamcheonBoundary.ts',
-  'src/streetSceneData.ts',
-  'src/streetCoordinates.ts',
-  'src/streetSurfaceData.ts',
-  'src/streetRoadGeometry.ts',
-  'src/roadCorridors.ts',
-  'src/roadGround.ts',
-  'src/recorded-alleys.json',
-  'src/recordedAlleys.ts',
-  'src/alleys.ts',
+  'src/data/gamcheon-buildings.json',
+  'src/data/street-surfaces.json',
+  'src/map/gamcheonBoundary.ts',
+  'src/scene/streetSceneData.ts',
+  'src/map/streetCoordinates.ts',
+  'src/scene/streetSurfaceData.ts',
+  'src/scene/streetRoadGeometry.ts',
+  'src/scene/roadCorridors.ts',
+  'src/scene/roadGround.ts',
+  'src/data/recorded-alleys.json',
+  'src/alleys/recordedAlleys.ts',
+  'src/alleys/alleys.ts',
 ]
 
 function inputsHash(files, root) {

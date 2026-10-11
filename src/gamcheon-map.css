@@ -115,14 +115,6 @@
 
 .gamcheon-map__model-editor { min-height: 0; flex: 1; overflow-y: auto; padding: 0 24px 20px; }
 .gamcheon-map__model-help { margin: 2px 0 14px; color: #6f7686; font-size: 11px; line-height: 1.6; }
-.gamcheon-map__model-styles { display: flex; gap: 5px; margin-bottom: 10px; }
-.gamcheon-map__model-styles button { flex: 1; padding: 8px 4px; border: 1px solid #e6e8f0; border-radius: 7px; background: #fff; color: #6f7686; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
-.gamcheon-map__model-styles button.is-active { border-color: #5b6cf0; background: #5b6cf0; color: white; }
-.gamcheon-map__model-assets { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-.gamcheon-map__model-assets button { display: flex; align-items: center; min-width: 0; gap: 7px; padding: 7px; border: 1px solid #e6e8f0; border-radius: 9px; background: #fff; color: #3f4656; text-align: left; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
-.gamcheon-map__model-assets button.is-selected { border-color: #5b6cf0; background: #eef0ff; box-shadow: inset 0 0 0 1px #5b6cf0; }
-.gamcheon-map__model-assets button span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gamcheon-map__model-icon { display: grid; width: 29px; height: 29px; flex: 0 0 auto; place-items: center; border-radius: 7px; background: #eaf3e7; color: #4c8a67; font-size: 18px; }
 .gamcheon-map__model-primary-actions { display: flex; gap: 7px; margin: 11px 0 4px; }
 .gamcheon-map__model-primary-actions button, .gamcheon-map__model-import { display: grid; min-height: 36px; padding: 8px 9px; place-items: center; border: 1px solid #dde2fb; border-radius: 8px; background: #fff; color: #5b6cf0; text-align: center; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
 .gamcheon-map__model-place { flex: 1; background: #5b6cf0 !important; color: #fff !important; }
@@ -145,9 +137,6 @@
 .gamcheon-map__model-item-actions { display: flex; gap: 5px; }
 .gamcheon-map__model-item-actions button { flex: 1; min-height: 31px; padding: 6px 4px; border: 1px solid #dde2fb; border-radius: 7px; background: #fff; color: #376a50; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
 .gamcheon-map__model-item-actions button.is-danger { border-color: #efd9d4; color: #a65e48; }
-.gamcheon-map__model-credit { display: block; margin-top: 15px; color: #9aaa9b; font-size: 9px; }
-.gamcheon-map__model-marker { width: 22px; height: 22px; padding: 0; border: 2px solid #fff; border-radius: 50%; background: #3a8964; box-shadow: 0 2px 8px #234f4470; color: #fff; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
-.gamcheon-map__model-marker.is-selected { width: 27px; height: 27px; background: #e9934f; }
 .gamcheon-map__alley-vertex { width: 14px; height: 14px; border: 2.5px solid #e78349; border-radius: 50%; background: #fff; box-shadow: 0 1px 5px rgba(27, 52, 42, .35); cursor: grab; }
 .gamcheon-map__alley-vertex:active { cursor: grabbing; }
 .gamcheon-map__alley-midpoint { display: grid; width: 16px; height: 16px; padding: 0; place-items: center; border: 1px solid #e3b08f; border-radius: 50%; background: rgba(255, 250, 240, .9); color: #c0612b; font: inherit; font-size: 12px; font-weight: 800; line-height: 1; cursor: copy; opacity: .8; }
@@ -925,8 +914,6 @@
 .gamcheon-map__model-section-title { font-size: 12px; }
 .gamcheon-map__model-placed button { padding: 10px 11px; font-size: 12px; }
 .gamcheon-map__model-inspector label { font-size: 11px; }
-.gamcheon-map__model-assets button { font-size: 11px; }
-.gamcheon-map__model-assets button span:last-child { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; }
 .gamcheon-map__model-placed { max-height: 260px; }
 
 /* GPS 기록 중 지도 위에 뜨는 막대 */

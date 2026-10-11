@@ -306,7 +306,7 @@ scene.updateMatrixWorld(true)
 // footprint. OSM supplies the plan only; the photographed door and mezzanine
 // heights retain their existing vertical coordinates. The west edge is the
 // glazed front facing the alley.
-const osm=JSON.parse(await readFile(fileURLToPath(new URL('../src/gamcheon-buildings.json',import.meta.url)),'utf8'))
+const osm=JSON.parse(await readFile(fileURLToPath(new URL('../src/data/gamcheon-buildings.json',import.meta.url)),'utf8'))
 const footprint=osm.features.find(feature=>feature.properties.id===1468551350)
 if(!footprint||footprint.geometry.type!=='Polygon')throw new Error('Beautiful Hangul OSM footprint is missing')
 const ring=footprint.geometry.coordinates[0].slice(0,-1)
