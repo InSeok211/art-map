@@ -38,7 +38,7 @@ npm run app:deploy                   # 빌드 → 데이터베이스 표 맞추�
 
 - 로그인 없이 편집: `wrangler.jsonc`의 `OPEN_EDITING`이 `"true"`이면 로그인 없이 누구나 편집·공개·모델 올리기를 할 수 있습니다. 주소를 아는 사람은 누구나 고칠 수 있으니, 다시 막으려면 `"false"`로 바꾸고 배포합니다(아래 로그인이 다시 쓰임).
 - 관리자 로그인: 비밀번호는 PBKDF2 해시로만 비밀값(`ADMIN_PASSWORD_HASH`)에 두고, 로그인하면 서명한 쿠키(HttpOnly·Secure·SameSite=Strict, 8시간)를 줍니다. 같은 곳에서 15분 안에 5번 틀리면 15분 동안 막습니다. 값을 바꾸는 요청은 이 앱 화면에서 온 것만 받습니다.
-- 홈페이지 연결: 공개 지도는 `src/embed.tsx`의 `HOST_ORIGINS` 주소에서 온 메시지만 받고 그 주소로만 보냅니다. 화면에 끼워 넣을 수 있는 주소는 `public/_headers`의 `frame-ancestors`로 같게 정합니다. 편집 앱은 다른 사이트에 끼워 넣을 수 없습니다.
+- 홈페이지 연결: 공개 지도는 `src/embed.tsx`의 `HOST_ORIGINS` 주소에서 온 메시지만 받고 그 주소로만 보냅니다. 화면에 끼워 넣을 수 있는 주소는 `public/_headers`의 `frame-ancestors`로 같게 정합니다. 편집 앱은 홈페이지 운영자 화면(`/admin/map-editor`)에서만 끼워 쓸 수 있습니다(같은 `frame-ancestors`).
   - 홈페이지 → 지도: `{ source: 'gamcheon-artist-host', type: 'set', places, selectedId, canPick }`
   - 지도 → 홈페이지: `{ source: 'gamcheon-artist-map', type: 'ready' | 'select' | 'pick', ... }`
 - 오픈소스 라이선스 전문은 빌드할 때 `third-party-notices.txt`로 함께 나갑니다.

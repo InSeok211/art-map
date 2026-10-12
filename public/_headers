@@ -9,10 +9,9 @@
 /index.html
   Content-Security-Policy: frame-ancestors 'self' https://artist-map.com https://gamcheon-artist-map-apply.rjbcom4263.workers.dev http://127.0.0.1:8787 http://localhost:8787
 
-# 편집 앱: 다른 사이트에 끼워 넣지 못하게 합니다(눌러서 속이기 방지).
+# 편집 앱: 홈페이지 운영자 화면(/admin/map-editor)에서만 끼워 쓸 수 있고, 다른 사이트에는 끼워 넣지 못합니다.
 /studio/*
-  X-Frame-Options: DENY
-  Content-Security-Policy: frame-ancestors 'none'
+  Content-Security-Policy: frame-ancestors 'self' https://artist-map.com https://gamcheon-artist-map-apply.rjbcom4263.workers.dev http://127.0.0.1:8787 http://localhost:8787
 
 # 빌드 파일은 이름에 내용 지문이 붙어 있어 오래 캐시합니다.
 /assets/*
