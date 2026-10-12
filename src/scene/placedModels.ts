@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { resolveModelUrl } from '../buildings/buildingEdits'
 import type { PlacedModel } from '../buildings/buildingEdits'
 import { loadModel } from './modelFiles'
+import { mergeByMaterial } from './mergeModel'
 import { streetMeters } from '../map/streetCoordinates'
 
 // 관리자가 올린 3D 모델(GLB)을 3D 거리에 둡니다(건물 탭 3단계). 모델의 바닥 가운데를 그 자리에 두고, 바닥의 긴
@@ -75,7 +76,8 @@ export class PlacedModels {
     let template = this.templates.get(modelId)
     if (!template) {
       template = resolveModelUrl(modelId).then((url) => new Promise<Template | null>((resolve) => loadModel(url, (gltf) => {
-        const model = gltf.scene
+        // 올린 모델도 부품을 같은 재질끼리 합쳐 그리기 명령을 줄입니다(mergeModel.ts).
+        const model = mergeByMaterial(gltf.scene)
         const box = new THREE.Box3().setFromObject(model)
         if (box.isEmpty()) return resolve(null)
         const size = box.getSize(new THREE.Vector3())

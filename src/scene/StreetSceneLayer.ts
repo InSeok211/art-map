@@ -21,6 +21,7 @@ import type { BuildingEdits, PlacedModel } from '../buildings/buildingEdits'
 import { drapeOnTerrain, flatPolygonGeometry, isDrawablePolygon, TERRAIN_GROUND_LIFT } from './groundGeometry'
 import { BEAUTIFUL_HANGUL_URL, GREEN_HOUSE_URL, loadModel } from './modelFiles'
 import { PlacedModels } from './placedModels'
+import { mergeByMaterial } from './mergeModel'
 import { routeLineMeshes } from './routeLine'
 import type { RoadGround } from './roadGround'
 // 길을 가리는 건물 반투명(findRoadOccluders)은 2026-10-09 주석 처리했습니다. 되살릴 때 아래 두 줄의 주석을 풉니다.
@@ -2318,7 +2319,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
     if (this.greenHouse) return
     loadModel(GREEN_HOUSE_URL, (gltf) => {
       if (this.map !== map) return
-      const model = gltf.scene
+      // 부품 수백 개를 같은 재질끼리 합쳐 그리기 명령을 줄입니다(mergeModel.ts).
+      const model = mergeByMaterial(gltf.scene)
       model.name = 'green-house'
       const placement = greenHouseOsmPlacement()
       model.scale.set(placement.scaleX, 1, placement.scaleZ)
@@ -2342,7 +2344,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
     if (this.beautifulHangul) return
     loadModel(BEAUTIFUL_HANGUL_URL, (gltf) => {
       if (this.map !== map) return
-      const model = gltf.scene
+      // 부품 수백 개를 같은 재질끼리 합쳐 그리기 명령을 줄입니다(mergeModel.ts).
+      const model = mergeByMaterial(gltf.scene)
       model.name = 'beautiful-hangul'
       // OSM 윤곽 그대로 두면 넓힌 골목(감내1로175번안길 등)과 겹치므로, 차도·골목길에서 비켜 놓습니다.
       const [x, z] = streetMeters(BEAUTIFUL_HANGUL_CENTER)
