@@ -25,7 +25,7 @@ npm run dev
 | 위치 | 내용 |
 |---|---|
 | `/` (`index.html`, `src/embed.tsx`) | 공개 지도. 홈페이지가 iframe으로 끼우면 홈페이지가 보낸 장소를 표시. 브라우저에서 바로 열면 편집 앱(`/studio/`)으로 이동하고, `/?view=public`으로 열면 장소 목록·길찾기 패널까지 있는 전체 공개 지도 |
-| `/studio/` (`studio/index.html`, `src/studio.tsx`) | 편집 앱. 관리자로 로그인해 골목길·건물을 고치고 공개 |
+| `/studio/` (`studio/index.html`, `src/studio.tsx`) | 편집 앱. 골목길·건물을 고치고 공개. 지금은 로그인 없이 누구나 씀(`wrangler.jsonc`의 `OPEN_EDITING`) |
 | `/api/` (`server/`) | 지도 데이터 API. `/api/map-alleys`·`/api/map-buildings`·`/api/map-models/<번호>`는 누구나 읽고, `/api/admin/...`는 로그인한 관리자만 씀 |
 | `migrations/` | 데이터베이스(D1) 표 |
 
@@ -36,6 +36,7 @@ npm run admin:password               # 배포한 서버에 관리자 로그인 �
 npm run app:deploy                   # 빌드 → 데이터베이스 표 맞추기 → 배포
 ```
 
+- 로그인 없이 편집: `wrangler.jsonc`의 `OPEN_EDITING`이 `"true"`이면 로그인 없이 누구나 편집·공개·모델 올리기를 할 수 있습니다. 주소를 아는 사람은 누구나 고칠 수 있으니, 다시 막으려면 `"false"`로 바꾸고 배포합니다(아래 로그인이 다시 쓰임).
 - 관리자 로그인: 비밀번호는 PBKDF2 해시로만 비밀값(`ADMIN_PASSWORD_HASH`)에 두고, 로그인하면 서명한 쿠키(HttpOnly·Secure·SameSite=Strict, 8시간)를 줍니다. 같은 곳에서 15분 안에 5번 틀리면 15분 동안 막습니다. 값을 바꾸는 요청은 이 앱 화면에서 온 것만 받습니다.
 - 홈페이지 연결: 공개 지도는 `src/embed.tsx`의 `HOST_ORIGINS` 주소에서 온 메시지만 받고 그 주소로만 보냅니다. 화면에 끼워 넣을 수 있는 주소는 `public/_headers`의 `frame-ancestors`로 같게 정합니다. 편집 앱은 다른 사이트에 끼워 넣을 수 없습니다.
   - 홈페이지 → 지도: `{ source: 'gamcheon-artist-host', type: 'set', places, selectedId, canPick }`

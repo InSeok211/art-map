@@ -50,7 +50,7 @@ async function postJson(path: string, body?: unknown) {
   return result
 }
 
-function Studio() {
+function Studio({ open }: { open: boolean }) {
   const [phoneLayout, setPhoneLayout] = useState(() => window.matchMedia('(max-width: 720px)').matches)
   const [mobileEditing, setMobileEditing] = useState(true)
   const alleyStore = useAlleyStore()
@@ -80,7 +80,7 @@ function Studio() {
         <div className="studio-header-actions">
           {phoneLayout && <button className="demo-edit-toggle" type="button" onClick={() => setMobileEditing((current) => !current)}>{editing ? '지도만 보기' : '편집하기'}</button>}
           <a className="studio-link" href="/?view=public" target="_blank" rel="noreferrer">공개 지도 보기</a>
-          {!PREVIEW && <button className="studio-link" type="button" onClick={logout}>로그아웃</button>}
+          {!PREVIEW && !open && <button className="studio-link" type="button" onClick={logout}>로그아웃</button>}
         </div>
       </header>
       <main className="demo-main">
@@ -123,15 +123,18 @@ function Login({ notice, onLogin }: { notice: string; onLogin: () => void }) {
   </main>
 }
 
-// 서버에서 열면 관리자로 로그인했는지 먼저 확인합니다.
+// 서버에서 열면 관리자로 로그인했는지 먼저 확인합니다(서버가 로그인 없이 편집하는 설정이면 바로 엽니다).
 function StudioGate() {
   const [state, setState] = useState<'checking' | 'login' | 'ready'>(PREVIEW ? 'ready' : 'checking')
   const [notice, setNotice] = useState('')
+  const [open, setOpen] = useState(false)
   useEffect(() => {
     if (PREVIEW) return
     fetch('/api/admin/session', { cache: 'no-store' })
-      .then((response) => response.json() as Promise<{ admin?: boolean; configured?: boolean }>)
+      .then((response) => response.json() as Promise<{ admin?: boolean; configured?: boolean; open?: boolean }>)
       .then((session) => {
+        setOpen(session.open === true)
+        if (session.open) { setState('ready'); return }
         if (session.configured === false) setNotice('관리자 비밀번호가 아직 설정되지 않았습니다(npm run admin:password).')
         setState(session.admin ? 'ready' : 'login')
       })
@@ -139,7 +142,7 @@ function StudioGate() {
   }, [])
   if (state === 'checking') return <main className="studio-login"><p>확인하는 중…</p></main>
   if (state === 'login') return <Login notice={notice} onLogin={() => setState('ready')} />
-  return <Studio />
+  return <Studio open={open} />
 }
 
 createRoot(document.getElementById('root')!).render(<StudioGate />)

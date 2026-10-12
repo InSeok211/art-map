@@ -100,3 +100,11 @@ describe('api routing', () => {
     expect((await handleApi(request('/api/map-alleys', { method: 'DELETE', headers: { origin: 'https://map.test' } }), env, new URL('https://map.test/api/map-alleys'))).status).toBe(405)
   })
 })
+
+describe('open editing', () => {
+  it('lets anyone edit without a login when OPEN_EDITING is true', async () => {
+    const env = { ...await testEnv(), OPEN_EDITING: 'true' } as Env
+    expect(await isAdmin(request('/api/admin/map-buildings'), env)).toBe(true)
+    expect(await isAdmin(request('/api/admin/map-buildings'), { ...env, OPEN_EDITING: 'false' })).toBe(false)
+  })
+})

@@ -30,8 +30,12 @@ function readCookie(request: Request, name: string) {
   return ''
 }
 
-// 로그인한 관리자인지 확인합니다.
+// 로그인 없이 편집하는 설정(OPEN_EDITING)이 켜져 있는지
+export const openEditing = (env: Env) => env.OPEN_EDITING === 'true'
+
+// 로그인한 관리자인지(또는 로그인 없이 편집하는 설정인지) 확인합니다.
 export async function isAdmin(request: Request, env: Env) {
+  if (openEditing(env)) return true
   if (!configured(env)) return false
   const [payload, signature] = readCookie(request, COOKIE).split('.')
   if (!payload || !signature) return false
@@ -83,5 +87,5 @@ export async function login(request: Request, env: Env) {
 export const logout = () => json({ ok: true }, { headers: { 'set-cookie': cookie('', 0) } })
 
 export async function session(request: Request, env: Env) {
-  return json({ admin: await isAdmin(request, env), configured: configured(env) })
+  return json({ admin: await isAdmin(request, env), configured: configured(env), open: openEditing(env) })
 }
