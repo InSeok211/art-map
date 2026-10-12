@@ -79,7 +79,7 @@ function Studio() {
         </div>
         <div className="studio-header-actions">
           {phoneLayout && <button className="demo-edit-toggle" type="button" onClick={() => setMobileEditing((current) => !current)}>{editing ? '지도만 보기' : '편집하기'}</button>}
-          <a className="studio-link" href="/" target="_blank" rel="noreferrer">공개 지도 보기</a>
+          <a className="studio-link" href="/?view=public" target="_blank" rel="noreferrer">공개 지도 보기</a>
           {!PREVIEW && <button className="studio-link" type="button" onClick={logout}>로그아웃</button>}
         </div>
       </header>

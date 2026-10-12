@@ -24,7 +24,7 @@ npm run dev
 
 | 위치 | 내용 |
 |---|---|
-| `/` (`index.html`, `src/embed.tsx`) | 공개 지도. 바로 열면 장소 목록·길찾기 패널까지 있는 전체 지도, 홈페이지가 iframe으로 끼우면 홈페이지가 보낸 장소를 표시 |
+| `/` (`index.html`, `src/embed.tsx`) | 공개 지도. 홈페이지가 iframe으로 끼우면 홈페이지가 보낸 장소를 표시. 브라우저에서 바로 열면 편집 앱(`/studio/`)으로 이동하고, `/?view=public`으로 열면 장소 목록·길찾기 패널까지 있는 전체 공개 지도 |
 | `/studio/` (`studio/index.html`, `src/studio.tsx`) | 편집 앱. 관리자로 로그인해 골목길·건물을 고치고 공개 |
 | `/api/` (`server/`) | 지도 데이터 API. `/api/map-alleys`·`/api/map-buildings`·`/api/map-models/<번호>`는 누구나 읽고, `/api/admin/...`는 로그인한 관리자만 씀 |
 | `migrations/` | 데이터베이스(D1) 표 |
