@@ -2,8 +2,8 @@ import recorded from '../data/recorded-alleys.json'
 import { sanitizeAlleys } from './alleys'
 import type { Alley } from './alleys'
 
-// 관리자가 확인해 홈페이지에 저장한 골목길(손으로 그린 것과 GPS 기록으로 찾은 것)을 배포할 때 받아 둔 사본입니다.
-// `npm run pull:alleys -- <홈페이지 주소>`로 갱신하고 `npm run build:road-ground`를 다시 돌리면, 이 골목길도
+// 관리자가 확인해 지도 앱 서버에 저장한 골목길(손으로 그린 것과 GPS 기록으로 찾은 것)을 배포할 때 받아 둔 사본입니다.
+// `npm run pull:alleys`로 갱신하고 `npm run build:road-ground`를 다시 돌리면, 이 골목길도
 // 도로 바닥에 구워지고 그 위에 걸친 건물이 깎입니다. 그 뒤에 새로 추가한 골목길은 다음 배포 전까지
 // 거리 장면이 바닥 위에 따로 그립니다(StreetSceneLayer.setExtraAlleys).
 export const RECORDED_ALLEYS: Alley[] = sanitizeAlleys(recorded)
