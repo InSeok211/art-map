@@ -1,17 +1,10 @@
-// 지도 앱 서버(Cloudflare Worker)가 쓰는 자원입니다(wrangler.jsonc).
-//  - DB: 골목길·GPS 기록·건물 편집·로그인 실패 기록(D1, migrations/)
-//  - MODELS: 관리자가 올린 3D 모델(GLB) 파일(R2, map-models/ 아래)
-//  - ASSETS: 빌드한 화면(공개 지도 /, 편집 앱 /studio/)
-//  - ADMIN_USERNAME·ADMIN_PASSWORD_HASH·SESSION_SECRET: 편집 앱 관리자 로그인(비밀값, npm run admin:password로 설정)
-//  - OPEN_EDITING: "true"면 로그인 없이 누구나 편집 앱을 씀(wrangler.jsonc의 vars). 끄면 다시 로그인해야 편집
-//  - MAP_EDIT_SECRET: 홈페이지 운영자 화면이 발급한 편집 허가증을 확인하는 비밀값(홈페이지와 같은 값, npm run link:homepage로 설정)
-export interface Env {
+// 지도 API가 쓰는 자원입니다. 이 API는 감천 작가 지도 홈페이지 서버 안에서 돌고(npm run export:site로 묶어 넣음),
+// 홈페이지가 자기 자원과 운영자 확인을 넘겨줍니다.
+//  - DB: 골목길·GPS 기록·건물 편집(홈페이지 D1, 표는 migrations/0001_map_data.sql)
+//  - MODELS: 관리자가 올린 3D 모델(GLB) 파일(홈페이지 R2, map-models/ 아래)
+//  - isAdmin: 이 요청이 홈페이지 운영자로 로그인한 사람의 것인지
+export interface MapEnv {
   DB: D1Database
   MODELS: R2Bucket
-  ASSETS: Fetcher
-  ADMIN_USERNAME?: string
-  ADMIN_PASSWORD_HASH?: string
-  SESSION_SECRET?: string
-  OPEN_EDITING?: string
-  MAP_EDIT_SECRET?: string
+  isAdmin: (request: Request) => Promise<boolean>
 }

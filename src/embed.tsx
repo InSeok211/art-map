@@ -11,20 +11,16 @@ import { isInsideGamcheonMap } from './map/gamcheonBoundary'
 import type { Place } from './types'
 import './embed.css'
 
-// 감천 골목지도 공개 지도(지도 앱 서버의 /)입니다. 감천 작가 지도 홈페이지(/map)가 iframe으로 끼워 쓰고,
-// 홈페이지(HOST_ORIGINS)와만 postMessage로 주고받습니다(다른 곳에서 온 메시지는 무시).
+// 감천 골목지도 공개 지도(홈페이지의 /map-app/)입니다. 감천 작가 지도 홈페이지(/map)가 iframe으로 끼워 쓰고,
+// 같은 홈페이지(HOST_ORIGINS)와만 postMessage로 주고받습니다(다른 곳에서 온 메시지는 무시).
 //   부모 → 지도: { source: 'gamcheon-artist-host', type: 'set', places, selectedId, canPick }
 //   지도 → 부모: { source: 'gamcheon-artist-map', type: 'ready' | 'select' | 'pick', ... }
-// 주소에 ?mode=full을 붙이거나 ?view=public으로 바로 열면 패널(장소 목록·길찾기)까지 갖춘 전체 지도로 열리고,
+// 주소에 ?mode=full을 붙이거나 바로 열면 패널(장소 목록·길찾기)까지 갖춘 전체 지도로 열리고,
 // 작가님 공방을 장소로 함께 보여 줍니다.
 const EMBEDDED = window.self !== window.top
 const FULL = new URLSearchParams(window.location.search).get('mode') === 'full' || !EMBEDDED
-// 이 주소를 브라우저에서 바로 열면 편집 앱(/studio/)으로 보냅니다. 홈페이지가 끼워 쓴 지도와 편집 앱의
-// '공개 지도 보기'(?view=public)는 그대로 공개 지도를 보여 줍니다.
-const OPEN_STUDIO = !EMBEDDED && !new URLSearchParams(window.location.search).has('view')
-if (OPEN_STUDIO) window.location.replace('/studio/')
-// 지도를 끼워 쓰는 홈페이지 주소입니다(public/_headers의 frame-ancestors와 같게 둡니다).
-const HOST_ORIGINS = ['https://artist-map.com', 'https://gamcheon-artist-map-apply.rjbcom4263.workers.dev', 'http://127.0.0.1:8787', 'http://localhost:8787']
+// 지도를 끼워 쓰는 홈페이지 주소입니다. 지도는 홈페이지 서버가 함께 주므로 같은 주소뿐입니다.
+const HOST_ORIGINS = [window.location.origin]
 // ?host=site: 홈페이지가 제목 카드(← 감천 작가 지도 · 작가 목록)를 지도 위에 띄우므로, 휴대폰 화면의 지도 쪽
 // 이름표를 숨기고 검색·분류를 그 카드 아래에 둡니다(CSS의 is-site-hosted).
 const SITE_HOSTED = new URLSearchParams(window.location.search).get('host') === 'site'
@@ -119,4 +115,4 @@ const EmbeddedMapView = memo(function EmbeddedMapView({ host, alleys, buildingEd
   />
 })
 
-if (!OPEN_STUDIO) createRoot(document.getElementById('root')!).render(<EmbeddedMap />)
+createRoot(document.getElementById('root')!).render(<EmbeddedMap />)

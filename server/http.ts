@@ -14,7 +14,6 @@ export async function readJson(request: Request): Promise<Record<string, unknown
 }
 
 // 다른 사이트가 관리자 브라우저를 시켜 값을 바꾸지 못하게(CSRF), 바꾸는 요청은 이 앱 화면에서 온 것만 받습니다.
-// (로그인 쿠키도 SameSite=Strict라 다른 사이트에서 온 요청에는 붙지 않습니다.)
 export function fromThisApp(request: Request, url: URL) {
   if (request.method === 'GET' || request.method === 'HEAD') return true
   return request.headers.get('origin') === url.origin

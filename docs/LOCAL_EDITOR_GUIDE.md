@@ -1,6 +1,6 @@
 # 로컬 지도 편집기 1차 사용 설명
 
-최신 지도 앱의 `/studio/`에서 사용하는 건물 편집 기능입니다. Vite에서는 브라우저에 저장하고, Worker에서는 로그인 후 D1/R2에 저장합니다. 기능 포함·제외 결정은 [FEATURE_INTEGRATION.md](FEATURE_INTEGRATION.md)에 있습니다.
+지도 편집 앱(`/studio/`, 홈페이지에서는 `/map-app/studio/`)에서 사용하는 건물 편집 기능입니다. Vite에서는 브라우저에 저장하고, 홈페이지에서는 운영자 로그인 후 홈페이지 D1/R2에 저장합니다. 기능 포함·제외 결정은 [FEATURE_INTEGRATION.md](FEATURE_INTEGRATION.md)에 있습니다.
 
 ## 시작
 
@@ -87,9 +87,7 @@ GLB는 내장 텍스처를 함께 포함합니다. ZIP은 추가 압축을 하�
 명령은 저장소 루트에서 실행합니다.
 
 ```powershell
-npm run admin:password -- --local
-npm run app:local
+npm run export:site -- <홈페이지 저장소 경로>
 ```
 
-로컬 Worker의 편집기는 `http://127.0.0.1:8788/studio/`이며, 로컬 DB와 로컬 R2를 사용합니다. 운영 자료를 자동으로 복사하지 않습니다.
-운영 배포는 README의 관리자 설정·D1/R2 준비·`app:deploy` 절차를 따릅니다. 이번 통합은 운영 배포를 실행하지 않습니다.
+지도는 별도 서버 없이 홈페이지 서버 안에서 돕니다. 위 명령으로 화면과 지도 API를 홈페이지에 넣은 뒤 홈페이지를 빌드·실행하면, 운영자 화면의 **지도 편집**(`/admin/map-editor`)에서 홈페이지의 로컬 DB·R2로 확인할 수 있습니다. 운영 배포는 홈페이지 배포와 같습니다.

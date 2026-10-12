@@ -85,20 +85,15 @@ npx vitest run src/scene/terrain/terrainBuildingGeometry.test.ts src/scene/terra
 
 브라우저에서는 평지/3D 전환, 낮은 쪽과 높은 쪽 벽 밑단, 건물 크기·방향 변경, 편집 모드의 반투명 표현을 확인합니다. 관련 검사는 수치·도형·평지 장면 동작을 검사하며, 현장 건물과의 일치까지 보장하지는 않습니다.
 
-## 지도 서버와 홈페이지 반영 순서
+## 홈페이지 반영 순서(한 서버)
 
 1. 로컬 `/studio/`에서 지형과 건물 편집을 진행합니다. 로컬 ZIP으로 브라우저 자료를 보관합니다.
-2. `npm run app:build`로 공개 지도·편집 앱·서버 타입을 빌드합니다.
-3. 서버 동작 확인은 관리자 로컬 설정 후 `npm run app:local`로 진행합니다.
-4. 운영 계정의 D1·R2·관리자 Secret과 기존 자료 이전을 준비합니다. 루트 `wrangler.jsonc`는 지도 앱 설정입니다.
-5. 실제 배포는 `npm run app:deploy`를 사용합니다. D1 마이그레이션과 Worker 배포를 실행하는 명령입니다.
-6. 홈페이지 iframe을 지도 서버 공개 주소로 연결하고, `src/embed.tsx`의 `HOST_ORIGINS`와 `public/_headers`의 허용 주소를 맞춥니다.
-
-상위 배포본의 `deployment.json`은 과거 홈페이지 기록입니다. 최신 지도 앱 연결 리소스는 이 저장소의 `wrangler.jsonc`에서 확인합니다.
-예전 `export:site`, `/embed.html`, 홈페이지 `/admin/art-map` 내보내기 방식은 최신 구조에서 사용하지 않습니다.
+2. `npm test`로 확인합니다.
+3. `npm run export:site -- <홈페이지 저장소 경로>`로 공개 지도·편집 앱(`public/map-app/`)과 지도 API(`app/map/generated/map-api.js`)를 홈페이지에 넣습니다.
+4. 홈페이지 저장소에서 빌드·배포하고 커밋합니다. 지도 데이터는 홈페이지 D1·R2에 있고, 편집은 홈페이지 운영자 로그인으로 합니다.
 
 ## 인수인계 설명
 
-“지도 원본은 `art-map` 폴더입니다. 공개 지도는 `/`, 편집기는 `/studio/`, 저장·로그인 API는 `server/`입니다. 건물과 지형 기능은 기능별 폴더에서 수정하며, 초안과 공개본은 공통 데이터 형식으로 관리합니다. Vite는 브라우저에 저장하고 Worker는 D1/R2에 저장합니다. ZIP은 로컬 복구용입니다. 지도 Worker를 배포한 뒤 홈페이지 iframe으로 연결합니다.”
+“지도 원본은 `art-map` 폴더입니다. 공개 지도는 `index.html`, 편집기는 `studio/`, 저장 API는 `server/`입니다. 건물과 지형 기능은 기능별 폴더에서 수정하며, 초안과 공개본은 공통 데이터 형식으로 관리합니다. Vite는 브라우저에 저장하고, 홈페이지에서는 홈페이지 D1/R2에 저장합니다. ZIP은 로컬 복구용입니다. `npm run export:site`로 홈페이지에 넣고 홈페이지를 배포하면 지도도 함께 나갑니다(서버는 홈페이지 하나).”
 
 기능 결정은 [FEATURE_INTEGRATION.md](FEATURE_INTEGRATION.md), 파일 구조는 [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)에 있습니다.

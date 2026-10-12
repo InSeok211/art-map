@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
 import { createRoot } from 'react-dom/client'
 import { GamcheonMap } from './GamcheonMap'
 import type { EditTool } from './GamcheonMap'
@@ -9,17 +8,15 @@ import { useAlleyStore } from './alleys/alleyStore'
 import { useBuildingEditStore } from './buildings/buildingEditStore'
 import type { Place } from './types'
 import './studio.css'
-import { installEditToken } from './studioAuth'
 import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings } from './scene/streetSceneData'
 
-// 감천 골목지도 편집 앱(지도 앱 서버의 /studio/)입니다. 골목길과 건물을 고쳐 공개 지도(/)에 반영합니다.
-//  - 지도 앱 서버에서 열면 관리자로 로그인한 뒤 서버 데이터베이스에 저장합니다.
+// 감천 골목지도 편집 앱입니다. 홈페이지 운영자 화면의 '지도 편집'(/admin/map-editor)이 /map-app/studio/를 띄우고,
+// 골목길과 건물을 고쳐 공개 지도(홈페이지 /map)에 반영합니다.
+//  - 홈페이지에서 열면 홈페이지 운영자 로그인으로 확인하고 홈페이지 데이터베이스에 저장합니다.
 //  - 개발 미리보기(npm run dev)에서는 서버가 없으므로 로그인 없이 이 브라우저에만 저장합니다.
 const PREVIEW = import.meta.env.DEV
 // 건물 편집 저장소는 이 표시가 있으면 서버 저장소만 씁니다(서버를 못 읽을 때 몰래 브라우저에 저장하지 않게).
 if (!PREVIEW) document.documentElement.dataset.buildingEditServer = 'true'
-// 홈페이지 운영자 화면에서 열었으면 그곳이 발급한 편집 허가증을 서버 요청에 붙입니다.
-const EDIT_TOKEN = !PREVIEW && installEditToken()
 
 // Survey links open the same map at the building being reviewed.
 const query = new URLSearchParams(window.location.search)
@@ -42,18 +39,7 @@ const reviewView = Number(reviewId) === ARTIST_WORKSHOP_FOOTPRINT_ID ? {
 const PLACES: Place[] = [ARTIST_WORKSHOP_PLACE, BEAUTIFUL_HANGUL_PLACE]
 const EDIT_TOOLS: EditTool[] = ['alleys', 'buildings']
 
-async function postJson(path: string, body?: unknown) {
-  const response = await fetch(path, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-  const result = await response.json().catch(() => ({})) as { error?: string }
-  if (!response.ok) throw new Error(result.error || `오류 ${response.status}`)
-  return result
-}
-
-function Studio({ open }: { open: boolean }) {
+function Studio() {
   const [phoneLayout, setPhoneLayout] = useState(() => window.matchMedia('(max-width: 720px)').matches)
   const [mobileEditing, setMobileEditing] = useState(true)
   const alleyStore = useAlleyStore()
@@ -67,8 +53,7 @@ function Studio({ open }: { open: boolean }) {
   }, [])
 
   const editing = !phoneLayout || mobileEditing
-  const saveState = PREVIEW ? '이 브라우저에만 저장(미리보기)' : '지도 앱 서버에 저장'
-  const logout = () => { void postJson('/api/admin/logout').finally(() => window.location.reload()) }
+  const saveState = PREVIEW ? '이 브라우저에만 저장(미리보기)' : '홈페이지 서버에 저장'
   if (!alleyStore.ready) return <main className="studio-login">
     <p role="status">{alleyStore.notice || '골목길 서버 데이터를 불러오는 중…'}</p>
     {alleyStore.notice && <button type="button" onClick={() => window.location.reload()}>새로고침</button>}
@@ -82,8 +67,7 @@ function Studio({ open }: { open: boolean }) {
         </div>
         <div className="studio-header-actions">
           {phoneLayout && <button className="demo-edit-toggle" type="button" onClick={() => setMobileEditing((current) => !current)}>{editing ? '지도만 보기' : '편집하기'}</button>}
-          <a className="studio-link" href="/?view=public" target="_blank" rel="noreferrer">공개 지도 보기</a>
-          {!PREVIEW && !open && !EDIT_TOKEN && <button className="studio-link" type="button" onClick={logout}>로그아웃</button>}
+          <a className="studio-link" href={PREVIEW ? '../' : '/map'} target="_blank" rel="noreferrer">공개 지도 보기</a>
         </div>
       </header>
       <main className="demo-main">
@@ -94,58 +78,26 @@ function Studio({ open }: { open: boolean }) {
   )
 }
 
-function Login({ notice, onLogin }: { notice: string; onLogin: () => void }) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    setBusy(true)
-    setError('')
-    try {
-      await postJson('/api/admin/login', { username, password })
-      onLogin()
-    } catch (reason) {
-      setError((reason as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
-  return <main className="studio-login">
-    <form onSubmit={submit}>
-      <span className="demo-brand-icon">G</span>
-      <h1>골목지도 편집 앱</h1>
-      <p>관리자만 쓸 수 있습니다. 홈페이지 운영자 화면의 <strong>지도 편집</strong>에서 열면 로그인 없이 바로 편집합니다.</p>
-      {notice && <p className="studio-login__error" role="alert">{notice}</p>}
-      <label>아이디<input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required /></label>
-      <label>비밀번호<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
-      {error && <p className="studio-login__error" role="alert">{error}</p>}
-      <button type="submit" disabled={busy}>{busy ? '확인하는 중…' : '로그인'}</button>
-    </form>
-  </main>
-}
-
-// 서버에서 열면 관리자로 로그인했는지 먼저 확인합니다(서버가 로그인 없이 편집하는 설정이면 바로 엽니다).
+// 홈페이지 운영자로 로그인했는지 먼저 확인합니다(같은 홈페이지 서버의 /api/admin/session).
 function StudioGate() {
-  const [state, setState] = useState<'checking' | 'login' | 'ready'>(PREVIEW ? 'ready' : 'checking')
-  const [notice, setNotice] = useState('')
-  const [open, setOpen] = useState(false)
+  const [state, setState] = useState<'checking' | 'denied' | 'error' | 'ready'>(PREVIEW ? 'ready' : 'checking')
   useEffect(() => {
     if (PREVIEW) return
     fetch('/api/admin/session', { cache: 'no-store' })
-      .then((response) => response.json() as Promise<{ admin?: boolean; configured?: boolean; open?: boolean }>)
-      .then((session) => {
-        setOpen(session.open === true)
-        if (session.open) { setState('ready'); return }
-        if (session.configured === false) setNotice('관리자 비밀번호가 아직 설정되지 않았습니다(npm run admin:password).')
-        setState(session.admin ? 'ready' : 'login')
-      })
-      .catch(() => { setNotice('지도 앱 서버에 연결하지 못했습니다.'); setState('login') })
+      .then((response) => response.json() as Promise<{ admin?: boolean }>)
+      .then((session) => setState(session.admin ? 'ready' : 'denied'))
+      .catch(() => setState('error'))
   }, [])
   if (state === 'checking') return <main className="studio-login"><p>확인하는 중…</p></main>
-  if (state === 'login') return <Login notice={notice} onLogin={() => setState('ready')} />
-  return <Studio open={open} />
+  if (state !== 'ready') return <main className="studio-login">
+    <div className="studio-login__box">
+      <span className="demo-brand-icon">G</span>
+      <h1>골목지도 편집 앱</h1>
+      <p>{state === 'denied' ? '홈페이지 운영자로 로그인해야 쓸 수 있습니다.' : '서버에 연결하지 못했습니다. 잠시 뒤 다시 열어 주세요.'}</p>
+      <a href="/admin/login" target="_top">운영자 로그인</a>
+    </div>
+  </main>
+  return <Studio />
 }
 
 createRoot(document.getElementById('root')!).render(<StudioGate />)

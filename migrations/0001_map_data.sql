@@ -1,5 +1,4 @@
--- 감천 골목지도 앱 서버의 데이터베이스입니다. 표 이름·모양은 예전 홈페이지(감천 작가 지도)와 같아서 데이터를 그대로
--- 옮겨 올 수 있습니다.
+-- 감천 골목지도 지도 API가 쓰는 표입니다(홈페이지 D1). server/schema.ts가 없으면 같은 모양으로 만듭니다.
 
 -- 골목길(확인한 길)과 버린 후보. 한 줄(id = 'active')에 목록 전체를 둡니다.
 CREATE TABLE IF NOT EXISTS map_alleys (
@@ -22,11 +21,4 @@ CREATE TABLE IF NOT EXISTS map_building_edits (
   id TEXT PRIMARY KEY NOT NULL CHECK (id IN ('draft', 'published')),
   edits_json TEXT NOT NULL,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- 편집 앱 로그인 실패 횟수(같은 곳에서 15분 안에 5번 틀리면 잠시 막음)
-CREATE TABLE IF NOT EXISTS login_failures (
-  key TEXT PRIMARY KEY NOT NULL,
-  count INTEGER NOT NULL,
-  first_at INTEGER NOT NULL
 );

@@ -1,4 +1,4 @@
-import type { Env } from './env'
+import type { MapEnv } from './env'
 import { error, json, readJson } from './http'
 
 // 골목길(관리자가 그리거나 GPS 기록으로 찾아 확인한 길)과 관리자 GPS 기록입니다(예전 홈페이지 app/map/map-alleys-db.ts
@@ -56,7 +56,7 @@ export function cleanLines(value: unknown): LngLat[][] | null {
   return lines
 }
 
-async function readAlleys(env: Env) {
+async function readAlleys(env: MapEnv) {
   const row = await env.DB.prepare("SELECT alleys_json, dismissed_json, updated_at FROM map_alleys WHERE id = 'active'")
     .first<{ alleys_json: string; dismissed_json: string; updated_at: string }>()
   return {
@@ -67,14 +67,14 @@ async function readAlleys(env: Env) {
 }
 
 // 공개 지도: 확인한 골목길만(GPS 기록·버린 후보는 내보내지 않음)
-export async function publicAlleys(env: Env) {
+export async function publicAlleys(env: MapEnv) {
   const { alleys, updatedAt } = await readAlleys(env)
   return json({ alleys, updatedAt }, { headers: { 'cache-control': 'public, max-age=60' } })
 }
 
-export const adminAlleys = async (env: Env) => json(await readAlleys(env))
+export const adminAlleys = async (env: MapEnv) => json(await readAlleys(env))
 
-export async function saveAlleys(request: Request, env: Env) {
+export async function saveAlleys(request: Request, env: MapEnv) {
   const body = await readJson(request)
   const alleys = cleanAlleys(body?.alleys)
   const dismissed = cleanLines(body?.dismissed ?? [])
@@ -86,13 +86,13 @@ export async function saveAlleys(request: Request, env: Env) {
 }
 
 // GPS 기록(편집 앱에서 GPX로 올린 것). 관리자만 읽고 쓰며 공개 지도에는 나가지 않습니다.
-export async function listTrails(env: Env) {
+export async function listTrails(env: MapEnv) {
   const { results } = await env.DB.prepare('SELECT id, started_at, points_json FROM gps_trails ORDER BY started_at')
     .all<{ id: string; started_at: string; points_json: string }>()
   return json({ trails: results.map((row) => ({ id: row.id, startedAt: row.started_at, points: JSON.parse(row.points_json) })) })
 }
 
-export async function saveTrail(request: Request, env: Env) {
+export async function saveTrail(request: Request, env: MapEnv) {
   const body = await readJson(request)
   if (!body || typeof body.id !== 'string' || !body.id || body.id.length > 80 || typeof body.startedAt !== 'string'
     || Number.isNaN(Date.parse(body.startedAt)) || !Array.isArray(body.points) || body.points.length > MAX_TRAIL_POINTS) {
@@ -112,7 +112,7 @@ export async function saveTrail(request: Request, env: Env) {
   return json({ trail: { id: body.id, startedAt, points } })
 }
 
-export async function deleteTrail(url: URL, env: Env) {
+export async function deleteTrail(url: URL, env: MapEnv) {
   const id = url.searchParams.get('id')
   if (!id) return error('지울 기록을 알려주세요.', 400)
   await env.DB.prepare('DELETE FROM gps_trails WHERE id = ?').bind(id).run()

@@ -15,7 +15,7 @@
 
 | 기능 | 결정 | 적용 위치·이유 |
 |---|---|---|
-| 기능별 파일 분리와 별도 지도 Worker | 유지 | 최신 `src/`, `server/`, `migrations/`, `wrangler.jsonc` 구조 사용 |
+| 기능별 파일 분리 | 유지 | 최신 `src/`, `server/`, `migrations/` 구조 사용. 별도 지도 Worker는 없애고 홈페이지 서버 하나로 합침(`npm run export:site`) |
 | 같은 재질 GLB 부품 합치기 | 유지 | 최신 `src/scene/mergeModel.ts`; 모델 배치와 함께 사용 |
 | 경사 지형 기반 일반 건물 생성 | 포함 | `src/scene/terrain/terrainBuildingGeometry.ts`; 벽 밑단은 경사면, 층·지붕은 수평 |
 | GLB 지면 맞춤과 기초 벽 | 포함 | `src/scene/terrain/buildingFoundation.ts`, `placedModels.ts` |

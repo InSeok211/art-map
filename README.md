@@ -1,6 +1,6 @@
 # 감천 골목지도
 
-감천2동 골목을 3D로 보여 주는 지도 앱입니다. 공개 지도(`/`)와 관리자 편집 앱(`/studio/`), 지도 데이터 API(`/api/`)를 한 서버(Cloudflare Worker)에서 제공합니다. 감천 작가 지도 홈페이지는 공개 지도를 화면에 끼워 쓰고 승인된 작가 위치를 넘겨줍니다.
+감천2동 골목을 3D로 보여 주는 지도입니다. 이 저장소는 지도 원본이고, 실제 서비스는 감천 작가 지도 홈페이지 서버 한 곳에서 합니다. `npm run export:site`로 지도 화면과 지도 API를 홈페이지 저장소에 넣고, 홈페이지를 배포하면 지도도 함께 나갑니다.
 
 ## 프로젝트 안내 문서
 
@@ -18,29 +18,26 @@ npm install --legacy-peer-deps
 npm run dev
 ```
 
-`npm run dev`는 화면만 띄우는 미리보기입니다(서버 없음). 공개 지도는 `http://127.0.0.1:5173/`, 편집 앱은 `/studio/`이며, 미리보기의 편집 앱은 로그인 없이 이 브라우저에만 저장합니다. 개발 서버의 공개 지도는 같은 브라우저의 확정한 건물 공개본·현재 골목·사용자 모델을 읽습니다. Worker로 빌드하면 localhost에서도 서버 API를 사용합니다.
+`npm run dev`는 화면만 띄우는 미리보기입니다(서버 없음). 공개 지도는 `http://127.0.0.1:5173/`, 편집 앱은 `/studio/`이며, 미리보기의 편집 앱은 로그인 없이 이 브라우저에만 저장합니다. 개발 서버의 공개 지도는 같은 브라우저의 확정한 건물 공개본·현재 골목·사용자 모델을 읽습니다.
 
-## 지도 앱 서버
-
-| 위치 | 내용 |
-|---|---|
-| `/` (`index.html`, `src/embed.tsx`) | 공개 지도. 홈페이지가 iframe으로 끼우면 홈페이지가 보낸 장소를 표시. 브라우저에서 바로 열면 편집 앱(`/studio/`)으로 이동하고, `/?view=public`으로 열면 장소 목록·길찾기 패널까지 있는 전체 공개 지도 |
-| `/studio/` (`studio/index.html`, `src/studio.tsx`) | 편집 앱. 골목길·건물을 고치고 공개. 홈페이지 운영자 화면의 **지도 편집**(`/admin/map-editor`)에서 열면 따로 로그인하지 않음 |
-| `/api/` (`server/`) | 지도 데이터 API. `/api/map-alleys`·`/api/map-buildings`·`/api/map-models/<번호>`는 누구나 읽고, `/api/admin/...`는 로그인한 관리자만 씀 |
-| `migrations/` | 데이터베이스(D1) 표 |
+## 홈페이지에 넣기(한 서버)
 
 ```bash
-npm run admin:password -- --local   # 내 PC 확인용 관리자 아이디·비밀번호(.dev.vars, git에 올라가지 않음)
-npm run app:local                    # 빌드 → 내 PC 데이터베이스 준비 → http://127.0.0.1:8788
-npm run admin:password               # 배포한 서버에 관리자 로그인 설정(비밀번호는 해시로만 저장)
-npm run link:homepage -- <홈페이지 폴더>  # 홈페이지 운영자 화면이 편집 허가증을 발급하도록 두 서버에 같은 비밀값 넣기
-npm run app:deploy                   # 빌드 → 데이터베이스 표 맞추기 → 배포
+npm run export:site -- <홈페이지 저장소 경로>
 ```
 
-- 홈페이지 운영자로 편집: 홈페이지 서버가 운영자 로그인을 확인한 뒤 8시간짜리 편집 허가증(HMAC-SHA256 서명, 비밀값 `MAP_EDIT_SECRET`)을 만들어 편집 앱 주소의 `#editToken=`으로 넘깁니다. 편집 앱은 주소창에서 이를 지우고 `/api/` 요청에 `Authorization: Bearer`로 붙입니다(`src/studioAuth.ts`, `server/auth.ts`의 `verifyEditToken`). 쿠키가 아니라서 홈페이지 안에 끼워 써도 동작합니다.
-- 로그인 없이 편집: `wrangler.jsonc`의 `OPEN_EDITING`을 `"true"`로 하면 누구나 편집·공개·모델 올리기를 할 수 있습니다(지금은 `"false"`).
-- 관리자 로그인: 비밀번호는 PBKDF2 해시로만 비밀값(`ADMIN_PASSWORD_HASH`)에 두고, 로그인하면 서명한 쿠키(HttpOnly·Secure·SameSite=Strict, 8시간)를 줍니다. 같은 곳에서 15분 안에 5번 틀리면 15분 동안 막습니다. 값을 바꾸는 요청은 이 앱 화면에서 온 것만 받습니다.
-- 홈페이지 연결: 공개 지도는 `src/embed.tsx`의 `HOST_ORIGINS` 주소에서 온 메시지만 받고 그 주소로만 보냅니다. 화면에 끼워 넣을 수 있는 주소는 `public/_headers`의 `frame-ancestors`로 같게 정합니다. 편집 앱은 홈페이지 운영자 화면(`/admin/map-editor`)에서만 끼워 쓸 수 있습니다(같은 `frame-ancestors`).
+그다음 홈페이지 저장소에서 빌드·배포하고 커밋합니다. 내보내는 것:
+
+| 홈페이지 안 위치 | 내용 |
+|---|---|
+| `public/map-app/` (`index.html`, `src/embed.tsx`) | 공개 지도 `/map-app/`. 홈페이지 `/map`이 iframe으로 끼우고 승인된 작가 위치를 넘겨줌 |
+| `public/map-app/studio/` (`studio/index.html`, `src/studio.tsx`) | 편집 앱 `/map-app/studio/`. 홈페이지 운영자 화면의 **지도 편집**(`/admin/map-editor`)이 띄움 |
+| `app/map/generated/map-api.js` (`server/`) | 지도 API. 홈페이지의 `/api/map-alleys`·`/api/map-buildings`·`/api/map-models/<번호>`(누구나 읽음)와 `/api/admin/map-*`·`/api/admin/gps-trails`(운영자만)가 `handleApi`로 넘김 |
+| `public/third-party-notices.txt` | 오픈소스 라이선스 전문·지도 데이터 출처 |
+
+- 로그인: 편집 앱과 지도 API는 홈페이지 운영자 로그인을 그대로 씁니다(홈페이지가 `isAdmin`을 넘겨줌, 편집 앱은 `/api/admin/session`으로 확인). 값을 바꾸는 요청은 같은 사이트 화면에서 온 것만 받습니다.
+- 데이터: 홈페이지 D1의 `map_alleys`·`gps_trails`·`map_building_edits` 표(`migrations/0001_map_data.sql`, 없으면 `server/schema.ts`가 만듦)와 홈페이지 R2의 `map-models/` 아래 GLB 파일.
+- 홈페이지 연결: 공개 지도는 같은 사이트 주소하고만 postMessage를 주고받습니다(`src/embed.tsx`의 `HOST_ORIGINS`).
   - 홈페이지 → 지도: `{ source: 'gamcheon-artist-host', type: 'set', places, selectedId, canPick }`
   - 지도 → 홈페이지: `{ source: 'gamcheon-artist-map', type: 'ready' | 'select' | 'pick', ... }`
 - 오픈소스 라이선스 전문은 빌드할 때 `third-party-notices.txt`로 함께 나갑니다.
@@ -93,7 +90,7 @@ export function MapSection() {
 
 ## 건물 고치기(관리자 작업실)
 
-편집 앱의 **건물** 탭입니다(`editable`과 `buildingEditor`를 넘기면 생김). 지도 바닥의 건물 윤곽을 눌러 층수·벽 색·지붕 색·지붕 모양을 바꾸거나 숨기고, **새 건물 그리기**로 윤곽을 찍어 건물을 더하고, 올린 GLB 모델로 건물을 바꿀 수 있습니다. 고친 내용은 초안에만 저장되고 **공개하기**를 눌러야 공개 지도(`buildingEdits`)에 나타납니다. 편집 앱은 지도 앱 서버의 데이터베이스와 파일 저장소(R2)를, 개발 미리보기는 이 브라우저(로컬 저장소·IndexedDB)를 씁니다.
+편집 앱의 **건물** 탭입니다(`editable`과 `buildingEditor`를 넘기면 생김). 지도 바닥의 건물 윤곽을 눌러 층수·벽 색·지붕 색·지붕 모양을 바꾸거나 숨기고, **새 건물 그리기**로 윤곽을 찍어 건물을 더하고, 올린 GLB 모델로 건물을 바꿀 수 있습니다. 고친 내용은 초안에만 저장되고 **공개하기**를 눌러야 공개 지도(`buildingEdits`)에 나타납니다. 편집 앱은 홈페이지 서버의 데이터베이스와 파일 저장소(R2)를, 개발 미리보기는 이 브라우저(로컬 저장소·IndexedDB)를 씁니다.
 
 GLB는 텍스처를 포함한 glTF 2.0 바이너리 한 파일, 20MB 이하만 받습니다(`src/buildings/glbCheck.ts`). 다른 주소를 불러오는 파일과 Draco·meshopt·Basis 압축 파일은 받지 않습니다. 직접 만들었거나 쓸 권리가 있는 모델만 올려 주세요.
 
@@ -105,7 +102,7 @@ GLB는 텍스처를 포함한 glTF 2.0 바이너리 한 파일, 20MB 이하만 �
 |---|---|
 | `src/GamcheonMap.tsx`, `src/gamcheon-map.css` | 지도 컴포넌트(패널·탭·지도 층 연결) |
 | `src/embed.tsx`, `src/studio.tsx` | 공개 지도, 편집 앱 |
-| `server/`, `migrations/`, `wrangler.jsonc` | 지도 앱 서버(API·로그인), 데이터베이스 표, 서버 설정 |
+| `server/`, `migrations/` | 지도 API(홈페이지 안에서 돎), 데이터베이스 표 |
 | `src/map/` | 지도 스타일, 감천 범위, 좌표 변환, 지형, 내 위치, 휴대폰 화면 |
 | `src/places/` | 장소 목록·편집, 작가님 공방 장소 |
 | `src/route/` | 길찾기 |

@@ -1,4 +1,4 @@
-import type { Env } from './env'
+import type { MapEnv } from './env'
 import { error, json, readJson } from './http'
 import { EMPTY_BUILDING_EDITS, sanitizeBuildingEdits } from '../src/buildings/buildingEdits'
 import type { BuildingEdits } from '../src/buildings/buildingEdits'
@@ -7,34 +7,34 @@ import type { BuildingEdits } from '../src/buildings/buildingEdits'
 // 두고, '공개하기'로 초안을 공개본에 옮깁니다. 받은 값은 편집 앱과 같은 규칙(buildingEdits.ts)으로 정리해 저장합니다.
 type Version = 'draft' | 'published'
 
-async function read(env: Env, id: Version) {
+async function read(env: MapEnv, id: Version) {
   const row = await env.DB.prepare('SELECT edits_json, updated_at FROM map_building_edits WHERE id = ?').bind(id)
     .first<{ edits_json: string; updated_at: string }>()
   return { edits: row ? sanitizeBuildingEdits(JSON.parse(row.edits_json)) : EMPTY_BUILDING_EDITS, updatedAt: row?.updated_at ?? null, exists: Boolean(row) }
 }
 
-async function write(env: Env, id: Version, edits: BuildingEdits) {
+async function write(env: MapEnv, id: Version, edits: BuildingEdits) {
   await env.DB.prepare(`INSERT INTO map_building_edits (id, edits_json, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO UPDATE SET edits_json = excluded.edits_json, updated_at = CURRENT_TIMESTAMP`)
     .bind(id, JSON.stringify(edits)).run()
 }
 
-export async function readBothVersions(env: Env) {
+export async function readBothVersions(env: MapEnv) {
   const [draft, published] = await Promise.all([read(env, 'draft'), read(env, 'published')])
   // 초안을 한 번도 저장하지 않았으면 공개본을 초안으로 씁니다.
   return { draft: draft.exists ? draft.edits : published.edits, published: published.edits, draftUpdatedAt: draft.updatedAt, publishedAt: published.updatedAt }
 }
 
-export const readPublished = async (env: Env) => (await read(env, 'published')).edits
+export const readPublished = async (env: MapEnv) => (await read(env, 'published')).edits
 
-export async function publicBuildings(env: Env) {
+export async function publicBuildings(env: MapEnv) {
   const published = await read(env, 'published')
   return json({ edits: published.edits, publishedAt: published.updatedAt })
 }
 
-export const adminBuildings = async (env: Env) => json(await readBothVersions(env))
+export const adminBuildings = async (env: MapEnv) => json(await readBothVersions(env))
 
-export async function saveDraft(request: Request, env: Env) {
+export async function saveDraft(request: Request, env: MapEnv) {
   const body = await readJson(request)
   const input = body?.draft as Partial<BuildingEdits> | undefined
   if (!input || typeof input.overrides !== 'object' || !input.overrides || Array.isArray(input.overrides)
@@ -52,13 +52,13 @@ export async function saveDraft(request: Request, env: Env) {
   return json({ draft })
 }
 
-export async function publish(env: Env) {
+export async function publish(env: MapEnv) {
   const { draft } = await readBothVersions(env)
   await write(env, 'published', draft)
   return json({ published: draft })
 }
 
-export async function discard(env: Env) {
+export async function discard(env: MapEnv) {
   const published = await readPublished(env)
   await write(env, 'draft', published)
   return json({ draft: published })

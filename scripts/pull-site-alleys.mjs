@@ -1,9 +1,9 @@
-// 지도 앱 서버에 저장된(관리자가 확인한) 골목길을 받아 src/data/recorded-alleys.json에 저장합니다.
-// 사용법: npm run pull:alleys [-- <지도 앱 서버 주소>]
+// 홈페이지 서버에 저장된(관리자가 확인한) 골목길을 받아 src/data/recorded-alleys.json에 저장합니다.
+// 사용법: npm run pull:alleys [-- <홈페이지 주소>]
 // 그다음 `npm run build:road-ground`로 도로 바닥을 다시 만들면 이 골목길이 바닥에 구워지고 걸친 건물이 깎입니다.
 import { readFileSync, writeFileSync } from 'node:fs'
 
-const site = (process.argv[2] || 'https://gamcheon-alley-map.rjbcom4263.workers.dev').replace(/\/$/, '')
+const site = (process.argv[2] || 'https://gamcheon-artist-map-apply.rjbcom4263.workers.dev').replace(/\/$/, '')
 const response = await fetch(`${site}/api/map-alleys`, { headers: { accept: 'application/json' } })
 if (!response.ok) {
   console.error(`골목길을 받지 못했습니다: ${response.status} ${response.statusText}`)

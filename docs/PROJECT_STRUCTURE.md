@@ -45,9 +45,8 @@ art-map/
 ├─ package-lock.json             설치 버전 기록
 ├─ index.html                    공개 지도 진입점
 ├─ studio/index.html             관리자 편집 앱 진입점
-├─ server/                       로그인·지도 API
+├─ server/                       지도 API(홈페이지 서버 안에서 돎, export:site로 넣음)
 ├─ migrations/                   D1 테이블 정의
-├─ wrangler.jsonc                지도 Worker·D1·R2 설정
 ├─ vite.config.ts                로컬 개발·일반 빌드 설정
 ├─ vite.lib.config.ts            React 라이브러리 빌드 설정
 ├─ tsconfig.json                 TypeScript 검사 설정
