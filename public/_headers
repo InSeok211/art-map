@@ -5,9 +5,9 @@
 
 # 공개 지도: 홈페이지(감천 작가 지도)와 내 PC의 홈페이지 개발 서버에서만 화면에 끼워 넣을 수 있습니다.
 /
-  Content-Security-Policy: frame-ancestors 'self' https://gamcheon-artist-map-apply.rjbcom4263.workers.dev http://127.0.0.1:8787 http://localhost:8787
+  Content-Security-Policy: frame-ancestors 'self' https://artist-map.com https://gamcheon-artist-map-apply.rjbcom4263.workers.dev http://127.0.0.1:8787 http://localhost:8787
 /index.html
-  Content-Security-Policy: frame-ancestors 'self' https://gamcheon-artist-map-apply.rjbcom4263.workers.dev http://127.0.0.1:8787 http://localhost:8787
+  Content-Security-Policy: frame-ancestors 'self' https://artist-map.com https://gamcheon-artist-map-apply.rjbcom4263.workers.dev http://127.0.0.1:8787 http://localhost:8787
 
 # 편집 앱: 다른 사이트에 끼워 넣지 못하게 합니다(눌러서 속이기 방지).
 /studio/*

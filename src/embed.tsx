@@ -19,7 +19,7 @@ import './embed.css'
 const EMBEDDED = window.self !== window.top
 const FULL = new URLSearchParams(window.location.search).get('mode') === 'full' || !EMBEDDED
 // 지도를 끼워 쓰는 홈페이지 주소입니다(public/_headers의 frame-ancestors와 같게 둡니다).
-const HOST_ORIGINS = ['https://gamcheon-artist-map-apply.rjbcom4263.workers.dev', 'http://127.0.0.1:8787', 'http://localhost:8787']
+const HOST_ORIGINS = ['https://artist-map.com', 'https://gamcheon-artist-map-apply.rjbcom4263.workers.dev', 'http://127.0.0.1:8787', 'http://localhost:8787']
 // ?host=site: 홈페이지가 제목 카드(← 감천 작가 지도 · 작가 목록)를 지도 위에 띄우므로, 휴대폰 화면의 지도 쪽
 // 이름표를 숨기고 검색·분류를 그 카드 아래에 둡니다(CSS의 is-site-hosted).
 const SITE_HOSTED = new URLSearchParams(window.location.search).get('host') === 'site'
