@@ -3,6 +3,9 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { useSiteBuildingEdits } from './siteBuildingEdits'
 
+// 테스트 환경(localhost·개발 모드)에서도 서버 공개본을 읽는 실제 경로를 확인합니다.
+vi.mock('./publicPreview', () => ({ LOCAL_PUBLIC_PREVIEW: false, PUBLISHED_ALLEYS_KEY: 'gamcheon-map-alleys-v1' }))
+
 const response = (edits: unknown) => new Response(JSON.stringify({ edits }), {
   headers: { 'content-type': 'application/json' },
 })

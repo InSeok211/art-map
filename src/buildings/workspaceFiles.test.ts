@@ -27,7 +27,7 @@ describe('workspace archives', () => {
     const restored = await readProjectBackup(archive)
     expect(restored.project.draft).toEqual(draft); expect(restored.project.published).toEqual(published)
     expect(new Uint8Array(await restored.files[0].file.arrayBuffer())).toEqual(new Uint8Array(data))
-  })
+  }, 30_000) // 실제 GLB를 압축·검사하므로 전체 테스트를 함께 돌릴 때 5초를 넘을 수 있습니다.
   it('refuses an incomplete export instead of dropping a missing model', async () => {
     await expect(createProjectBackup(draft, published, [], [])).rejects.toThrow(/모델 파일.*없습니다/)
   })
