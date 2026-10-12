@@ -3,7 +3,7 @@ import { isInsideGamcheonMap } from '../map/gamcheonBoundary'
 
 // 관리자가 작업실 '건물' 탭에서 고친 지도 건물의 내용입니다
 // (1단계: 자동으로 만든 건물 고치기, 2단계: 새 건물 그리기, 3단계: 올린 3D 모델(GLB)로 건물 바꾸기).
-// 홈페이지에는 초안(작업실에서만 보임)과 공개본(공개 지도) 두 벌로 저장하고, '공개하기'로 초안을 공개본에 옮깁니다.
+// 지도 앱 서버에 초안(편집 앱에서만 보임)과 공개본(공개 지도) 두 벌로 저장하고, '공개하기'로 초안을 공개본에 옮깁니다.
 // 건물은 OSM 건물 번호로 가리킵니다. 따로 만든 모델 건물(공방·그린하우스·아름다운한글)은 고칠 수 없습니다.
 
 export type RoofStyle = StreetBuilding['roofStyle']
@@ -30,7 +30,7 @@ export interface AddedBuilding {
 // 모델은 바닥 가운데를 (경도, 위도)에 두고, 바닥의 긴 쪽이 widthMeters가 되게 늘이거나 줄여 rotation(도)만큼 돌립니다.
 export interface PlacedModel {
   id: string
-  // 홈페이지에 올린 모델 파일 번호(m-로 시작)
+  // 지도 앱 서버에 올린 모델 파일 번호(m-로 시작)
   modelId: string
   name: string
   longitude: number
@@ -178,7 +178,7 @@ export function setModel(edits: BuildingEdits, id: string, model: PlacedModel | 
 // 모델이 대신하는 건물 번호(지도에서 빠짐)
 export const replacedBuildingIds = (edits: BuildingEdits | undefined) => new Set(edits?.models.flatMap((model) => model.replaces) ?? [])
 
-// 모델 파일 주소. 홈페이지에서는 /api/map-models/<번호>, 개발 미리보기는 이 브라우저에 담아 둔 파일(modelLibrary.ts)을 씁니다.
+// 모델 파일 주소. 지도 앱 서버에서는 /api/map-models/<번호>, 개발 미리보기는 이 브라우저에 담아 둔 파일(modelLibrary.ts)을 씁니다.
 let localModelSource: ((modelId: string) => Promise<string | null>) | null = null
 export function setLocalModelSource(source: typeof localModelSource) { localModelSource = source }
 export async function resolveModelUrl(modelId: string) {

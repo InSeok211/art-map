@@ -11,3 +11,7 @@ design/**/*.webp
 # 사진에서 잘라 낸 원본 픽셀(그린하우스 데칼 등)도 같은 이유로 올리지 않습니다.
 design/**/*.rgba
 .site-build/
+# 지도 앱 서버(wrangler): 로컬 데이터·비밀값·빌드 결과
+.wrangler/
+.dev.vars
+dist-app/

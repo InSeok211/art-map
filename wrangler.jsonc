@@ -1,0 +1,30 @@
+{
+  // 감천 골목지도 앱 서버: 공개 지도(/)·편집 앱(/studio/) 화면과 지도 데이터 API(/api/)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gamcheon-alley-map",
+  "main": "server/index.ts",
+  "compatibility_date": "2026-05-15",
+  "assets": {
+    "directory": "dist-app",
+    "binding": "ASSETS",
+    // /api/는 서버 코드가, 나머지는 빌드한 화면 파일이 바로 응답합니다.
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gamcheon-alley-map-db",
+      "database_id": "1841dcc3-433b-480c-be93-d5d2908ad3e5",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MODELS",
+      "bucket_name": "gamcheon-alley-map-models"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

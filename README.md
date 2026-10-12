@@ -1,6 +1,6 @@
 # 감천 골목지도
 
-감천2동의 가게와 명소를 표시하는 재사용 가능한 React 지도 컴포넌트입니다. 감천2동과 주변 일대를 사각형으로 표시하며 장소 검색·편집과 3D 에셋 배치 기능을 제공합니다. 실제 장소 데이터는 아직 연결하지 않았습니다.
+감천2동 골목을 3D로 보여 주는 지도 앱입니다. 공개 지도(`/`)와 관리자 편집 앱(`/studio/`), 지도 데이터 API(`/api/`)를 한 서버(Cloudflare Worker)에서 제공합니다. 감천 작가 지도 홈페이지는 공개 지도를 화면에 끼워 쓰고 승인된 작가 위치를 넘겨줍니다.
 
 ## 개발 및 확인
 
@@ -9,7 +9,29 @@ npm install --legacy-peer-deps
 npm run dev
 ```
 
-브라우저에서 Vite가 출력하는 로컬 주소를 열면 미리보기 화면을 볼 수 있습니다. 미리보기의 감천문화마을 좌표는 UI 확인용 대략 위치입니다.
+`npm run dev`는 화면만 띄우는 미리보기입니다(서버 없음). 공개 지도는 `http://127.0.0.1:5173/`, 편집 앱은 `/studio/`이며, 미리보기의 편집 앱은 로그인 없이 이 브라우저에만 저장합니다.
+
+## 지도 앱 서버
+
+| 위치 | 내용 |
+|---|---|
+| `/` (`index.html`, `src/embed.tsx`) | 공개 지도. 바로 열면 장소 목록·길찾기 패널까지 있는 전체 지도, 홈페이지가 iframe으로 끼우면 홈페이지가 보낸 장소를 표시 |
+| `/studio/` (`studio/index.html`, `src/studio.tsx`) | 편집 앱. 관리자로 로그인해 골목길·건물을 고치고 공개 |
+| `/api/` (`server/`) | 지도 데이터 API. `/api/map-alleys`·`/api/map-buildings`·`/api/map-models/<번호>`는 누구나 읽고, `/api/admin/...`는 로그인한 관리자만 씀 |
+| `migrations/` | 데이터베이스(D1) 표 |
+
+```bash
+npm run admin:password -- --local   # 내 PC 확인용 관리자 아이디·비밀번호(.dev.vars, git에 올라가지 않음)
+npm run app:local                    # 빌드 → 내 PC 데이터베이스 준비 → http://127.0.0.1:8788
+npm run admin:password               # 배포한 서버에 관리자 로그인 설정(비밀번호는 해시로만 저장)
+npm run app:deploy                   # 빌드 → 데이터베이스 표 맞추기 → 배포
+```
+
+- 관리자 로그인: 비밀번호는 PBKDF2 해시로만 비밀값(`ADMIN_PASSWORD_HASH`)에 두고, 로그인하면 서명한 쿠키(HttpOnly·Secure·SameSite=Strict, 8시간)를 줍니다. 같은 곳에서 15분 안에 5번 틀리면 15분 동안 막습니다. 값을 바꾸는 요청은 이 앱 화면에서 온 것만 받습니다.
+- 홈페이지 연결: 공개 지도는 `src/embed.tsx`의 `HOST_ORIGINS` 주소에서 온 메시지만 받고 그 주소로만 보냅니다. 화면에 끼워 넣을 수 있는 주소는 `public/_headers`의 `frame-ancestors`로 같게 정합니다. 편집 앱은 다른 사이트에 끼워 넣을 수 없습니다.
+  - 홈페이지 → 지도: `{ source: 'gamcheon-artist-host', type: 'set', places, selectedId, canPick }`
+  - 지도 → 홈페이지: `{ source: 'gamcheon-artist-map', type: 'ready' | 'select' | 'pick', ... }`
+- 오픈소스 라이선스 전문은 빌드할 때 `third-party-notices.txt`로 함께 나갑니다.
 
 ```bash
 npm test
@@ -59,7 +81,7 @@ export function MapSection() {
 
 ## 건물 고치기(관리자 작업실)
 
-`editable`과 `buildingEditor`(`src/buildings/buildingEditStore.ts`의 `useBuildingEditStore()`)를 넘기면 **건물** 탭이 생깁니다. 지도 바닥의 건물 윤곽을 눌러 층수·벽 색·지붕 색·지붕 모양을 바꾸거나 숨기고, **새 건물 그리기**로 윤곽을 찍어 건물을 더하고, 올린 GLB 모델로 건물을 바꿀 수 있습니다. 고친 내용은 초안에만 저장되고 **공개하기**를 눌러야 공개 지도(`buildingEdits`)에 나타납니다. 홈페이지 관리자 화면에서는 홈페이지 데이터베이스와 파일 저장소(R2)를, 개발 미리보기에서는 이 브라우저(로컬 저장소·IndexedDB)를 씁니다.
+편집 앱의 **건물** 탭입니다(`editable`과 `buildingEditor`를 넘기면 생김). 지도 바닥의 건물 윤곽을 눌러 층수·벽 색·지붕 색·지붕 모양을 바꾸거나 숨기고, **새 건물 그리기**로 윤곽을 찍어 건물을 더하고, 올린 GLB 모델로 건물을 바꿀 수 있습니다. 고친 내용은 초안에만 저장되고 **공개하기**를 눌러야 공개 지도(`buildingEdits`)에 나타납니다. 편집 앱은 지도 앱 서버의 데이터베이스와 파일 저장소(R2)를, 개발 미리보기는 이 브라우저(로컬 저장소·IndexedDB)를 씁니다.
 
 GLB는 텍스처를 포함한 glTF 2.0 바이너리 한 파일, 20MB 이하만 받습니다(`src/buildings/glbCheck.ts`). 다른 주소를 불러오는 파일과 Draco·meshopt·Basis 압축 파일은 받지 않습니다. 직접 만들었거나 쓸 권리가 있는 모델만 올려 주세요.
 
@@ -70,7 +92,8 @@ GLB는 텍스처를 포함한 glTF 2.0 바이너리 한 파일, 20MB 이하만 �
 | 위치 | 내용 |
 |---|---|
 | `src/GamcheonMap.tsx`, `src/gamcheon-map.css` | 지도 컴포넌트(패널·탭·지도 층 연결) |
-| `src/demo.tsx`, `src/embed.tsx` | 개발 미리보기·관리자 작업실, 홈페이지에 넣는 공개 지도 |
+| `src/embed.tsx`, `src/studio.tsx` | 공개 지도, 편집 앱 |
+| `server/`, `migrations/`, `wrangler.jsonc` | 지도 앱 서버(API·로그인), 데이터베이스 표, 서버 설정 |
 | `src/map/` | 지도 스타일, 감천 범위, 좌표 변환, 지형, 내 위치, 휴대폰 화면 |
 | `src/places/` | 장소 목록·편집, 작가님 공방 장소 |
 | `src/route/` | 길찾기 |
@@ -109,16 +132,6 @@ OSM 윤곽(1468590644)은 골목을 따라 9.5m×2.2m 띠로 그려져 있어 �
 - 걷는 속도는 평지 1.1m/s, 계단 0.55m/s로 잡았습니다. **계단 피하기**를 켜면 계단 없는 길만 찾습니다. 고도 자료가 없어 경사는 반영하지 않습니다.
 - 지도를 열면 바로 내 위치(파란 점)와 바라보는 방향(화살표)을 보여 주고, 지도를 닫으면 추적을 멈춥니다. 방향은 휴대폰 나침반을 먼저 쓰고(iOS는 화면을 한 번 누를 때 권한을 물음), 없으면 걸어온 방향을 씁니다. 화살표는 매 프레임 부드럽게 돌아갑니다. 지도 도구의 **내 위치로 이동** 버튼으로 언제든 내 위치로 갈 수 있습니다. 위치는 화면에만 쓰고 저장하거나 보내지 않습니다. 경로에서 25m 넘게 벗어나면 현재 위치에서 다시 찾고, 목적지 15m 안에 들어오면 도착을 알립니다.
 - 위치 기능은 HTTPS(또는 localhost)에서만 동작합니다. 권한이 거부되거나 위치가 지도 밖이면 장소·지도에서 출발지를 고르도록 안내합니다.
-
-### 감천 작가 지도 홈페이지로 내보내기
-
-감천 작가 지도 홈페이지(Next.js/vinext 저장소)는 이 지도를 두 곳에서 씁니다. `npm run export:site -- "<홈페이지 저장소 경로>"`를 실행하면 둘 다 새로 만들어 넣습니다.
-
-- `public/artist-map-embed/`: 공개 작가 지도(`/map`)가 iframe으로 끼워 쓰는 지도입니다(`embed.html`, `src/embed.tsx`). 패널 없이 지도만 보이고, 부모 창과 `postMessage`로 장소 목록·선택(`set`)을 받고 선택(`select`)·지도에서 고른 좌표(`pick`)를 보냅니다.
-- `public/admin-art-map/assets/`: 관리자 골목지도 작업실(`/admin/art-map`)이 쓰는 편집용 지도입니다(`index.html`, `src/demo.tsx`). 관리자 페이지가 고정 이름(`map.js`, `map.css`)으로 불러옵니다.
-- 관리자 페이지의 `Bundled from ... at <커밋>` 표시도 현재 커밋으로 갱신합니다.
-
-내보낸 뒤 홈페이지 저장소에서 빌드·배포해야 운영 사이트에 반영됩니다.
 
 ### 성능
 
@@ -162,4 +175,4 @@ OSM 윤곽(1468590644)은 골목을 따라 9.5m×2.2m 띠로 그려져 있어 �
 
 ## 출처와 라이선스
 
-지도 데이터(OpenStreetMap, ODbL 1.0), 배경 지도(OpenFreeMap·OpenMapTiles), 3D 모델 에셋의 출처와 조건, 오픈소스 라이선스 고지 방법은 [`NOTICE.md`](NOTICE.md)에 정리했습니다. 홈페이지로 내보내면 `public/third-party-notices.txt`가 함께 만들어집니다.
+지도 데이터(OpenStreetMap, ODbL 1.0), 배경 지도(OpenFreeMap·OpenMapTiles), 3D 모델 에셋의 출처와 조건, 오픈소스 라이선스 고지 방법은 [`NOTICE.md`](NOTICE.md)에 정리했습니다. 지도 앱을 빌드하면 `third-party-notices.txt`가 함께 만들어집니다.

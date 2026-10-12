@@ -90,7 +90,7 @@ export interface GamcheonMapProps {
   // 패널 없이 지도만 보여 줄 때 켭니다(패널 자리 여백을 두지 않음).
   compact?: boolean
   editable?: boolean
-  // 편집할 수 있을 때 보여 줄 편집 도구(기본: 모두). 홈페이지 관리자 작업실은 골목길만 씁니다.
+  // 편집할 수 있을 때 보여 줄 편집 도구(기본: 모두). 편집 앱(studio.tsx)은 골목길·건물만 씁니다.
   editTools?: EditTool[]
   onPlacesChange?: (places: Place[]) => void
   alleys?: Alley[]
@@ -673,7 +673,7 @@ export function GamcheonMap({
               걸어서 찾기{alleyFinder.panelProps.candidates.length > 0 && <em>{alleyFinder.panelProps.candidates.length}</em>}
             </button>
           </div>}
-          {alleyFinder.enabled && alleyTool === 'walk' ? <TrailPanel {...alleyFinder.panelProps} onRecordStart={() => setSheetOpen(false)} /> : <AlleyEditor {...alley.editorProps} />}
+          {alleyFinder.enabled && alleyTool === 'walk' ? <TrailPanel {...alleyFinder.panelProps} /> : <AlleyEditor {...alley.editorProps} />}
         </> : editor ? <PlaceForm
           draft={editor}
           onChange={setEditor}
@@ -702,11 +702,6 @@ export function GamcheonMap({
       </aside>
 
       {/* GPS 기록 중에는 어느 탭에 있든 지도 위에 기록 상태와 끝내기 버튼을 띄웁니다(휴대폰에서 시트를 접어도 보임). */}
-      {alleyFinder.panelProps.recorder.recording && <div className="gamcheon-map__rec-bar" role="status">
-        <span className="gamcheon-map__rec-dot" aria-hidden="true" />
-        <span>기록 중 · {alleyFinder.panelProps.recorder.draft?.points.length ?? 0}점{alleyFinder.panelProps.recorder.accuracy !== null && ` · 정확도 ${alleyFinder.panelProps.recorder.accuracy}m`}</span>
-        <button type="button" onClick={() => void alleyFinder.panelProps.recorder.finish()}>끝내고 저장</button>
-      </div>}
 
       {immersive && <MobileMapUI
         query={query}

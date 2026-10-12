@@ -14,6 +14,13 @@
       "runtimeArgs": ["G:/node_modules/wrangler/bin/wrangler.js", "dev", "--local", "--port", "8787", "--ip", "127.0.0.1", "--config", "G:/dist/server/wrangler.json", "--persist-to", "G:/.wrangler/state"],
       "port": 8787,
       "url": "http://127.0.0.1:8787"
+    },
+    {
+      "name": "map-app-local",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/wrangler/bin/wrangler.js", "dev", "--local", "--port", "8788", "--ip", "127.0.0.1"],
+      "port": 8788,
+      "url": "http://127.0.0.1:8788"
     }
   ]
 }

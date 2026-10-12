@@ -10,28 +10,15 @@ import { newId } from '../map/listUtils'
 import { gpxToTrails } from './gpxImport'
 import { roadWidth } from '../scene/roadCorridors'
 import { STREET_SURFACE_WAYS } from '../scene/streetSurfaceData'
-import { useTrailRecorder } from './useTrailRecorder'
 
-// 관리자 화면에서 GPS 기록을 저장·불러오는 곳(예: 홈페이지 데이터베이스)입니다.
+// 편집 앱에서 GPS 기록(GPX로 올린 것)을 저장·불러오는 곳(지도 앱 서버의 데이터베이스)입니다.
 export interface GpsTrailStore {
   trails: GpsTrail[]
   // 버린 후보의 선. 이 근처의 흔적은 다시 후보로 보이지 않습니다.
   dismissed: LngLat[][]
-  onRecord: (trail: GpsTrail) => Promise<void> | void
+  onAddTrail: (trail: GpsTrail) => Promise<void> | void
   onDeleteTrail: (id: string) => void
   onDismiss: (line: LngLat[]) => void
-  // 관리자로 로그인해 있으면 걸은 길을 버튼 없이 자동으로 기록합니다(useAutoTrailRecorder). 켜져 있으면 수동
-  // 기록 버튼 대신 이 상태를 보여 줍니다(같은 걸음이 두 번 세어지지 않게).
-  auto?: AutoTrailStatus
-}
-
-export interface AutoTrailStatus {
-  recording: boolean
-  paused: boolean
-  pointCount: number
-  lastSaved: Date | null
-  pause: () => void
-  resume: () => void
 }
 
 const THRESHOLD_KEY = 'gamcheon-trail-threshold-v1'
@@ -61,7 +48,7 @@ export function useAlleyFinder(
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [gpxStatus, setGpxStatus] = useState('')
 
-  // GPS 기록 앱에서 내보낸 GPX 파일들을 기록으로 추가합니다(자동 기록과 같은 규칙으로 거르고 나눔). 홈페이지는
+  // GPS 기록 앱에서 내보낸 GPX 파일들을 기록으로 추가합니다(trailFixes.ts 규칙으로 거르고 나눔). 서버는
   // 감천 작업 범위 밖의 점을 버리므로, 범위 밖에서만 걸은 부분은 저장되지 않습니다.
   async function importGpx(files: FileList | File[]) {
     if (!store) return
@@ -71,7 +58,7 @@ export function useAlleyFinder(
       let trails
       try { trails = gpxToTrails(await file.text()) } catch { unreadable++; continue }
       for (const trail of trails) {
-        try { await store.onRecord(trail); saved++ } catch { failed++ }
+        try { await store.onAddTrail(trail); saved++ } catch { failed++ }
       }
     }
     setGpxStatus([
@@ -81,7 +68,6 @@ export function useAlleyFinder(
       !saved && !failed && !unreadable ? '30m 넘게 걸은 기록이 없습니다.' : '',
     ].filter(Boolean).join(' '))
   }
-  const recorder = useTrailRecorder(store?.onRecord)
   const trails = store?.trails ?? []
 
   const candidates = useMemo(() => store ? findAlleyCandidates(trails, {
@@ -95,10 +81,9 @@ export function useAlleyFinder(
     const map = mapRef.current
     if (!map) return
     const shown = active && store
-    const drawnTrails = recorder.draft ? [...trails, recorder.draft] : trails
-    map.getSource<GeoJSONSource>(TRAIL_SOURCE_ID)?.setData(shown && showTrails ? trailsToGeoJSON(drawnTrails) : EMPTY)
+    map.getSource<GeoJSONSource>(TRAIL_SOURCE_ID)?.setData(shown && showTrails ? trailsToGeoJSON(trails) : EMPTY)
     map.getSource<GeoJSONSource>(CANDIDATE_SOURCE_ID)?.setData(shown ? candidatesToGeoJSON(candidates, selectedId) : EMPTY)
-  }, [active, store, trails, recorder.draft, showTrails, candidates, selectedId])
+  }, [active, store, trails, showTrails, candidates, selectedId])
 
   // 지도에서 후보 선을 누르면 그 후보를 고릅니다.
   useEffect(() => {
@@ -122,8 +107,6 @@ export function useAlleyFinder(
   return {
     enabled: Boolean(store),
     panelProps: {
-      recorder,
-      auto: store?.auto,
       trails,
       candidates,
       selectedId,

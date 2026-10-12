@@ -7,5 +7,5 @@
     "outDir": "dist/types"
   },
   "include": ["src/GamcheonMap.tsx", "src/places/filterPlaces.ts", "src/index.ts", "src/types.ts"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/demo.tsx", "src/embed.tsx"]
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/studio.tsx", "src/embed.tsx"]
 }

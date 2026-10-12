@@ -3,7 +3,7 @@ import { EMPTY_BUILDING_EDITS, sameBuildingEdits, sanitizeBuildingEdits } from '
 import type { BuildingEdits } from './buildingEdits'
 
 // 골목지도 작업실 '건물' 탭의 저장소입니다. 초안(작업실에서만 보임)과 공개본(공개 지도) 두 벌을 다룹니다.
-//  - 홈페이지(/admin/art-map) 안에서 열리면 홈페이지 데이터베이스에 저장합니다(관리자만).
+//  - 편집 앱(지도 앱 서버의 /studio/)에서 열리면 서버 데이터베이스에 저장합니다(관리자만).
 //  - 그 밖(개발 미리보기)에서는 이 브라우저에만 저장합니다.
 const API = '/api/admin/map-buildings'
 const DRAFT_KEY = 'gamcheon-building-draft-v1'
@@ -16,7 +16,7 @@ export interface BuildingEditStore {
   dirty: boolean
   status: string
   busy: boolean
-  // 홈페이지 저장소를 쓰는지(개발 미리보기는 false, 아직 확인 중이거나 못 읽었으면 null)
+  // 서버 저장소를 쓰는지(개발 미리보기는 false, 아직 확인 중이거나 못 읽었으면 null)
   server: boolean | null
   onChange: (draft: BuildingEdits) => void
   onPublish: () => void

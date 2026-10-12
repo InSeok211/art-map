@@ -51,7 +51,22 @@ body { background: #edf3ed; }
 @media (max-width: 720px) { .demo-brand strong { font-size: 14px; } }
 /* 휴대폰: 위에 떠 있는 작업실 머리글 아래로 지도 도구를 내립니다. */
 @media (max-width: 720px) {
-  .demo-shell:not(.is-embedded) .gamcheon-map__map-tools { top: calc(70px + env(safe-area-inset-top)); }
-  .demo-shell:not(.is-embedded) .gamcheon-map .maplibregl-ctrl-bottom-right { top: calc(118px + env(safe-area-inset-top)); }
-  .demo-shell:not(.is-embedded) .gamcheon-map__rec-bar { top: calc(118px + env(safe-area-inset-top)); }
+  .demo-shell .gamcheon-map__map-tools { top: calc(70px + env(safe-area-inset-top)); }
+  .demo-shell .gamcheon-map .maplibregl-ctrl-bottom-right { top: calc(118px + env(safe-area-inset-top)); }
 }
+
+/* 머리글 오른쪽: 공개 지도 보기·로그아웃 */
+.studio-header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.studio-link { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border: 1px solid #dde2fb; border-radius: 999px; background: #fff; color: #4a5ae0; font: inherit; font-size: 12px; font-weight: 800; text-decoration: none; cursor: pointer; }
+@media (max-width: 720px) { .studio-link { display: none; } }
+
+/* 로그인 화면 */
+.studio-login { display: grid; min-height: 100dvh; place-items: center; padding: 24px; background: #f4f6fb; font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+.studio-login form { display: flex; width: min(360px, 100%); flex-direction: column; gap: 12px; padding: 28px; border: 1px solid #e1e5f5; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(20, 30, 60, .08); }
+.studio-login h1 { margin: 4px 0 0; color: #20232a; font-size: 20px; }
+.studio-login p { margin: 0; color: #6f7686; font-size: 13px; }
+.studio-login label { display: flex; flex-direction: column; gap: 6px; color: #3f4656; font-size: 13px; font-weight: 700; }
+.studio-login input { min-height: 42px; padding: 0 12px; border: 1px solid #d7dbea; border-radius: 10px; font: inherit; font-size: 14px; }
+.studio-login button { min-height: 44px; border: 0; border-radius: 10px; background: #5b6cf0; color: #fff; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.studio-login button:disabled { opacity: .6; }
+.studio-login__error { color: #b4532a !important; font-weight: 700; }

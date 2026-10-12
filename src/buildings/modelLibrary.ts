@@ -3,7 +3,7 @@ import { setLocalModelSource } from './buildingEdits'
 import { checkGlb, MAX_GLB_BYTES } from './glbCheck'
 
 // 작업실 '건물' 탭에서 올린 3D 모델(GLB) 파일 목록입니다.
-//  - 홈페이지 관리자 화면: 홈페이지 파일 저장소(R2)에 올리고 /api/map-models/<번호>로 받습니다.
+//  - 편집 앱(지도 앱 서버): 서버 파일 저장소(R2)에 올리고 /api/map-models/<번호>로 받습니다.
 //  - 개발 미리보기: 이 브라우저(IndexedDB)에만 담아 둡니다.
 const API = '/api/admin/map-models'
 const DATABASE = 'gamcheon-map-model-files'
@@ -67,7 +67,7 @@ async function readError(response: Response) {
   return body.error || `오류 ${response.status}`
 }
 
-// server: 홈페이지 저장소를 쓰는지(null이면 아직 모름)
+// server: 서버 저장소를 쓰는지(null이면 아직 모름)
 export function useModelLibrary(server: boolean | null): ModelLibrary {
   const [files, setFiles] = useState<ModelFile[]>([])
   const [uploading, setUploading] = useState(false)

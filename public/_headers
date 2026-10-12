@@ -1,0 +1,19 @@
+# 지도 앱 서버가 화면 파일에 붙이는 헤더입니다(Cloudflare Workers 정적 파일).
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# 공개 지도: 홈페이지(감천 작가 지도)와 내 PC의 홈페이지 개발 서버에서만 화면에 끼워 넣을 수 있습니다.
+/
+  Content-Security-Policy: frame-ancestors 'self' https://gamcheon-artist-map-apply.rjbcom4263.workers.dev http://127.0.0.1:8787 http://localhost:8787
+/index.html
+  Content-Security-Policy: frame-ancestors 'self' https://gamcheon-artist-map-apply.rjbcom4263.workers.dev http://127.0.0.1:8787 http://localhost:8787
+
+# 편집 앱: 다른 사이트에 끼워 넣지 못하게 합니다(눌러서 속이기 방지).
+/studio/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+
+# 빌드 파일은 이름에 내용 지문이 붙어 있어 오래 캐시합니다.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

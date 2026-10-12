@@ -5,20 +5,21 @@ import { sanitizeAlleys } from './alleys/alleys'
 import type { Alley } from './alleys/alleys'
 import { useSiteBuildingEdits } from './buildings/siteBuildingEdits'
 import type { BuildingEdits } from './buildings/buildingEdits'
-import { isSiteAdmin, postTrail } from './alleys/adminTrailApi'
-import { useAutoTrailRecorder } from './alleys/useAutoTrailRecorder'
-import { PocketMode } from './alleys/PocketMode'
 import { GamcheonMap } from './GamcheonMap'
 import { isInsideGamcheonMap } from './map/gamcheonBoundary'
 import type { Place } from './types'
 import './embed.css'
 
-// 감천 작가 지도 홈페이지(/map)가 iframe으로 끼워 쓰는 지도입니다(public/artist-map-embed).
-// 같은 출처(origin)의 부모 창과 postMessage로 주고받습니다.
+// 감천 골목지도 공개 지도(지도 앱 서버의 /)입니다. 감천 작가 지도 홈페이지(/map)가 iframe으로 끼워 쓰고,
+// 홈페이지(HOST_ORIGINS)와만 postMessage로 주고받습니다(다른 곳에서 온 메시지는 무시).
 //   부모 → 지도: { source: 'gamcheon-artist-host', type: 'set', places, selectedId, canPick }
 //   지도 → 부모: { source: 'gamcheon-artist-map', type: 'ready' | 'select' | 'pick', ... }
-// 주소에 ?mode=full을 붙이면 패널(장소 목록·길찾기)까지 갖춘 전체 지도로 열리고, 작가님 공방을 장소로 함께 보여 줍니다.
-const FULL = new URLSearchParams(window.location.search).get('mode') === 'full'
+// 주소에 ?mode=full을 붙이거나 주소를 바로 열면 패널(장소 목록·길찾기)까지 갖춘 전체 지도로 열리고, 작가님 공방을
+// 장소로 함께 보여 줍니다.
+const EMBEDDED = window.self !== window.top
+const FULL = new URLSearchParams(window.location.search).get('mode') === 'full' || !EMBEDDED
+// 지도를 끼워 쓰는 홈페이지 주소입니다(public/_headers의 frame-ancestors와 같게 둡니다).
+const HOST_ORIGINS = ['https://gamcheon-artist-map-apply.rjbcom4263.workers.dev', 'http://127.0.0.1:8787', 'http://localhost:8787']
 // ?host=site: 홈페이지가 제목 카드(← 감천 작가 지도 · 작가 목록)를 지도 위에 띄우므로, 휴대폰 화면의 지도 쪽
 // 이름표를 숨기고 검색·분류를 그 카드 아래에 둡니다(CSS의 is-site-hosted).
 const SITE_HOSTED = new URLSearchParams(window.location.search).get('host') === 'site'
@@ -39,10 +40,21 @@ function toPlace(value: unknown): Place | null {
   }
 }
 
-const post = (message: Record<string, unknown>) =>
-  window.parent.postMessage({ source: 'gamcheon-artist-map', ...message }, window.location.origin)
+// 메시지를 보낼 홈페이지 주소. 처음에는 iframe을 연 페이지 주소(referrer)로 정하고, 홈페이지가 보낸 메시지를 받으면
+// 그 주소로 맞춥니다. 허락한 주소가 아니면 아무 데도 보내지 않습니다.
+let hostOrigin = (() => {
+  try {
+    const origin = new URL(document.referrer).origin
+    return HOST_ORIGINS.includes(origin) ? origin : null
+  } catch {
+    return null
+  }
+})()
+const post = (message: Record<string, unknown>) => {
+  if (EMBEDDED && hostOrigin) window.parent.postMessage({ source: 'gamcheon-artist-map', ...message }, hostOrigin)
+}
 
-// 관리자가 확인한 골목길(손으로 그린 길과 GPS 기록으로 찾은 길)을 홈페이지에서 받아 옵니다. 못 받으면 빈 목록.
+// 관리자가 확인한 골목길(손으로 그린 길과 GPS 기록으로 찾은 길)을 지도 앱 서버에서 받아 옵니다. 못 받으면 빈 목록.
 function useSiteAlleys() {
   const [alleys, setAlleys] = useState<Alley[]>([])
   useEffect(() => {
@@ -56,40 +68,14 @@ function useSiteAlleys() {
   return alleys
 }
 
-// 관리자로 로그인해 공개 지도를 열면, 걸은 길을 자동으로 기록해 골목길 후보 찾기에 씁니다(일반 방문자는 기록하지
-// 않음). 기록 중인지 늘 보이도록 지도 위에 작은 표시와 일시정지 버튼을 둡니다.
-function useAdminAutoTrail() {
-  const [admin, setAdmin] = useState(false)
-  useEffect(() => {
-    let cancelled = false
-    isSiteAdmin().then((value) => { if (!cancelled) setAdmin(value) })
-    return () => { cancelled = true }
-  }, [])
-  return useAutoTrailRecorder(admin, async (trail, { keepalive }) => { await postTrail(trail, keepalive) })
-}
-
-function AutoTrailBadge({ recorder }: { recorder: ReturnType<typeof useAutoTrailRecorder> }) {
-  const [pocket, setPocket] = useState(false)
-  if (!recorder.enabled) return null
-  return <>
-    <div className={`embed-auto-trail${recorder.recording ? ' is-recording' : ''}${SITE_HOSTED ? ' is-site-hosted' : ''}`} role="status">
-      <span className="embed-auto-trail__dot" aria-hidden="true" />
-      <span>{recorder.recording ? `골목길 자동 기록 중 · ${recorder.pointCount}점` : '골목길 자동 기록 꺼짐'}</span>
-      {recorder.recording && <button type="button" onClick={() => setPocket(true)}>주머니 모드</button>}
-      <button type="button" onClick={recorder.recording ? recorder.pause : recorder.resume}>{recorder.recording ? '일시정지' : '다시 켜기'}</button>
-    </div>
-    {pocket && recorder.recording && <PocketMode pointCount={recorder.pointCount} onExit={() => setPocket(false)} />}
-  </>
-}
-
 function EmbeddedMap() {
   const [host, setHost] = useState<HostState>({ places: [], selectedId: null, canPick: false })
   const alleys = useSiteAlleys()
   const buildingEdits = useSiteBuildingEdits()
-  const autoTrail = useAdminAutoTrail()
   useEffect(() => {
     const receive = (event: MessageEvent) => {
-      if (event.source !== window.parent || event.origin !== window.location.origin) return
+      if (event.source !== window.parent || !HOST_ORIGINS.includes(event.origin)) return
+      hostOrigin = event.origin
       if (event.data?.source !== 'gamcheon-artist-host' || event.data.type !== 'set') return
       setHost({
         places: Array.isArray(event.data.places) ? event.data.places.map(toPlace).filter((place: Place | null): place is Place => place !== null) : [],
@@ -102,11 +88,9 @@ function EmbeddedMap() {
     return () => window.removeEventListener('message', receive)
   }, [])
 
-  const map = buildingEdits && <EmbeddedMapView host={host} alleys={alleys} buildingEdits={buildingEdits} />
-  return <>{map}<AutoTrailBadge recorder={autoTrail} /></>
+  return buildingEdits && <EmbeddedMapView host={host} alleys={alleys} buildingEdits={buildingEdits} />
 }
 
-// 자동 기록 표시가 GPS 점마다 바뀌어도 지도는 다시 그리지 않도록 따로 둡니다.
 const EmbeddedMapView = memo(function EmbeddedMapView({ host, alleys, buildingEdits }: { host: HostState; alleys: Alley[]; buildingEdits: BuildingEdits }) {
   const places = FULL ? [ARTIST_WORKSHOP_PLACE, ...host.places.filter((place) => place.id !== ARTIST_WORKSHOP_PLACE.id)] : host.places
   return <GamcheonMap
