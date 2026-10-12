@@ -2,6 +2,15 @@
 
 감천2동 골목을 3D로 보여 주는 지도 앱입니다. 공개 지도(`/`)와 관리자 편집 앱(`/studio/`), 지도 데이터 API(`/api/`)를 한 서버(Cloudflare Worker)에서 제공합니다. 감천 작가 지도 홈페이지는 공개 지도를 화면에 끼워 쓰고 승인된 작가 위치를 넘겨줍니다.
 
+## 프로젝트 안내 문서
+
+- [파일 구조·정리 기준·이동 내역](docs/PROJECT_STRUCTURE.md)
+- [수정 위치·실행 방법·홈페이지 반영·인수인계 설명](docs/MAINTENANCE_GUIDE.md)
+- [로컬 편집기: 선택·배치·고도·실행 취소·백업·서버 공개](docs/LOCAL_EDITOR_GUIDE.md)
+- [최신 커밋 통합: 포함·제외·보류 기능 결정](docs/FEATURE_INTEGRATION.md)
+
+이 저장소는 지도 원본입니다. 상위 `실서버_배포본_20261001/`의 `worker/`·`static/`는 과거 홈페이지 배포본입니다.
+
 ## 개발 및 확인
 
 ```bash
@@ -9,7 +18,7 @@ npm install --legacy-peer-deps
 npm run dev
 ```
 
-`npm run dev`는 화면만 띄우는 미리보기입니다(서버 없음). 공개 지도는 `http://127.0.0.1:5173/`, 편집 앱은 `/studio/`이며, 미리보기의 편집 앱은 로그인 없이 이 브라우저에만 저장합니다.
+`npm run dev`는 화면만 띄우는 미리보기입니다(서버 없음). 공개 지도는 `http://127.0.0.1:5173/`, 편집 앱은 `/studio/`이며, 미리보기의 편집 앱은 로그인 없이 이 브라우저에만 저장합니다. 개발 서버의 공개 지도는 같은 브라우저의 확정한 건물 공개본·현재 골목·사용자 모델을 읽습니다. Worker로 빌드하면 localhost에서도 서버 API를 사용합니다.
 
 ## 지도 앱 서버
 
@@ -100,9 +109,27 @@ GLB는 텍스처를 포함한 glTF 2.0 바이너리 한 파일, 20MB 이하만 �
 | `src/alleys/` | 골목길 그리기, GPS 기록으로 골목길 찾기, GPX 가져오기 |
 | `src/buildings/` | 관리자 건물 고치기(고친 내용 형식, 저장소, 패널, 모델 파일) |
 | `src/scene/` | 3D 거리 장면(`StreetSceneLayer.ts`)과 건물·도로 데이터, 바닥 도형, 모델 파일·올린 모델 배치, 경로 선 |
+| `src/scene/terrain/` | 지형 전용 건물 기준 층·경사 벽·기초 계산과 관련 검사 |
 | `src/data/` | OSM 건물·도로, 감천2동 경계, 기록한 골목길, 바탕 지도 스타일 원본 |
 | `src/generated/` | `npm run build:road-ground`·`build:terrain`이 미리 계산한 저장본 |
 | `src/assets/models/` | 직접 만든 GLB 모델 |
+| `previews/` | 그린하우스·아름다운한글 단독 모델 미리보기 HTML |
+| `scripts/` | 데이터 수집·변환, 사전 계산, 모델 제작, 홈페이지 내보내기 |
+| `design/` | 도면·OSM XML·외관 조사·시안 근거와 조사 보고서 |
+| `docs/` | 파일 분류 기준과 프로젝트 관리 설명 |
+
+### 평지와 3D 지형 생성
+
+평지는 기존 상세 건물 생성 경로를 사용합니다. 3D 지형에서는 일반 건물을 `StreetSceneLayer.ts`의 `buildTerrainBuilding()`과 `src/scene/terrain/terrainBuildingGeometry.ts`로 생성합니다. 도로 쪽 지면에 기준 층을 두고, 벽 밑단은 지형을 따르며, 층과 지붕은 수평을 유지합니다. 현재 3D 일반 건물의 외관은 지형 배치를 확인하기 위한 단순화 시안입니다. 아래 촬영 거리 상세 외관 설명은 기존 평지 표현에 해당합니다.
+
+전용 GLB와 작가님 공방은 기존 외관 모델을 지면 기준으로 배치하고, 낮은 쪽을 기초로 연결합니다. 평지와 3D는 생성 도형이 다르지만 건물 위치·색·높이와 편집 저장 데이터는 공유합니다. 세부 구조와 한계는 [파일 구조 문서](docs/PROJECT_STRUCTURE.md#5-평지와-3d-지형의-관계)에 기록했습니다.
+
+### 단독 모델 미리보기
+
+개발 서버를 실행한 뒤 다음 주소에서 확인합니다.
+
+- 그린하우스: `http://127.0.0.1:5173/previews/greenhouse-preview.html`
+- 아름다운한글: `http://127.0.0.1:5173/previews/beautiful-hangul-preview.html`
 
 ### 작가님 공방 모델
 

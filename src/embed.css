@@ -16,3 +16,6 @@ body { overflow: hidden; }
 .gamcheon-map.artist-full-map { height: 100%; min-height: 0; border-radius: 0; }
 
 
+
+/* 개발 서버에서 확인하는 공개본 표시 */
+.embed-local-preview { position: fixed; z-index: 100; bottom: 12px; left: 12px; padding: 8px 12px; border: 1px solid #d7deeb; border-radius: 8px; background: #fffffff0; color: #34405a; font: 12px system-ui, sans-serif; }

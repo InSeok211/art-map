@@ -46,11 +46,11 @@ async function withStore<T>(mode: IDBTransactionMode, action: (store: IDBObjectS
     database.close()
   }
 }
-type StoredFile = ModelFile & { file: Blob }
+export type StoredFile = ModelFile & { file: Blob }
 
 // 개발 미리보기에서 3D 거리가 이 브라우저에 담아 둔 모델 파일을 읽게 합니다.
 const localUrls = new globalThis.Map<string, string>()
-function registerLocalSource() {
+export function registerLocalSource() {
   setLocalModelSource(async (id) => {
     const cached = localUrls.get(id)
     if (cached) return cached
@@ -60,6 +60,31 @@ function registerLocalSource() {
     localUrls.set(id, url)
     return url
   })
+}
+
+export const readLocalModelFiles = () => withStore<StoredFile[]>('readonly', (store) => store.getAll())
+
+export async function restoreLocalModelFiles(files: StoredFile[]) {
+  const existing = new Map((await readLocalModelFiles()).map((file) => [file.id, file]))
+  for (const file of files) {
+    const old = existing.get(file.id)
+    if (!old) continue
+    const a = new Uint8Array(await old.file.arrayBuffer()), b = new Uint8Array(await file.file.arrayBuffer())
+    if (a.length !== b.length || a.some((value, index) => value !== b[index])) throw new Error(`모델 ID ${file.id}가 기존의 다른 파일과 겹칩니다.`)
+  }
+  const database = await openStore()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction(STORE, 'readwrite')
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error ?? new Error('모델 파일을 저장하지 못했습니다.'))
+      transaction.onabort = () => reject(transaction.error ?? new Error('모델 파일 저장이 취소되었습니다.'))
+      const store = transaction.objectStore(STORE)
+      for (const file of files) store.put(file)
+    })
+  } finally { database.close() }
+  registerLocalSource()
+  window.dispatchEvent(new Event('gamcheon-model-library-changed'))
 }
 
 async function readError(response: Response) {
@@ -86,9 +111,12 @@ export function useModelLibrary(server: boolean | null): ModelLibrary {
         .catch((reason: Error) => { if (!cancelled) setError(`모델 목록을 불러오지 못했습니다: ${reason.message}`) })
     } else {
       registerLocalSource()
-      withStore<StoredFile[]>('readonly', (store) => store.getAll())
+      const refresh = () => { void readLocalModelFiles()
         .then((records) => { if (!cancelled) setFiles(records.map(({ id, name, size }) => ({ id, name, size }))) })
-        .catch(() => { /* 이 브라우저에 저장소를 쓸 수 없으면 빈 목록 */ })
+        .catch(() => { /* 이 브라우저에 저장소를 쓸 수 없으면 빈 목록 */ }) }
+      refresh()
+      window.addEventListener('gamcheon-model-library-changed', refresh)
+      return () => { cancelled = true; window.removeEventListener('gamcheon-model-library-changed', refresh) }
     }
     return () => { cancelled = true }
   }, [server])

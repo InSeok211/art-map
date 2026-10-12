@@ -1,5 +1,7 @@
 import type { StreetBuilding } from '../scene/streetSceneData'
 import { isInsideGamcheonMap } from '../map/gamcheonBoundary'
+import { placedOutline, sanitizeBuildingSettings } from './buildingSettings'
+import type { BuildingSettings } from './buildingSettings'
 
 // 관리자가 작업실 '건물' 탭에서 고친 지도 건물의 내용입니다
 // (1단계: 자동으로 만든 건물 고치기, 2단계: 새 건물 그리기, 3단계: 올린 3D 모델(GLB)로 건물 바꾸기).
@@ -8,7 +10,7 @@ import { isInsideGamcheonMap } from '../map/gamcheonBoundary'
 
 export type RoofStyle = StreetBuilding['roofStyle']
 
-export interface BuildingOverride {
+export interface BuildingOverride extends BuildingSettings {
   hidden?: boolean
   heightMeters?: number
   wallColor?: number
@@ -17,7 +19,7 @@ export interface BuildingOverride {
 }
 
 // 관리자가 직접 윤곽을 그려 더한 건물(경도·위도 윤곽, 닫는 점 없이)
-export interface AddedBuilding {
+export interface AddedBuilding extends BuildingSettings {
   id: string
   outline: [number, number][]
   heightMeters: number
@@ -28,7 +30,7 @@ export interface AddedBuilding {
 
 // 관리자가 올린 3D 모델(GLB 파일)을 지도에 둔 것. replaces의 건물(OSM 번호)은 지도에서 빠집니다.
 // 모델은 바닥 가운데를 (경도, 위도)에 두고, 바닥의 긴 쪽이 widthMeters가 되게 늘이거나 줄여 rotation(도)만큼 돌립니다.
-export interface PlacedModel {
+export interface PlacedModel extends BuildingSettings {
   id: string
   // 지도 앱 서버에 올린 모델 파일 번호(m-로 시작)
   modelId: string
@@ -67,7 +69,7 @@ const isColor = (value: unknown): value is number => Number.isInteger(value) && 
 function sanitizeOverride(value: unknown): BuildingOverride | null {
   if (!value || typeof value !== 'object') return null
   const input = value as Record<string, unknown>
-  const override: BuildingOverride = {}
+  const override: BuildingOverride = sanitizeBuildingSettings(input)
   if (input.hidden === true) override.hidden = true
   const height = Number(input.heightMeters)
   if (input.heightMeters !== undefined && Number.isFinite(height)) {
@@ -90,6 +92,7 @@ function sanitizeAdded(value: unknown): AddedBuilding | null {
   if (!Number.isFinite(height) || !isColor(input.wallColor) || !isColor(input.roofColor)) return null
   if (input.roofStyle !== 'flat' && input.roofStyle !== 'gable') return null
   return {
+    ...sanitizeBuildingSettings(input),
     id: input.id,
     outline: outline.map(([lng, lat]) => [Math.round(lng * 1e7) / 1e7, Math.round(lat * 1e7) / 1e7]),
     heightMeters: Math.min(BUILDING_HEIGHT_RANGE.max, Math.max(BUILDING_HEIGHT_RANGE.min, height)),
@@ -110,6 +113,7 @@ function sanitizeModel(value: unknown): PlacedModel | null {
     ? [...new Set(input.replaces.filter((id): id is number => Number.isSafeInteger(id) && Number(id) > 0))].slice(0, MAX_REPLACES)
     : []
   return {
+    ...sanitizeBuildingSettings(input),
     id: input.id,
     modelId: input.modelId,
     name: typeof input.name === 'string' ? input.name.slice(0, 80) : '',
@@ -195,8 +199,11 @@ export function addedBuildingNumber(id: string) {
 // 새 건물을 자동으로 만든 일반 건물과 같은 모양 데이터로 바꿉니다(같은 3D 생성 코드로 그림).
 export function addedToStreetBuilding(building: AddedBuilding): StreetBuilding {
   return {
+    editorId: building.id,
+    terrain: building.terrain,
+    flatBaseMeters: building.flatBaseMeters,
     id: addedBuildingNumber(building.id),
-    outline: building.outline,
+    outline: placedOutline(building.outline, building.placement),
     heightMeters: building.heightMeters,
     wallColor: building.wallColor,
     roofColor: building.roofColor,
@@ -222,6 +229,9 @@ export function applyBuildingEdits(buildings: StreetBuilding[], edits: BuildingE
     if (override.hidden) return []
     return [{
       ...building,
+      outline: placedOutline(building.outline, override.placement),
+      terrain: override.terrain,
+      flatBaseMeters: override.flatBaseMeters,
       ...(override.heightMeters !== undefined ? { heightMeters: override.heightMeters } : {}),
       ...(override.wallColor !== undefined ? { wallColor: override.wallColor } : {}),
       ...(override.roofColor !== undefined ? { roofColor: override.roofColor } : {}),

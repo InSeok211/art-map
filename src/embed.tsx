@@ -6,6 +6,7 @@ import type { Alley } from './alleys/alleys'
 import { useSiteBuildingEdits } from './buildings/siteBuildingEdits'
 import type { BuildingEdits } from './buildings/buildingEdits'
 import { GamcheonMap } from './GamcheonMap'
+import { LOCAL_PUBLIC_PREVIEW, PUBLISHED_ALLEYS_KEY } from './buildings/publicPreview'
 import { isInsideGamcheonMap } from './map/gamcheonBoundary'
 import type { Place } from './types'
 import './embed.css'
@@ -58,6 +59,13 @@ const post = (message: Record<string, unknown>) => {
 function useSiteAlleys() {
   const [alleys, setAlleys] = useState<Alley[]>([])
   useEffect(() => {
+    if (LOCAL_PUBLIC_PREVIEW) {
+      const read = () => { try { setAlleys(sanitizeAlleys(JSON.parse(localStorage.getItem(PUBLISHED_ALLEYS_KEY) ?? '[]'))) } catch { setAlleys([]) } }
+      read()
+      const refresh = (event: StorageEvent) => { if (event.key === PUBLISHED_ALLEYS_KEY) read() }
+      window.addEventListener('storage', refresh)
+      return () => window.removeEventListener('storage', refresh)
+    }
     let cancelled = false
     fetch('/api/map-alleys')
       .then((response) => response.ok ? response.json() : { alleys: [] })
@@ -88,7 +96,9 @@ function EmbeddedMap() {
     return () => window.removeEventListener('message', receive)
   }, [])
 
-  return buildingEdits && <EmbeddedMapView host={host} alleys={alleys} buildingEdits={buildingEdits} />
+  return <>{buildingEdits && <EmbeddedMapView host={host} alleys={alleys} buildingEdits={buildingEdits} />}
+    {LOCAL_PUBLIC_PREVIEW && <div className="embed-local-preview">로컬 공개본 미리보기</div>}
+  </>
 }
 
 const EmbeddedMapView = memo(function EmbeddedMapView({ host, alleys, buildingEdits }: { host: HostState; alleys: Alley[]; buildingEdits: BuildingEdits }) {

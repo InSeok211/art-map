@@ -66,6 +66,10 @@ function Studio() {
   const editing = !phoneLayout || mobileEditing
   const saveState = PREVIEW ? '이 브라우저에만 저장(미리보기)' : '지도 앱 서버에 저장'
   const logout = () => { void postJson('/api/admin/logout').finally(() => window.location.reload()) }
+  if (!alleyStore.ready) return <main className="studio-login">
+    <p role="status">{alleyStore.notice || '골목길 서버 데이터를 불러오는 중…'}</p>
+    {alleyStore.notice && <button type="button" onClick={() => window.location.reload()}>새로고침</button>}
+  </main>
   return (
     <div className="demo-shell">
       <header className="demo-header">

@@ -4,6 +4,7 @@ import bakedOutlines from '../generated/building-outlines.json'
 import mapSurfaces from '../data/street-surfaces.json'
 import { RECORDED_ALLEY_WAYS } from '../alleys/recordedAlleys'
 import * as polygonClipping from 'polygon-clipping'
+import type { TerrainBuildingSettings } from '../buildings/buildingSettings'
 import { isBuildingInBuildingArea, isInsideGamcheonMap } from '../map/gamcheonBoundary'
 import { ALLEY_EDGE, FOOT_ROAD_TYPES, PHOTOGRAPHED_ROAD_WIDTH, roadOutlines, roadWidth } from './roadCorridors'
 
@@ -75,6 +76,9 @@ export interface FacadeOpening {
 }
 
 export interface StreetBuilding {
+  editorId?: string
+  terrain?: TerrainBuildingSettings
+  flatBaseMeters?: number
   id: number
   outline: StreetPoint[]
   heightMeters: number

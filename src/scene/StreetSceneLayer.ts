@@ -18,7 +18,12 @@ import type { TerrainSampler } from '../map/terrain'
 import { applyBuildingEdits } from '../buildings/buildingEdits'
 import { GREEN_HOUSE_FOOTPRINT_IDS } from './landmarkBuildings'
 import type { BuildingEdits, PlacedModel } from '../buildings/buildingEdits'
+import type { BuildingSettings } from '../buildings/buildingSettings'
+import type { BuildingSelection } from '../buildings/buildingSelection'
+import { pickBuilding } from './buildingPicking'
 import { drapeOnTerrain, flatPolygonGeometry, isDrawablePolygon, TERRAIN_GROUND_LIFT } from './groundGeometry'
+import { buildingFoundationFaces } from './terrain/buildingFoundation'
+import { terrainBuildingPlan, terrainWallGeometry } from './terrain/terrainBuildingGeometry'
 import { BEAUTIFUL_HANGUL_URL, GREEN_HOUSE_URL, loadModel } from './modelFiles'
 import { PlacedModels } from './placedModels'
 import { mergeByMaterial } from './mergeModel'
@@ -116,7 +121,6 @@ const ALLEY_PAVING_COLOR = 0xead2ad
 
 // 바닥 무늬(돌·포장 질감) 한 장이 덮는 크기(m)
 const GROUND_TEXTURE_METERS = 20
-const TERRAIN_BUILDING_CLEARANCE = TERRAIN_GROUND_LIFT + 0.12
 // 3D 지형의 바닥 층 순서. 층마다 삼각형을 다르게 나눠 비탈에 얹으면 높이가 몇 cm~수십 cm씩 어긋나, 몇 cm 차이로
 // 쌓은 층(흰 바닥·돌 포장·골목길·차도)이 서로 뚫고 나와 길에 얼룩(노이즈)이 생깁니다. 그래서 지형에서는 바닥이
 // 깊이값을 남기지 않고 아래 층부터 차례로 덮어 그리게 합니다(건물·나무는 그 뒤에 깊이를 비교해 그립니다).
@@ -217,21 +221,25 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private readonly buildingEdits?: BuildingEdits
   private readonly placedModels: PlacedModels
 
-  // 3D 지형(켜져 있을 때만). 건물은 윤곽의 높은 땅 위에 세우고, 낮은 쪽은 기초 벽으로 연결합니다.
+  // 3D 지형(켜져 있을 때만). 도로 쪽 지면에 기준 층을 두고, 일반 건물의 벽은 지형에서부터 생성합니다.
   private readonly terrain?: TerrainSampler
   private buildingBase = 0
+  private currentPick = -1
+  private pickReferences: BuildingSelection[] = []
+  private readonly picking: boolean
   private occluderBases: number[] = []
 
   // focus: 처음 화면 중심(경도·위도). 이 근처 건물부터 만듭니다(없으면 작가님 공방 근처).
   // buildingEdits: 관리자가 고친 건물(높이·색·지붕·숨기기, 새 건물, 올린 3D 모델, buildingEdits.ts)
   // onModelError: 관리자가 올린 3D 모델을 불러오지 못했을 때(모델 이름)
-  constructor(options: { terrain?: TerrainSampler; focus?: [number, number]; buildingEdits?: BuildingEdits; onModelError?: (name: string) => void } = {}) {
+  constructor(options: { terrain?: TerrainSampler; focus?: [number, number]; buildingEdits?: BuildingEdits; picking?: boolean; onModelError?: (name: string) => void } = {}) {
     const started = performance.now()
     this.terrain = options.terrain
+    this.picking = options.picking ?? false
     this.buildingEdits = options.buildingEdits
     this.placedModels = new PlacedModels({
       scene: this.scene,
-      baseHeight: (outline) => this.terrainBuildingBase(outline),
+      baseHeight: (outline, placed) => this.terrainBuildingBase(outline, placed),
       addFoundation: (outline, base) => this.addModelFoundation(outline, base, false),
       changed: () => {
         this.shadowsBaked = false
@@ -440,11 +448,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
   // 도형은 지형에 얹고, 나무 같은 작은 물체는 그 자리 땅 높이만큼 올립니다.
   private onTerrain(geometry: THREE.BufferGeometry, maxGroundEdge = 6) {
     const terrain = this.terrain
-    if (!terrain) return geometry
     if (this.buildingContext) {
-      geometry.translate(0, this.buildingBase, 0)
+      if (this.buildingBase) geometry.translate(0, this.buildingBase, 0)
       return geometry
     }
+    if (!terrain) return geometry
     geometry.computeBoundingBox()
     const box = geometry.boundingBox!
     if (box.max.y - box.min.y < 0.6) return drapeOnTerrain(geometry, terrain, TERRAIN_GROUND_LIFT, maxGroundEdge)
@@ -452,39 +460,13 @@ export class StreetSceneLayer implements CustomLayerInterface {
     return geometry
   }
 
-  private terrainBuildingBase(outline: [number, number][]) {
-    return this.terrain ? this.terrain.highest(outline) + TERRAIN_BUILDING_CLEARANCE : 0
+  private terrainBuildingBase(outline: [number, number][], settings?: BuildingSettings) {
+    return this.terrain ? terrainBuildingPlan(outline, this.terrain, distanceToRoad, [], undefined, settings?.terrain).base
+      : settings?.flatBaseMeters ?? 0
   }
 
   private terrainFoundationFaces(outline: [number, number][], base: number) {
-    const terrain = this.terrain
-    const faces: THREE.BufferGeometry[] = []
-    if (!terrain || outline.length < 3) return faces
-    const [cx, cz] = outlineCenter(outline)
-    for (let index = 0; index < outline.length; index++) {
-      const [ax, az] = outline[index], [bx, bz] = outline[(index + 1) % outline.length]
-      const length = Math.hypot(bx - ax, bz - az)
-      if (length < 0.15) continue
-      const ux = (bx - ax) / length, uz = (bz - az) / length
-      const mx = (ax + bx) / 2, mz = (az + bz) / 2
-      const outward = -uz * (mx - cx) + ux * (mz - cz) >= 0 ? 1 : -1
-      const nx = -uz * outward, nz = ux * outward
-      const flip = (bx - ax) * nz - (bz - az) * nx < 0
-      const [p, q] = flip ? [[bx, bz], [ax, az]] : [[ax, az], [bx, bz]]
-      const bottomP = terrain.height(p[0], p[1]) + TERRAIN_GROUND_LIFT - base
-      const bottomQ = terrain.height(q[0], q[1]) + TERRAIN_GROUND_LIFT - base
-      const offset = 0.08
-      const a = [p[0] + nx * offset, bottomP, p[1] + nz * offset]
-      const b = [q[0] + nx * offset, bottomQ, q[1] + nz * offset]
-      const c = [q[0] + nx * offset, 0, q[1] + nz * offset]
-      const d = [p[0] + nx * offset, 0, p[1] + nz * offset]
-      const geometry = new THREE.BufferGeometry()
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...b, ...c, ...a, ...c, ...d], 3))
-      geometry.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, length / 2, 0, length / 2, 1, 0, 0, length / 2, 1, 0, 1], 2))
-      geometry.setAttribute('normal', new THREE.Float32BufferAttribute(Array(6).fill([nx, 0, nz]).flat(), 3))
-      faces.push(geometry)
-    }
-    return faces
+    return buildingFoundationFaces(outline, base, this.terrain)
   }
 
   private addTerrainFoundation(outline: [number, number][]) {
@@ -500,7 +482,12 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const geometry = mergeGeometries(faces)
     faces.forEach((face) => face.dispose())
     geometry.translate(0, base, 0)
-    const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0xb6bfba, side: THREE.DoubleSide }))
+    let map = this.conceptTextures.get('context-stone')
+    if (!map) {
+      map = conceptTexture('context-stone')
+      this.conceptTextures.set('context-stone', map)
+    }
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0xb6bfba, map, side: THREE.DoubleSide }))
     mesh.castShadow = true
     mesh.receiveShadow = true
     if (track) this.modelFoundations.push(mesh)
@@ -525,6 +512,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
 
   // 지금 만드는 건물의 번호를 도형의 모든 꼭짓점에 붙입니다(고리 묶음의 건물만). 첫 도형에서 번호를 받습니다.
   private tagBuilding(geometry: THREE.BufferGeometry) {
+    if (this.picking) geometry.setAttribute('pickIndex', new THREE.Float32BufferAttribute(
+      new Float32Array(geometry.getAttribute('position').count).fill(this.buildingContext ? this.currentPick : -1), 1))
     if (this.group === 'scene') return
     if (this.currentBuilding < 0 && this.buildingContext && this.occluders.length < FADE_TEXTURE_SIZE * FADE_TEXTURE_SIZE) {
       this.currentBuilding = this.occluders.push(this.buildingContext) - 1
@@ -1903,13 +1892,67 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.consolidateSlots()
   }
 
+  // 지형 전용 시안: 지면부터 벽을 만들고, 기준 층에서 창문과 지붕의 수평 높이를 정합니다.
+  private buildTerrainBuilding(building: StreetBuilding, outline: [number, number][]) {
+    const terrain = this.terrain!
+    const height = building.heightMeters
+    const plan = terrainBuildingPlan(outline, terrain, distanceToRoad, building.sharedEdges, height, building.terrain)
+    this.buildingBase = plan.base
+    const finish = building.roadview?.surface ?? building.observed?.surface ?? building.inferred?.surface
+    const surface: ConceptSurface = finish === 'brick' || building.brickFacade ? 'lane-brick'
+      : finish === 'wood' ? 'wood' : finish === 'panel' ? 'context-tile' : 'context-stucco'
+    this.detailedRoof(building.roofColor, building.wallColor, outline, height, building.id,
+      building.roofStyle, true, true, building.roofFinish === 'sheet' ? 'roof-sheet' : 'roof-grain', false, false)
+    for (const edge of plan.edges) {
+      const { a, b, length, nx, nz, x, z } = edge
+      this.addGeometry(building.wallColor, terrainWallGeometry(a, b, nx, nz, plan.base, height, terrain,
+        surface === 'wood' ? 1.2 : 2.4), false, surface)
+      if (building.roofStyle === 'flat') {
+        this.wallFace(0xe8e6dd, a, b, nx, nz, 0.025, height - 0.02, height + 0.36, 'context-stucco')
+      }
+      if (edge.shared) continue
+      const ux = (b[0] - a[0]) / length, uz = (b[1] - a[1]) / length
+      const rotation = -Math.atan2(b[1] - a[1], b[0] - a[0])
+      const ground = (px: number, pz: number) => terrain.height(px, pz) + TERRAIN_GROUND_LIFT - plan.base
+      // 출입구는 기준 층과 지면이 만나는 면에만 둡니다.
+      const door = edge === plan.entrance && length >= 2 && Math.abs(ground(x, z)) < 0.15
+      if (door) {
+        this.box(0xe0e6de, 1.16, 2.18, 0.07, x + nx * 0.06, 1.09, z + nz * 0.06, rotation)
+        this.box(building.roadview?.doorColor ?? this.shade(building.wallColor, 0.55), 1, 2.05, 0.08,
+          x + nx * 0.11, 1.06, z + nz * 0.11, rotation)
+      }
+      const count = Math.min(7, Math.floor(length / 2.6))
+      for (let row = 1.65; row + 0.75 < height; row += DISTRICT_FLOOR_HEIGHT) {
+        for (let column = 0; column < count; column++) {
+          const along = (column - (count - 1) / 2) * length / count
+          if (door && row < 2.65 && Math.abs(along) < 1.3) continue
+          const wx = x + ux * along, wz = z + uz * along
+          // 높은 쪽 땅에 가려질 창은 만들지 않습니다. 층 높이는 건물 전체에서 같습니다.
+          const grade = Math.max(ground(wx, wz), ground(wx - ux * 0.6, wz - uz * 0.6), ground(wx + ux * 0.6, wz + uz * 0.6))
+          if (row - 0.65 < grade + 0.15) continue
+          this.quad(0xffffff, [
+            [wx - ux * 0.6 + nx * 0.06, row - 0.65, wz - uz * 0.6 + nz * 0.06],
+            [wx + ux * 0.6 + nx * 0.06, row - 0.65, wz + uz * 0.6 + nz * 0.06],
+            [wx + ux * 0.6 + nx * 0.06, row + 0.65, wz + uz * 0.6 + nz * 0.06],
+            [wx - ux * 0.6 + nx * 0.06, row + 0.65, wz - uz * 0.6 + nz * 0.06],
+          ], 'district-window')
+        }
+      }
+    }
+  }
+
   // 건물 하나를 만듭니다. 바로 만들 때(build)와 나눠 만들 때(scheduleDistrictBuild) 함께 씁니다.
   private buildOne(building: StreetBuilding, outline: [number, number][]) {
     this.group = building.id === ARTIST_WORKSHOP_FOOTPRINT_ID ? 'scene' : this.ringOf(outline)
     this.buildingContext = { outline, height: building.heightMeters }
-    this.buildingBase = this.terrainBuildingBase(outline)
     this.currentBuilding = -1
-    this.addTerrainFoundation(outline)
+    if (this.picking) this.currentPick = this.pickReferences.push(building.editorId ? { kind: 'added', id: building.editorId } : { kind: 'osm', id: building.id }) - 1
+    if (this.terrain && building.id !== ARTIST_WORKSHOP_FOOTPRINT_ID) {
+      this.buildTerrainBuilding(building, outline)
+      return
+    }
+    this.buildingBase = this.terrainBuildingBase(outline, building)
+    if (building.terrain?.foundation !== false) this.addTerrainFoundation(outline)
     if (building.concept) {
       this.doubleSided = true
       this.buildConceptBuilding(building, outline)
@@ -2251,6 +2294,13 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private shadersReady = false
   private shadowBakeAt = 0
 
+  pickBuildingAt(point: { x: number; y: number }): BuildingSelection | null {
+    if (!this.picking || !this.map || !this.shadersReady) return null
+    const canvas = this.map.getCanvas()
+    return pickBuilding(this.scene, this.camera, this.pickReferences, point.x, point.y, canvas.clientWidth, canvas.clientHeight,
+      this.terrain ? (x, z) => this.terrain!.height(x, z) + TERRAIN_GROUND_LIFT : undefined)
+  }
+
   render(_gl: WebGL2RenderingContext, options: { defaultProjectionData: { mainMatrix: ArrayLike<number> } }) {
     if (!this.renderer || !this.map || !this.shadersReady) return
     const origin = MercatorCoordinate.fromLngLat(STREET_ORIGIN, 0)
@@ -2277,9 +2327,6 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
     // 그림자 패스가 끝난 뒤 뷰포트를 지도 캔버스 크기로 되돌리도록 매번 맞춥니다.
     this.renderer.setViewport(0, 0, _gl.drawingBufferWidth, _gl.drawingBufferHeight)
-    // MapLibre 지형의 먼 거리 깊이값이 실제보다 높은 면으로 건물과 길을 가릴 수 있습니다.
-    // 거리 장면 내부의 깊이 관계는 유지하면서, 바탕 지형의 깊이값만 지운 뒤 그립니다.
-    if (this.terrain) this.renderer.clearDepth()
     // 경로 띠는 화면 기준 굵기를 지키도록, 줌이 꽤 바뀌면 그 굵기로 다시 만듭니다.
     if (this.routeLine && Math.abs(this.map.getZoom() - this.routeZoom) > 0.35) this.buildRouteLine()
     this.renderer.render(this.scene, this.camera)
@@ -2322,6 +2369,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
       // 부품 수백 개를 같은 재질끼리 합쳐 그리기 명령을 줄입니다(mergeModel.ts).
       const model = mergeByMaterial(gltf.scene)
       model.name = 'green-house'
+      model.userData.buildingPick = { kind: 'osm', id: [...GREEN_HOUSE_FOOTPRINT_IDS][0] }
       const placement = greenHouseOsmPlacement()
       model.scale.set(placement.scaleX, 1, placement.scaleZ)
       const outline = GREEN_HOUSE_PLAN.map(([px, pz]) => [px + placement.x, pz + placement.z] as [number, number])
@@ -2347,6 +2395,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
       // 부품 수백 개를 같은 재질끼리 합쳐 그리기 명령을 줄입니다(mergeModel.ts).
       const model = mergeByMaterial(gltf.scene)
       model.name = 'beautiful-hangul'
+      model.userData.buildingPick = { kind: 'osm', id: BEAUTIFUL_HANGUL_FOOTPRINT_ID }
       // OSM 윤곽 그대로 두면 넓힌 골목(감내1로175번안길 등)과 겹치므로, 차도·골목길에서 비켜 놓습니다.
       const [x, z] = streetMeters(BEAUTIFUL_HANGUL_CENTER)
       const [dx, dz] = shiftOffCarriageways(BEAUTIFUL_HANGUL_OUTLINE.map(streetMeters), 3, 'all')

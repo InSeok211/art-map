@@ -938,6 +938,32 @@
 }
 .gamcheon-map__terrain-long { margin-left: .25em; }
 
+/* 로컬 건물 편집 도구 */
+.gamcheon-map__workspace-tools { display: grid; gap: 10px; padding: 14px; margin-bottom: 12px; border: 1px solid #dde2fb; border-radius: 12px; background: #f5f6ff; }
+.gamcheon-map__workspace-tools > strong { font-size: 15px; color: #29334a; }
+.gamcheon-map__workspace-tools .gamcheon-map__model-item-actions { flex-wrap: wrap; }
+.gamcheon-map__workspace-tools .gamcheon-map__model-item-actions > * { flex: 1 1 42%; min-height: 38px; font-size: 11px; }
+.gamcheon-map__workspace-tools .gamcheon-map__model-import { position: relative; }
+.gamcheon-map__workspace-tools button[aria-pressed="true"] { background: #5b6cf0; color: #fff; }
+.gamcheon-map__building-search { display: flex; gap: 7px; margin: 12px 0; }
+.gamcheon-map__building-search input { width: 0; flex: 1; min-width: 0; }
+.gamcheon-map__building-search input, .gamcheon-map__building-search button, .gamcheon-map__model-inspector input[type="number"], .gamcheon-map__model-inspector input[type="text"] { padding: 8px; border: 1px solid #d5dbea; border-radius: 7px; background: #fff; color: #29334a; font: inherit; font-size: 12px; }
+.gamcheon-map__property-section { display: grid; gap: 10px; padding-top: 12px; border-top: 1px solid #dde2eb; }
+.gamcheon-map__property-section > strong { color: #29334a; font-size: 13px; }
+.gamcheon-map__model-inspector .gamcheon-map__number-field { grid-template-columns: minmax(0, 1fr) minmax(90px, 48%); align-items: center; gap: 8px; }
+.gamcheon-map__model-inspector .gamcheon-map__number-field input { grid-column: 2; box-sizing: border-box; }
+.gamcheon-map__model-inspector .gamcheon-map__building-toggle input { width: auto; grid-column: auto; }
+.gamcheon-map__editor-handle { min-width: 44px; min-height: 32px; padding: 6px 10px; border: 2px solid #fff; border-radius: 999px; box-shadow: 0 2px 8px #1c263755; background: #e88728; color: #fff; font: 700 12px system-ui, sans-serif; cursor: grab; touch-action: none; z-index: 4; }
+.gamcheon-map__editor-handle.is-1 { background: #5969e8; }
+.gamcheon-map__editor-handle.is-2 { background: #2f8064; }
+.gamcheon-map__editor-handle:active { cursor: grabbing; }
+.gamcheon-map__editor-handle:focus-visible { outline: 3px solid #29334a; outline-offset: 2px; }
+.gamcheon-map__public-preview { position: fixed; inset: 20px; width: calc(100% - 40px); max-width: none; height: calc(100% - 40px); max-height: none; margin: auto; padding: 0; border: 1px solid #d5dbea; border-radius: 14px; background: #fff; }
+.gamcheon-map__public-preview[open] { display: grid; grid-template-rows: 48px minmax(0, 1fr); }
+.gamcheon-map__public-preview::backdrop { background: #1c2637aa; }
+.gamcheon-map__public-preview header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-bottom: 1px solid #d5dbea; font: 14px system-ui, sans-serif; }
+.gamcheon-map__public-preview header button { padding: 7px 12px; border: 1px solid #d5dbea; border-radius: 8px; background: #f5f6ff; color: #34405a; cursor: pointer; }
+.gamcheon-map__public-preview iframe { width: 100%; height: 100%; border: 0; }
 /* GPX 파일로 기록 추가 */
 .gamcheon-map__gpx-button { position: relative; display: inline-flex !important; align-items: center; justify-content: center; min-height: 38px; padding: 0 14px; border: 1px solid #dde2fb; border-radius: 9px; background: #fff; color: #4a5ae0; font-size: 12px !important; font-weight: 800; cursor: pointer; }
 .gamcheon-map__gpx-button input { position: absolute; inset: 0; width: 100% !important; opacity: 0; cursor: pointer; }

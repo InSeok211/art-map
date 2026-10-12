@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { EMPTY_BUILDING_EDITS, sameBuildingEdits, sanitizeBuildingEdits } from './buildingEdits'
 import type { BuildingEdits } from './buildingEdits'
+import { PUBLISHED_KEY } from './buildingEditStore'
+import { registerLocalSource } from './modelLibrary'
+import { LOCAL_PUBLIC_PREVIEW } from './publicPreview'
 
 const REFRESH_MS = 60_000
 const STARTUP_WAIT_MS = 1_500
@@ -10,6 +13,14 @@ const STARTUP_WAIT_MS = 1_500
 export function useSiteBuildingEdits(): BuildingEdits | null {
   const [edits, setEdits] = useState<BuildingEdits | null>(null)
   useEffect(() => {
+    if (LOCAL_PUBLIC_PREVIEW) {
+      registerLocalSource()
+      const read = () => { try { setEdits(sanitizeBuildingEdits(JSON.parse(localStorage.getItem(PUBLISHED_KEY) ?? '{}'))) } catch { setEdits(EMPTY_BUILDING_EDITS) } }
+      read()
+      const refresh = (event: StorageEvent) => { if (event.key === PUBLISHED_KEY) read() }
+      window.addEventListener('storage', refresh)
+      return () => window.removeEventListener('storage', refresh)
+    }
     let cancelled = false
     let latestRequest = 0
     const startup = window.setTimeout(() => {

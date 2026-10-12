@@ -1,5 +1,5 @@
 import type { Env } from './env'
-import { json, readJson } from './http'
+import { error, json, readJson } from './http'
 import { EMPTY_BUILDING_EDITS, sanitizeBuildingEdits } from '../src/buildings/buildingEdits'
 import type { BuildingEdits } from '../src/buildings/buildingEdits'
 
@@ -36,7 +36,18 @@ export const adminBuildings = async (env: Env) => json(await readBothVersions(en
 
 export async function saveDraft(request: Request, env: Env) {
   const body = await readJson(request)
-  const draft = sanitizeBuildingEdits(body?.draft)
+  const input = body?.draft as Partial<BuildingEdits> | undefined
+  if (!input || typeof input.overrides !== 'object' || !input.overrides || Array.isArray(input.overrides)
+    || !Array.isArray(input.added) || !Array.isArray(input.models)) {
+    return error('건물 초안 형식이 잘못되었습니다. 기존 초안은 유지됩니다.', 400)
+  }
+  const draft = sanitizeBuildingEdits(input)
+  if (Object.keys(draft.overrides).length !== Object.keys(input.overrides).length
+    || draft.added.length !== input.added.length || draft.models.length !== input.models.length
+    || new Set(draft.added.map((building) => building.id)).size !== draft.added.length
+    || new Set(draft.models.map((model) => model.id)).size !== draft.models.length) {
+    return error('저장할 수 없는 건물 데이터나 중복 ID가 있습니다. 기존 초안은 유지됩니다.', 400)
+  }
   await write(env, 'draft', draft)
   return json({ draft })
 }

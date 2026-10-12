@@ -23,6 +23,6 @@
 
 - 생성 스크립트: `scripts/build-beautiful-hangul.mjs`
 - 모델 파일: `src/assets/models/custom/beautiful-hangul-studio.glb`
-- 미리보기: `beautiful-hangul-preview.html`
+- 미리보기: [`previews/beautiful-hangul-preview.html`](../../previews/beautiful-hangul-preview.html)
 - 모델링 기준 크기: 출입문 높이 약 2.42 m(사용자가 추정한 2~2.5 m 범위), 전면 약 8.8 m, 깊이 약 11 m, 처마 높이 약 4.1 m. 처마를 포함한 전체 깊이는 약 13.2 m다. 사진만으로 실제 치수를 확정할 수 없어 비율은 시안용 추정이다.
 - 지도 모델 목록에는 등록했으며, 실제 지도 좌표와 회전은 아직 지정하지 않았다.

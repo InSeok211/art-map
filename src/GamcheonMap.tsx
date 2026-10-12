@@ -9,6 +9,7 @@ import { filterPlaces } from './places/filterPlaces'
 import { GAMCHEON_MAP_BOUNDS, isInsideGamcheonMap } from './map/gamcheonBoundary'
 import { BUILDING_EDIT_LAYER_IDS, BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle, DEM_SOURCE_ID, ROUTE_LAYER_IDS, TRAIL_LAYER_IDS } from './map/mapStyle'
 import { BuildingEditor } from './buildings/BuildingEditor'
+import { LocalWorkspaceTools } from './buildings/LocalWorkspaceTools'
 import { useBuildingEditing } from './buildings/useBuildingEditing'
 import type { BuildingEditStore } from './buildings/buildingEditStore'
 import type { BuildingEdits } from './buildings/buildingEdits'
@@ -185,7 +186,9 @@ export function GamcheonMap({
   // 골목길 탭 안의 두 도구: 지도에 점을 찍어 그리기(draw) / 걸으며 기록해 찾기(walk)
   const [alleyTool, setAlleyTool] = useState<'draw' | 'walk'>('draw')
   const alleyFinder = useAlleyFinder(mapRef, canEditAlleys && mode === 'alleys', gpsTrails, alley.editorProps.alleys, alley.addAlley)
-  const buildingEditing = useBuildingEditing(mapRef, canEditBuildings && mode === 'buildings', buildingEditor)
+  const buildingEditing = useBuildingEditing(mapRef, canEditBuildings && mode === 'buildings', buildingEditor, {
+    terrainMode, pick: (point) => streetLayerRef.current?.pickBuildingAt(point) ?? null,
+  })
   // 3D 거리에 반영할 건물 고친 내용: 작업실은 초안, 공개 지도는 공개본.
   //  - 건물 모양이 바뀌면(고친 건물·새 건물·모델이 대신하는 건물) 잠시 기다렸다가 3D 거리를 다시 만듭니다
   //    (조절바를 끄는 동안 여러 번 다시 만들지 않게).
@@ -327,6 +330,7 @@ export function GamcheonMap({
       setPlacedModelError('')
       streetLayer = new StreetSceneLayer({
         terrain, focus: map.getCenter().toArray() as [number, number], buildingEdits: buildingEditsRef.current,
+        picking: !!buildingEditor,
         onModelError: (name) => setPlacedModelError(`3D 모델 '${name}'을(를) 불러오지 못했습니다.`),
       })
       streetLayer.setOtherBuildingsHidden(workshopOnlyRef.current, false)
@@ -666,7 +670,9 @@ export function GamcheonMap({
           <button type="button" className={mode === 'route' ? 'is-active' : ''} onClick={() => switchMode('route')}>길찾기</button>
         </div>
 
-        {mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : mode === 'buildings' && buildingEditing.panelProps ? <BuildingEditor {...buildingEditing.panelProps} sceneError={placedModelError} /> : mode === 'alleys' ? <>
+        {mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : mode === 'buildings' && buildingEditing.panelProps ? <BuildingEditor {...buildingEditing.panelProps} sceneError={placedModelError}
+          workspace={buildingEditor && <LocalWorkspaceTools store={buildingEditor} alleys={alley.editorProps.alleys} onAlleysChange={onAlleysChange}
+            terrainMode={terrainMode} onTerrainMode={setTerrainMode} />} /> : mode === 'alleys' ? <>
           {alleyFinder.enabled && <div className="gamcheon-map__tool-switch" role="tablist" aria-label="골목길 도구">
             <button type="button" role="tab" aria-selected={alleyTool === 'draw'} className={alleyTool === 'draw' ? 'is-active' : ''} onClick={() => setAlleyTool('draw')}>직접 그리기 · {alley.editorProps.alleys.length}</button>
             <button type="button" role="tab" aria-selected={alleyTool === 'walk'} className={alleyTool === 'walk' ? 'is-active' : ''} onClick={() => { alley.stopDrawing(); setAlleyTool('walk') }}>

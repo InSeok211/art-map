@@ -22,6 +22,15 @@ afterEach(() => {
 })
 
 describe('building edit persistence', () => {
+  it('persists undo and redo locally and keeps the public revision unchanged', () => {
+    const { result } = renderHook(() => useBuildingEditStore())
+    act(() => result.current.onChange(setOverride(EMPTY_BUILDING_EDITS, 123, { heightMeters: 12 })))
+    act(() => result.current.onUndo?.())
+    expect(JSON.parse(localStorage.getItem('gamcheon-building-draft-v1')!)).toEqual(EMPTY_BUILDING_EDITS)
+    act(() => result.current.onRedo?.())
+    expect(result.current.draft.overrides[123].heightMeters).toBe(12)
+    expect(result.current.published).toEqual(EMPTY_BUILDING_EDITS)
+  })
   it('does not publish locally when the hosted admin API fails to load', async () => {
     document.documentElement.dataset.buildingEditServer = 'true'
     const fetch = vi.fn().mockResolvedValue(json({ error: 'Forbidden' }, 403))

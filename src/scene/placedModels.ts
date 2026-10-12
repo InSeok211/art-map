@@ -6,8 +6,8 @@ import { mergeByMaterial } from './mergeModel'
 import { streetMeters } from '../map/streetCoordinates'
 
 // 관리자가 올린 3D 모델(GLB)을 3D 거리에 둡니다(건물 탭 3단계). 모델의 바닥 가운데를 그 자리에 두고, 바닥의 긴
-// 쪽이 widthMeters가 되게 늘이거나 줄여 rotation(도, 긴 쪽이 가리키는 방향)만큼 돌립니다. 언덕에서는 바닥의 가장
-// 높은 땅에 올리고 아래를 기초 벽으로 채웁니다(그린하우스와 같은 방식).
+// 쪽이 widthMeters가 되게 늘이거나 줄여 rotation(도, 긴 쪽이 가리키는 방향)만큼 돌립니다. 언덕에서는 도로 쪽
+// 지면에 기준 바닥을 맞추고, 낮은 쪽의 틈은 기초 벽으로 연결합니다(그린하우스와 같은 방식).
 // 모델 파일은 한 번만 읽어 원본(바닥 가운데·긴 쪽을 맞춘 것)을 두고, 배치마다 복제합니다. 위치·크기·방향만 바뀌면
 // 3D 거리를 다시 만들지 않고 모델만 다시 놓습니다(set).
 
@@ -15,7 +15,7 @@ import { streetMeters } from '../map/streetCoordinates'
 export interface PlacedModelHost {
   readonly scene: THREE.Scene
   // 바닥 윤곽(장면 미터)을 올릴 높이
-  baseHeight(outline: [number, number][]): number
+  baseHeight(outline: [number, number][], placed: PlacedModel): number
   // 언덕에서 바닥 아래를 채우는 기초 벽(평지면 null). 장면에 붙여 돌려줍니다.
   addFoundation(outline: [number, number][], base: number): THREE.Mesh | null
   // 장면이 바뀌었을 때(그림자 다시 굽기·다시 그리기)
@@ -109,18 +109,22 @@ export class PlacedModels {
       const lx = sx * half[0], lz = sz * half[1]
       return [x + lx * cos + lz * sin, z - lx * sin + lz * cos] as [number, number]
     })
-    const base = this.host.baseHeight(outline)
+    const base = this.host.baseHeight(outline, placed)
     // 원본과 도형·재질을 함께 씁니다(지울 때 원본만 정리).
     const holder = new THREE.Group()
     holder.name = `placed-model-${placed.id}`
+    holder.userData.buildingPick = { kind: 'model', id: placed.id }
     holder.add(template.object.clone(true))
     holder.scale.setScalar(scale)
     holder.rotation.y = angle
     holder.position.set(x, base, z)
     this.objects.push(holder)
     this.host.scene.add(holder)
-    const foundation = this.host.addFoundation(outline, base)
-    if (foundation) this.foundations.push(foundation)
+    const foundation = placed.terrain?.foundation === false ? null : this.host.addFoundation(outline, base)
+    if (foundation) {
+      foundation.userData.buildingPick = holder.userData.buildingPick
+      this.foundations.push(foundation)
+    }
     this.host.changed()
   }
 

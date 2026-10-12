@@ -3,9 +3,28 @@ import type { AddedBuilding, BuildingOverride, RoofStyle } from './buildingEdits
 import { ModelFiles, ModelInspector, PlacingBanner } from './BuildingModelPanel'
 import type { ModelTools } from './BuildingModelPanel'
 import type { StreetBuilding } from '../scene/streetSceneData'
+import { useState } from 'react'
+import type { ReactNode } from 'react'
+import { NumberField, PlacementProperties, TerrainProperties } from './BuildingProperties'
+import type { BuildingPlacement, BuildingSettings } from './buildingSettings'
 
 // 작업실 '건물' 탭의 패널입니다. 고친 내용은 초안에만 들어가고 '공개하기'를 눌러야 공개 지도에 나갑니다.
 interface BuildingEditorProps {
+  local: boolean
+  workspace?: ReactNode
+  canUndo: boolean
+  canRedo: boolean
+  onUndo: () => void
+  onRedo: () => void
+  terrainMode: boolean
+  settings: BuildingSettings
+  elevationInfo: string
+  placement?: BuildingPlacement
+  onChangeSettings: (patch: Partial<BuildingSettings>) => void
+  onPlacement: (placement: BuildingPlacement) => void
+  onMoveBuilding: () => void
+  onPickEntrance: () => void
+  onDuplicate: () => void
   selected: { building: StreetBuilding; override: BuildingOverride } | null
   // 새로 그린 건물을 골랐을 때
   added: AddedBuilding | null
@@ -81,11 +100,14 @@ function RoofChoice({ value, onChange }: { value: RoofStyle | undefined; onChang
 }
 
 export function BuildingEditor({
+  local, workspace, canUndo, canRedo, onUndo, onRedo, terrainMode, settings, elevationInfo, placement, onChangeSettings, onPlacement,
+  onMoveBuilding, onPickEntrance, onDuplicate,
   selected, added, onRoad, drawingPoints, models, sceneError, notice, editedIds, addedIds, editedCount, publishedCount, dirty, busy, status,
   onChange, onChangeAdded, onRemoveAdded, onTrimRoad, onSelect, onSelectAdded, onStartDrawing, onUndoPoint, onFinishDrawing, onCancelDrawing,
   onClose, onPublish, onDiscard,
 }: BuildingEditorProps) {
   const model = models.selected
+  const [searchId, setSearchId] = useState('')
   const original = selected?.building
   const override = selected?.override ?? {}
   const change = (patch: Partial<BuildingOverride>) => {
@@ -97,11 +119,20 @@ export function BuildingEditor({
   const roofStyle = override.roofStyle ?? original?.roofStyle
 
   return <div className="gamcheon-map__model-editor gamcheon-map__building-editor">
+    {workspace}
+    <div className="gamcheon-map__model-item-actions">
+      <button type="button" disabled={!canUndo || busy} onClick={onUndo}>실행 취소 · Ctrl+Z</button>
+      <button type="button" disabled={!canRedo || busy} onClick={onRedo}>다시 실행 · Ctrl+Shift+Z</button>
+    </div>
+    <form className="gamcheon-map__building-search" onSubmit={(event) => { event.preventDefault(); if (/^\d+$/.test(searchId)) onSelect(Number(searchId)) }}>
+      <input aria-label="기존 건물 번호 검색" placeholder="기존 건물 ID 입력" value={searchId} onChange={(event) => setSearchId(event.target.value)} />
+      <button type="submit">번호로 찾기</button>
+    </form>
     <div className={`gamcheon-map__building-publish${dirty ? ' is-dirty' : ''}`}>
       <strong>{dirty ? '공개하지 않은 변경이 있습니다' : '공개 지도와 같습니다'}</strong>
       <span>초안에서 고친 건물 {editedCount}채 · 공개된 건물 {publishedCount}채</span>
       <div className="gamcheon-map__model-item-actions">
-        <button type="button" className="gamcheon-map__model-place" disabled={!dirty || busy} onClick={onPublish}>공개하기</button>
+        <button type="button" className="gamcheon-map__model-place" disabled={!dirty || busy} onClick={onPublish}>{local ? '공개본 확정' : '공개하기'}</button>
         <button type="button" disabled={!dirty || busy} onClick={() => { if (window.confirm('공개하지 않은 변경을 모두 버릴까요?')) onDiscard() }}>초안 버리기</button>
       </div>
       {status && <p className="gamcheon-map__model-help" role="status">{status}</p>}
@@ -111,9 +142,9 @@ export function BuildingEditor({
     <PlacingBanner tools={models} />
     {drawingPoints === null ? <>
       {!original && !added && !model && <p className="gamcheon-map__model-help">
-        지도 바닥의 건물 윤곽을 눌러 고를 건물을 정하세요. 높이·색·지붕을 바꾸거나 숨길 수 있습니다.
+        건물의 벽·지붕 또는 바닥 윤곽을 눌러 선택하세요. 손잡이를 드래그해 이동·회전·크기를 조절합니다.
         지도에 없는 건물은 '새 건물 그리기'로 더할 수 있습니다.
-        바꾼 내용은 초안에만 들어가고, '공개하기'를 눌러야 공개 지도에 나타납니다.
+        {local ? '초안은 이 브라우저에 저장됩니다. 공개본을 확정한 뒤 ZIP으로 내보내세요.' : "바꾼 내용은 초안에만 들어가고, '공개하기'를 눌러야 공개 지도에 나타납니다."}
       </p>}
       <div className="gamcheon-map__model-primary-actions">
         <button type="button" className="gamcheon-map__model-place" onClick={onStartDrawing}>＋ 새 건물 그리기</button>
@@ -131,6 +162,16 @@ export function BuildingEditor({
     </div>}
     {notice && <p className="gamcheon-map__model-error" role="alert">{notice}</p>}
 
+    {(original || added || model) && <div className="gamcheon-map__model-inspector">
+      <strong>선택 ID · {original?.id ?? added?.id ?? model?.id}</strong>
+      <label>건물 이름 <input type="text" aria-label="건물 이름" key={String(original?.id ?? added?.id ?? model?.id) + (settings.name ?? '')}
+        defaultValue={settings.name ?? ''} maxLength={120} placeholder="이름을 입력하세요"
+        onBlur={(event) => onChangeSettings({ name: event.target.value || undefined })} /></label>
+      {placement && <PlacementProperties placement={placement} onChange={onPlacement} onMove={onMoveBuilding} onDuplicate={onDuplicate} />}
+      <TerrainProperties settings={settings} terrainMode={terrainMode} model={!!model} onChange={onChangeSettings} onPickEntrance={onPickEntrance} />
+      {elevationInfo && <p className="gamcheon-map__model-help" role="status">{elevationInfo}</p>}
+    </div>}
+
     {added && <div className="gamcheon-map__model-inspector">
       <strong>새 건물 {addedIds.indexOf(added.id) + 1}</strong>
       {onRoad && <div className="gamcheon-map__building-road" role="alert">
@@ -138,6 +179,7 @@ export function BuildingEditor({
         <button type="button" onClick={onTrimRoad}>길 밖으로 깎기</button>
       </div>}
       <FloorsSlider height={added.heightMeters} onChange={(floors) => onChangeAdded({ heightMeters: floorsToHeight(floors) })} />
+      <NumberField label="건물 높이(m)" value={added.heightMeters} min={2.5} max={60} onChange={(heightMeters) => heightMeters !== undefined && onChangeAdded({ heightMeters })} />
       <ColorChoice label="벽 색" value={added.wallColor} options={WALL_COLORS} onChange={(wallColor) => wallColor !== undefined && onChangeAdded({ wallColor })} />
       <ColorChoice label="지붕 색" value={added.roofColor} options={ROOF_COLORS} onChange={(roofColor) => roofColor !== undefined && onChangeAdded({ roofColor })} />
       <RoofChoice value={added.roofStyle} onChange={(roofStyle) => onChangeAdded({ roofStyle })} />
@@ -161,6 +203,7 @@ export function BuildingEditor({
       {!override.hidden && <>
         <FloorsSlider height={height} onChange={(floors) =>
           change({ heightMeters: heightToFloors(original.heightMeters) === floors ? undefined : floorsToHeight(floors) })} />
+        <NumberField label="건물 높이(m)" value={height} min={2.5} max={60} onChange={(heightMeters) => change({ heightMeters })} />
         <ColorChoice label="벽 색" value={override.wallColor ?? original.wallColor} original={original.wallColor} options={WALL_COLORS} onChange={(wallColor) => change({ wallColor })} />
         <ColorChoice label="지붕 색" value={override.roofColor ?? original.roofColor} original={original.roofColor} options={ROOF_COLORS} onChange={(roofColor) => change({ roofColor })} />
         <RoofChoice value={roofStyle} onChange={(style) => change({ roofStyle: style === original.roofStyle ? undefined : style })} />

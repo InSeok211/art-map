@@ -2,6 +2,7 @@ import type { ChangeEvent } from 'react'
 import { MODEL_WIDTH_RANGE } from './buildingEdits'
 import type { PlacedModel } from './buildingEdits'
 import type { ModelFile } from './modelLibrary'
+import { NumberField } from './BuildingProperties'
 
 // 작업실 '건물' 탭에서 올린 3D 모델(GLB)을 다루는 부분: 파일 올리기·목록, 고른 모델 조절.
 export interface ModelTools {
@@ -25,6 +26,7 @@ export interface ModelTools {
   onMove: () => void
   onRemove: () => void
   onSelect: (id: string) => void
+  onDuplicate?: () => void
 }
 
 const fileSize = (bytes: number) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))}KB` : `${(bytes / 1024 / 1024).toFixed(1)}MB`
@@ -52,7 +54,7 @@ export function ModelFiles({ tools, mode }: { tools: ModelTools; mode: 'replace'
           {mode === 'replace'
             ? <button type="button" className="gamcheon-map__model-place" onClick={() => tools.onReplace(file)}>이 모델로 바꾸기</button>
             : <button type="button" onClick={() => tools.onPlace(file)}>빈 곳에 두기</button>}
-          <button type="button" disabled={used} title={used ? '지도에 둔 모델은 먼저 지도에서 지워야 합니다' : undefined}
+          <button type="button" disabled={used} title={used ? '초안·공개본·실행 취소 기록에서 사용하는 파일입니다' : undefined}
             onClick={() => { if (window.confirm(`'${file.name}' 파일을 지울까요?`)) tools.onDeleteFile(file.id) }}>파일 지우기</button>
         </div>
       </div>
@@ -73,6 +75,14 @@ export function PlacingBanner({ tools }: { tools: ModelTools }) {
 export function ModelInspector({ model, tools, onClose }: { model: PlacedModel; tools: ModelTools; onClose: () => void }) {
   return <div className="gamcheon-map__model-inspector">
     <strong>3D 모델 · {model.name || model.modelId}</strong>
+    <NumberField label="모델 경도" value={model.longitude} min={128} max={130} step={0.000001} digits={7}
+      onChange={(longitude) => longitude !== undefined && tools.onChange({ longitude })} />
+    <NumberField label="모델 위도" value={model.latitude} min={34} max={36} step={0.000001} digits={7}
+      onChange={(latitude) => latitude !== undefined && tools.onChange({ latitude })} />
+    <NumberField label="모델 폭(m)" value={model.widthMeters} min={1} max={120}
+      onChange={(widthMeters) => widthMeters !== undefined && tools.onChange({ widthMeters })} />
+    <NumberField label="모델 회전(도)" value={model.rotation} min={-360} max={360} step={1}
+      onChange={(rotation) => rotation !== undefined && tools.onChange({ rotation })} />
     {model.replaces.length > 0 && <p className="gamcheon-map__model-help">원래 건물 {model.replaces.length}채를 대신합니다. 모델을 지우면 원래 건물이 다시 보입니다.</p>}
     <label>크기(긴 쪽) <span>{model.widthMeters.toFixed(1)}m</span>
       <input aria-label="모델 크기" type="range" min={MODEL_WIDTH_RANGE.min} max={MODEL_WIDTH_RANGE.max} step={0.5} value={model.widthMeters}
@@ -89,6 +99,7 @@ export function ModelInspector({ model, tools, onClose }: { model: PlacedModel; 
     <p className="gamcheon-map__model-help">모델의 긴 쪽이 '크기'가 되고, 바닥은 땅 높이에 맞춰 놓입니다.</p>
     <div className="gamcheon-map__model-item-actions">
       <button type="button" onClick={tools.onMove}>위치 옮기기</button>
+      {tools.onDuplicate && <button type="button" onClick={tools.onDuplicate}>모델 복제</button>}
       <button type="button" onClick={() => { if (window.confirm('이 모델을 지도에서 지울까요?')) tools.onRemove() }}>모델 지우기</button>
       <button type="button" onClick={onClose}>선택 해제</button>
     </div>

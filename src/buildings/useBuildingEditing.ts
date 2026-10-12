@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { GeoJSONSource, Map, MapMouseEvent } from 'maplibre-gl'
+import { Marker } from 'maplibre-gl'
 import { ADDED_OUTLINE_POINTS, editedBuildingCount, NEW_BUILDING_DEFAULTS, setAdded, setModel, setOverride } from './buildingEdits'
 import type { AddedBuilding, BuildingOverride, PlacedModel } from './buildingEdits'
 import type { BuildingEditStore } from './buildingEditStore'
@@ -13,6 +14,14 @@ import { clearOfCarriageways, getPhotographedStreetBuildings } from '../scene/st
 import type { StreetBuilding } from '../scene/streetSceneData'
 import { streetMeters } from '../map/streetCoordinates'
 import { LANDMARK_BUILDING_IDS } from '../scene/landmarkBuildings'
+import { outlinePlacement, placedOutline } from './buildingSettings'
+import type { BuildingPlacement, BuildingSettings } from './buildingSettings'
+import type { BuildingSelection } from './buildingSelection'
+import { streetLngLat } from '../map/streetCoordinates'
+import { loadTerrain } from '../map/terrain'
+import { terrainBuildingPlan } from '../scene/terrain/terrainBuildingGeometry'
+import { distanceToRoad } from '../scene/streetRoadGeometry'
+import { TERRAIN_GROUND_LIFT } from '../scene/groundGeometry'
 
 // 작업실 '건물' 탭: 바닥의 건물 윤곽을 눌러 고르고, 고른 건물과 고친 건물을 지도에 표시합니다.
 // '새 건물 그리기'를 누르면 지도에 꼭짓점을 찍어 새 건물 윤곽을 그립니다(첫 점을 다시 누르거나 '완성').
@@ -24,10 +33,11 @@ const CLOSE_PIXELS = 14
 // 이보다 작은 윤곽(제곱미터)은 실수로 찍은 것으로 봅니다.
 const MIN_AREA = 4
 
-type Selection = { kind: 'osm'; id: number } | { kind: 'added'; id: string } | { kind: 'model'; id: string }
+type Selection = BuildingSelection
 type Point = [number, number]
 // 지도를 눌러 모델을 둘 곳을 고르는 중(새로 두기 / 옮기기)
 type Placing = { kind: 'new'; file: ModelFile } | { kind: 'move'; id: string }
+  | { kind: 'building' | 'entrance'; selection: Selection }
 // 빈 땅에 처음 둘 때의 모델 크기(m)
 const NEW_MODEL_WIDTH = 10
 const MODEL_PICK_PIXELS = 10
@@ -66,7 +76,8 @@ function outlineFit(outline: Point[]) {
   const rotation = ((Math.atan2(best.dz, best.dx) * 180 / Math.PI) % 360 + 360) % 360
   return { rotation: Math.round(rotation * 10) / 10, widthMeters: Math.round((Math.max(...along) - Math.min(...along)) * 10) / 10 }
 }
-export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolean, store: BuildingEditStore | undefined) {
+export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolean, store: BuildingEditStore | undefined,
+  options?: { pick: (point: { x: number; y: number }) => Selection | null; terrainMode: boolean }) {
   const [selection, setSelection] = useState<Selection | null>(null)
   const [notice, setNotice] = useState('')
   const [drawing, setDrawing] = useState<Point[] | null>(null)
@@ -80,6 +91,32 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
   const placingRef = useRef(placing)
   placingRef.current = placing
   const library = useModelLibrary(store ? store.server : null)
+  const optionsRef = useRef(options)
+  optionsRef.current = options
+
+  function changeSettings(target: Selection, patch: Partial<BuildingSettings>) {
+    const current = storeRef.current
+    if (!current) return
+    if (target.kind === 'osm') current.onChange(setOverride(current.draft, target.id, { ...current.draft.overrides[target.id], ...patch }))
+    else if (target.kind === 'added') {
+      const item = current.draft.added.find((item) => item.id === target.id)
+      if (item) current.onChange(setAdded(current.draft, item.id, { ...item, ...patch }))
+    } else {
+      const item = current.draft.models.find((item) => item.id === target.id)
+      if (item) current.onChange(setModel(current.draft, item.id, { ...item, ...patch }))
+    }
+  }
+
+  function select(target: Selection) {
+    if (target.kind === 'osm' && LANDMARK_BUILDING_IDS.has(target.id)) {
+      setNotice('공방·그린하우스·아름다운한글은 전용 모델입니다. 일반 건물 편집에서는 변경하지 않습니다.')
+      return
+    }
+    if (target.kind === 'osm' && !streetBuilding(target.id)) { setNotice('해당 번호의 편집 가능한 건물이 없습니다.'); return }
+    const replacing = target.kind === 'osm' && storeRef.current?.draft.models.find((item) => item.replaces.includes(target.id))
+    setSelection(replacing ? { kind: 'model', id: replacing.id } : target)
+    setNotice('')
+  }
 
   // 탭을 떠나면 그리던 윤곽과 모델 두기를 그만둡니다.
   useEffect(() => { if (!active) { setDrawing(null); setPlacing(null) } }, [active])
@@ -94,9 +131,23 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
         rotation: 0, widthMeters: NEW_MODEL_WIDTH, replaces: [],
       }))
       setSelection({ kind: 'model', id })
-    } else {
+    } else if (current.kind === 'move') {
       const model = edits.draft.models.find((item) => item.id === current.id)
       if (model) edits.onChange(setModel(edits.draft, model.id, { ...model, longitude: point[0], latitude: point[1] }))
+    } else {
+      const target = current.selection
+      const item = target.kind === 'osm' ? edits.draft.overrides[target.id] : target.kind === 'added'
+        ? edits.draft.added.find((item) => item.id === target.id) : edits.draft.models.find((item) => item.id === target.id)
+      if (current.kind === 'entrance') changeSettings(target, { terrain: { ...item?.terrain, entrance: point } })
+      else {
+        const shape = target.kind === 'osm' ? streetBuilding(target.id)?.outline : target.kind === 'added' ? (item as AddedBuilding)?.outline : undefined
+        if (shape) {
+          const placement = item?.placement ?? outlinePlacement(shape)
+          const next = { ...placement, longitude: point[0], latitude: point[1] }
+          if (!placedOutline(shape, next).every(([lng, lat]) => isInsideGamcheonMap(lng, lat))) { setNotice('건물 윤곽이 지도 범위를 벗어납니다.'); return }
+          changeSettings(target, { placement: next, terrain: item?.terrain ? { ...item.terrain, entrance: undefined } : undefined })
+        }
+      }
     }
     setPlacing(null)
     setNotice('')
@@ -154,6 +205,8 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
         return
       }
       const { x, y } = event.point
+      const picked = optionsRef.current?.pick(event.point)
+      if (picked) { select(picked); return }
       const model = map.queryRenderedFeatures([[x - MODEL_PICK_PIXELS, y - MODEL_PICK_PIXELS], [x + MODEL_PICK_PIXELS, y + MODEL_PICK_PIXELS]], { layers: ['building-edit-model-points'] })
         .find((feature) => typeof feature.properties?.modelPlacement === 'string')
       if (model) {
@@ -187,6 +240,22 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
     map.on('click', click)
     return () => { map.off('click', click) }
   }, [active, store])
+
+  useEffect(() => {
+    if (!active || !store) return
+    const key = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target?.closest('input,textarea,select,[contenteditable="true"]') || !(event.ctrlKey || event.metaKey)) return
+      if (event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        if (drawingRef.current && !event.shiftKey) setDrawing((points) => points ? points.slice(0, -1) : points)
+        else if (event.shiftKey) storeRef.current?.onRedo?.()
+        else storeRef.current?.onUndo?.()
+      } else if (event.key.toLowerCase() === 'y') { event.preventDefault(); storeRef.current?.onRedo?.() }
+    }
+    window.addEventListener('keydown', key)
+    return () => window.removeEventListener('keydown', key)
+  }, [active, !!store])
 
   // 모델 둘 곳을 고르는 동안: 십자 커서, Esc로 취소.
   const isPlacing = active && placing !== null
@@ -234,12 +303,12 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
       const building = streetBuilding(id)
       if (!building) return []
       const state = selection?.kind === 'osm' && id === selection.id ? 'selected' : draft.overrides[id]?.hidden ? 'hidden' : 'edited'
-      return [{ type: 'Feature' as const, properties: { id, state }, geometry: polygon(building.outline) }]
+      return [{ type: 'Feature' as const, properties: { id, state }, geometry: polygon(placedOutline(building.outline, draft.overrides[id]?.placement)) }]
     })
     const added = draft.added.map((building) => ({
       type: 'Feature' as const,
       properties: { addedId: building.id, state: selection?.kind === 'added' && selection.id === building.id ? 'selected' : 'added' },
-      geometry: polygon(building.outline),
+      geometry: polygon(placedOutline(building.outline, building.placement)),
     }))
     // 모델 자리(점)와 모델이 대신하는 건물(회색 점선)
     const models = draft.models.flatMap((model) => [
@@ -264,7 +333,11 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
         geometry: { type: 'Point' as const, coordinates: point },
       })),
     ] : []
-    return [...edited, ...added, ...models, ...sketch]
+    const selectedSettings = selection?.kind === 'osm' ? draft.overrides[selection.id] : selection?.kind === 'added'
+      ? draft.added.find((item) => item.id === selection.id) : draft.models.find((item) => selection?.kind === 'model' && item.id === selection.id)
+    const entrance = selectedSettings?.terrain?.entrance ? [{ type: 'Feature' as const, properties: { state: 'first' },
+      geometry: { type: 'Point' as const, coordinates: selectedSettings.terrain.entrance } }] : []
+    return [...edited, ...added, ...models, ...sketch, ...entrance]
   }, [draft, selection, drawing, cursor])
   useEffect(() => {
     mapRef.current?.getSource<GeoJSONSource>(BUILDING_EDIT_SOURCE_ID)?.setData(active ? { type: 'FeatureCollection', features } : EMPTY)
@@ -273,14 +346,86 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
   const selectedOsm = selection?.kind === 'osm' ? streetBuilding(selection.id) : undefined
   const selectedAdded = selection?.kind === 'added' ? addedById.get(selection.id) : undefined
   const selectedModel = selection?.kind === 'model' ? modelById.get(selection.id) : undefined
+  const settings: BuildingSettings = selectedOsm ? draft?.overrides[selectedOsm.id] ?? {} : selectedAdded ?? selectedModel ?? {}
+  const sourceOutline = selectedOsm?.outline ?? selectedAdded?.outline
+  const placement = sourceOutline ? settings.placement ?? outlinePlacement(sourceOutline) : undefined
+  const [elevationInfo, setElevationInfo] = useState('')
+  const elevationKey = JSON.stringify({ selection, terrain: settings.terrain, placement: settings.placement,
+    height: (settings as BuildingOverride).heightMeters, model: selectedModel })
+  useEffect(() => {
+    if (!selection || !options?.terrainMode) { setElevationInfo(''); return }
+    let cancelled = false
+    loadTerrain().then((terrain) => {
+      if (cancelled) return
+      if (selectedModel) {
+        const [x, z] = streetMeters([selectedModel.longitude, selectedModel.latitude])
+        setElevationInfo(`모델 중심 지면: 해발 ${terrain.height(x, z).toFixed(1)}m`)
+      } else if (sourceOutline) {
+        const outline = placedOutline(sourceOutline, settings.placement).map(streetMeters)
+        const plan = terrainBuildingPlan(outline, terrain, distanceToRoad, selectedOsm?.sharedEdges,
+          (settings as BuildingOverride).heightMeters ?? selectedOsm?.heightMeters ?? selectedAdded?.heightMeters, settings.terrain)
+        const heights = outline.flatMap((a, index) => {
+          const b = outline[(index + 1) % outline.length], count = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2))
+          return Array.from({ length: count + 1 }, (_, step) => terrain.height(a[0] + (b[0] - a[0]) * step / count, a[1] + (b[1] - a[1]) * step / count))
+        })
+        setElevationInfo(`기준 층: 해발 ${(plan.base - TERRAIN_GROUND_LIFT).toFixed(1)}m · 외곽 지면 ${Math.min(...heights).toFixed(1)}~${Math.max(...heights).toFixed(1)}m`)
+      }
+    }).catch(() => { if (!cancelled) setElevationInfo('지형 높이를 읽지 못했습니다.') })
+    return () => { cancelled = true }
+  }, [elevationKey, options?.terrainMode])
+  const setPlacement = (next: BuildingPlacement) => {
+    if (!selection || !sourceOutline) return
+    if (!placedOutline(sourceOutline, next).every(([lng, lat]) => isInsideGamcheonMap(lng, lat))) { setNotice('건물 윤곽이 지도 범위를 벗어납니다.'); return }
+    changeSettings(selection, { placement: next, terrain: settings.terrain ? { ...settings.terrain, entrance: undefined } : undefined })
+    setNotice('')
+  }
+
+  // 이동·회전·크기 손잡이는 드래그가 끝났을 때 한 번 저장합니다.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !active || !selection || drawing || placing || (!placement && !selectedModel)) return
+    const center: Point = selectedModel ? [selectedModel.longitude, selectedModel.latitude] : [placement!.longitude, placement!.latitude]
+    const [cx, cz] = streetMeters(center)
+    const radius = selectedModel ? 5 : Math.max(3, ...sourceOutline!.map((p) => {
+      const base = outlinePlacement(sourceOutline!), [bx, bz] = streetMeters([base.longitude, base.latitude]), [x, z] = streetMeters(p)
+      return Math.hypot(x - bx, z - bz)
+    }))
+    const angle = (selectedModel?.rotation ?? placement!.rotation) * Math.PI / 180
+    const reach = selectedModel ? selectedModel.widthMeters / 2 : radius * placement!.scale
+    const markers = (['이동', '회전', '크기'] as const).map((label, index) => {
+      const element = document.createElement('button')
+      element.type = 'button'; element.className = `gamcheon-map__editor-handle is-${index}`; element.textContent = label
+      element.setAttribute('aria-label', `선택 건물 ${label} 손잡이`)
+      element.addEventListener('click', (event) => event.stopPropagation())
+      const direction = index === 1 ? 1 : index === 2 ? -1 : 0
+      const point = streetLngLat([cx + Math.cos(angle) * reach * direction, cz + Math.sin(angle) * reach * direction])
+      const marker = new Marker({ element, draggable: true }).setLngLat(point).addTo(map)
+      marker.on('dragend', () => {
+        const end = marker.getLngLat(), [x, z] = streetMeters([end.lng, end.lat])
+        if (!isInsideGamcheonMap(end.lng, end.lat)) { setNotice('지도 범위 밖으로 옮길 수 없습니다.'); marker.setLngLat(point); return }
+        const rotation = ((Math.atan2(z - cz, x - cx) * 180 / Math.PI) + 360) % 360
+        if (selectedModel) {
+          const patch = index === 0 ? { longitude: end.lng, latitude: end.lat } : index === 1 ? { rotation }
+            : { widthMeters: Math.max(1, Math.min(120, Math.hypot(x - cx, z - cz) * 2)) }
+          const current = storeRef.current
+          if (current) current.onChange(setModel(current.draft, selectedModel.id, { ...selectedModel, ...patch }))
+        } else if (placement) setPlacement(index === 0 ? { ...placement, longitude: end.lng, latitude: end.lat }
+          : index === 1 ? { ...placement, rotation } : { ...placement, scale: Math.max(0.1, Math.min(5, Math.hypot(x - cx, z - cz) / radius)) })
+      })
+      return marker
+    })
+    return () => markers.forEach((marker) => marker.remove())
+  }, [active, selection, draft, drawing, placing])
   // 모델 파일을 지울 수 있는지(초안·공개본 어디에도 쓰이지 않을 때만)
   const published = store?.published
-  const usedModelIds = useMemo(() => new Set([...(draft?.models ?? []), ...(published?.models ?? [])].map((model) => model.modelId)), [draft, published])
+  const usedModelIds = useMemo(() => new Set([...[...(draft?.models ?? []), ...(published?.models ?? [])].map((model) => model.modelId),
+    ...(store?.retainedModelIds ?? [])]), [draft, published, store?.retainedModelIds])
   // 새 건물이 차도·보행로와 겹치는지(겹치면 '길 밖으로 깎기'로 겹친 부분을 잘라 낼 수 있음)
   const trimmed = useMemo(() => {
     if (!selectedAdded) return undefined
-    const clear = clearOfCarriageways(selectedAdded.outline)
-    return clear === selectedAdded.outline ? undefined : clear
+    const outline = placedOutline(selectedAdded.outline, selectedAdded.placement)
+    const clear = clearOfCarriageways(outline)
+    return clear === outline ? undefined : clear
   }, [selectedAdded])
 
   const easeTo = (outline: Point[]) => {
@@ -290,12 +435,37 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
 
   return {
     panelProps: store ? {
+      local: store.server === false,
+      canUndo: store.canUndo ?? false,
+      canRedo: store.canRedo ?? false,
+      onUndo: () => store.onUndo?.(),
+      onRedo: () => store.onRedo?.(),
+      terrainMode: options?.terrainMode ?? false,
+      settings,
+      elevationInfo,
+      placement,
+      onChangeSettings: (patch: Partial<BuildingSettings>) => { if (selection) changeSettings(selection, patch) },
+      onPlacement: setPlacement,
+      onMoveBuilding: () => { if (selection) setPlacing({ kind: 'building', selection }) },
+      onPickEntrance: () => { if (selection) setPlacing({ kind: 'entrance', selection }) },
+      onDuplicate: () => {
+        if (!sourceOutline) return
+        const outline = placedOutline(sourceOutline, settings.placement).map((p) => { const [x, z] = streetMeters(p); return streetLngLat([x + 2, z + 2]) })
+        if (!outline.every(([lng, lat]) => isInsideGamcheonMap(lng, lat))) { setNotice('복제할 공간이 지도 범위를 벗어납니다.'); return }
+        const id = newBuildingId(), source = selectedAdded ?? selectedOsm!
+        store.onChange(setAdded(store.draft, id, { id, outline, heightMeters: (settings as BuildingOverride).heightMeters ?? source.heightMeters,
+          wallColor: (settings as BuildingOverride).wallColor ?? source.wallColor, roofColor: (settings as BuildingOverride).roofColor ?? source.roofColor,
+          roofStyle: (settings as BuildingOverride).roofStyle ?? source.roofStyle, name: `${settings.name || '건물'} 복제`,
+          flatBaseMeters: settings.flatBaseMeters, terrain: settings.terrain ? { ...settings.terrain, entrance: undefined } : undefined }))
+        setSelection({ kind: 'added', id })
+      },
       selected: selectedOsm ? { building: selectedOsm, override: draft?.overrides[selectedOsm.id] ?? {} } : null,
       added: selectedAdded ?? null,
       models: {
         selected: selectedModel ?? null,
         placed: store.draft.models,
-        placing: placing ? (placing.kind === 'new' ? `'${placing.file.name}'을(를) 둘 곳을 지도에서 누르세요.` : '모델을 옮길 곳을 지도에서 누르세요.') : '',
+        placing: placing ? (placing.kind === 'new' ? `'${placing.file.name}'을(를) 둘 곳을 지도에서 누르세요.`
+          : placing.kind === 'entrance' ? '출입구가 닿는 지면을 지도에서 누르세요.' : '건물을 옮길 곳을 지도에서 누르세요.') : '',
         files: library.files,
         usedIds: usedModelIds,
         uploading: library.uploading,
@@ -304,14 +474,15 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
         onDeleteFile: (id: string) => { void library.remove(id) },
         // 고른 건물(자동으로 만든 건물이나 새로 그린 건물)을 모델로 바꿉니다. 모델은 건물 자리 가운데에 긴 변 방향으로 둡니다.
         onReplace: (file: ModelFile) => {
-          const outline = selectedOsm?.outline ?? selectedAdded?.outline
-          if (!outline) return
+          if (!sourceOutline) return
+          const outline = placedOutline(sourceOutline, settings.placement)
           const id = newPlacementId()
           let next = store.draft
           if (selectedAdded) next = setAdded(next, selectedAdded.id, null)
           const [longitude, latitude] = centerOf(outline)
           next = setModel(next, id, {
             id, modelId: file.id, name: file.name, longitude, latitude, ...outlineFit(outline),
+            terrain: settings.terrain, flatBaseMeters: settings.flatBaseMeters,
             replaces: selectedOsm ? [selectedOsm.id] : [],
           })
           store.onChange(next)
@@ -324,7 +495,18 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
         },
         onCancelPlacing: () => setPlacing(null),
         onChange: (patch: Partial<PlacedModel>) => {
-          if (selectedModel) store.onChange(setModel(store.draft, selectedModel.id, { ...selectedModel, ...patch, id: selectedModel.id }))
+          if (!selectedModel) return
+          const next = { ...selectedModel, ...patch, id: selectedModel.id }
+          if (!isInsideGamcheonMap(next.longitude, next.latitude)) { setNotice('지도 범위 밖으로 옮길 수 없습니다.'); return }
+          store.onChange(setModel(store.draft, selectedModel.id, next)); setNotice('')
+        },
+        onDuplicate: () => {
+          if (!selectedModel) return
+          const [x, z] = streetMeters([selectedModel.longitude, selectedModel.latitude]), [longitude, latitude] = streetLngLat([x + 2, z + 2])
+          if (!isInsideGamcheonMap(longitude, latitude)) { setNotice('복제할 위치가 지도 범위를 벗어납니다.'); return }
+          const id = newPlacementId()
+          store.onChange(setModel(store.draft, id, { ...selectedModel, id, longitude, latitude, replaces: [], name: `${selectedModel.name} 복제` }))
+          setSelection({ kind: 'model', id })
         },
         onMove: () => { if (selectedModel) setPlacing({ kind: 'move', id: selectedModel.id }) },
         onRemove: () => {
@@ -369,21 +551,21 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
           return
         }
         setNotice('')
-        store.onChange(setAdded(store.draft, selectedAdded.id, { ...selectedAdded, outline: trimmed }))
+        store.onChange(setAdded(store.draft, selectedAdded.id, { ...selectedAdded, outline: trimmed, placement: undefined }))
       },
       onSelect: (id: number) => {
         setDrawing(null)
         setPlacing(null)
-        setSelection({ kind: 'osm', id })
+        select({ kind: 'osm', id })
         const building = streetBuilding(id)
-        if (building) easeTo(building.outline)
+        if (building) easeTo(placedOutline(building.outline, store.draft.overrides[id]?.placement))
       },
       onSelectAdded: (id: string) => {
         setDrawing(null)
         setPlacing(null)
         setSelection({ kind: 'added', id })
         const building = addedById.get(id)
-        if (building) easeTo(building.outline)
+        if (building) easeTo(placedOutline(building.outline, building.placement))
       },
       onStartDrawing: () => {
         setSelection(null)

@@ -40,10 +40,12 @@ async function json(response: Response) {
 const putTrail = (trails: GpsTrail[], trail: GpsTrail) => [...trails.filter((item) => item.id !== trail.id), trail]
 
 export function useAlleyStore() {
+  const hosted = document.documentElement.dataset.buildingEditServer === 'true'
   const [alleys, setAlleys] = useState<Alley[]>(() => readLocal(ALLEYS_KEY, sanitizeAlleys, []))
   const [trails, setTrails] = useState<GpsTrail[]>(() => readLocal(TRAILS_KEY, sanitizeTrails, []))
   const [dismissed, setDismissed] = useState<LngLat[][]>(() => readLocal(DISMISSED_KEY, sanitizeLines, []))
   const [server, setServer] = useState(false)
+  const [ready, setReady] = useState(!hosted)
   const [notice, setNotice] = useState('')
   const saveTimer = useRef(0)
   const latest = useRef({ alleys, dismissed })
@@ -51,6 +53,7 @@ export function useAlleyStore() {
 
   // 지도 앱 서버에서 열렸는지 확인하고, 그렇다면 저장된 골목길·기록을 불러옵니다.
   useEffect(() => {
+    if (!hosted) return
     let cancelled = false
     ;(async () => {
       try {
@@ -58,21 +61,17 @@ export function useAlleyStore() {
         const { trails: savedTrails } = await json(await fetch(TRAILS_API, { cache: 'no-store' }))
         if (cancelled) return
         const serverAlleys = sanitizeAlleys(saved.alleys)
-        const local = latest.current.alleys
         setServer(true)
         setTrails(sanitizeTrails(savedTrails))
         setDismissed(sanitizeLines(saved.dismissed))
-        // 예전에 이 브라우저에만 그려 둔 골목길이 있으면 처음 한 번 서버로 옮깁니다.
-        if (!serverAlleys.length && local.length) {
-          await putAlleys(local, sanitizeLines(saved.dismissed))
-          setNotice(`이 브라우저에 있던 골목길 ${local.length}개를 서버에 저장했습니다.`)
-        } else setAlleys(serverAlleys)
+        setAlleys(serverAlleys)
+        setReady(true)
       } catch {
-        // 개발 미리보기(또는 로그인이 풀린 상태): 이 브라우저에만 저장합니다.
+        if (!cancelled) setNotice('골목길 서버 데이터를 불러오지 못했습니다. 페이지를 새로고침해 주세요.')
       }
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [hosted])
 
   async function putAlleys(nextAlleys: Alley[], nextDismissed: LngLat[][]) {
     const response = await fetch(ALLEYS_API, {
@@ -98,6 +97,7 @@ export function useAlleyStore() {
   }
 
   function updateAlleys(next: Alley[]) {
+    if (!ready) return
     setAlleys(next)
     latest.current = { ...latest.current, alleys: next }
     writeLocal(ALLEYS_KEY, next)
@@ -107,6 +107,7 @@ export function useAlleyStore() {
   // 기록(GPX로 올린 것)을 저장합니다. 서버에서는 올린 뒤 서버가 정리해 돌려준 기록(범위 밖 점 제외)으로 목록을
   // 바꾸고, 개발 미리보기에서는 이 브라우저에 둡니다. 같은 번호의 기록은 새것으로 바꿉니다.
   async function saveTrail(trail: GpsTrail) {
+    if (!ready) throw new Error('골목길 서버 데이터를 불러온 뒤 다시 시도해 주세요.')
     if (!server) {
       setTrails((current) => {
         const next = putTrail(current, trail)
@@ -125,6 +126,7 @@ export function useAlleyStore() {
     dismissed,
     onAddTrail: (trail) => saveTrail(trail),
     onDeleteTrail: (id) => {
+      if (!ready) return
       setTrails((current) => {
         const next = current.filter((trail) => trail.id !== id)
         if (!server) writeLocal(TRAILS_KEY, next)
@@ -133,6 +135,7 @@ export function useAlleyStore() {
       if (server) deleteTrail(id).catch(() => setNotice('기록을 지우지 못했습니다. 새로고침 후 다시 시도해 주세요.'))
     },
     onDismiss: (line) => {
+      if (!ready) return
       const next = [...dismissed, line]
       setDismissed(next)
       latest.current = { ...latest.current, dismissed: next }
@@ -141,5 +144,5 @@ export function useAlleyStore() {
     },
   }
 
-  return { alleys, updateAlleys, gpsTrails, server, notice }
+  return { alleys, updateAlleys, gpsTrails, server, ready, notice }
 }
