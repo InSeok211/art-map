@@ -33,9 +33,36 @@ function readCookie(request: Request, name: string) {
 // 로그인 없이 편집하는 설정(OPEN_EDITING)이 켜져 있는지
 export const openEditing = (env: Env) => env.OPEN_EDITING === 'true'
 
-// 로그인한 관리자인지(또는 로그인 없이 편집하는 설정인지) 확인합니다.
+// 홈페이지 운영자 화면이 발급한 편집 허가증입니다. 홈페이지 서버가 운영자 로그인을 확인한 뒤
+// "base64url(내용).base64url(HMAC-SHA256(MAP_EDIT_SECRET, 내용))"을 만들어 편집 앱 주소의 #editToken=으로 넘기고,
+// 편집 앱은 이를 Authorization: Bearer 머리글로 보냅니다(쿠키가 아니라서 홈페이지 안에 끼워 써도 동작).
+// 내용: { aud: 'gamcheon-map-studio', sub: 운영자 아이디, exp: 만료(초) }. 만료는 최대 8시간 뒤까지만 받습니다.
+export const EDIT_TOKEN_AUDIENCE = 'gamcheon-map-studio'
+const MAX_TOKEN_SECONDS = 60 * 60 * 8 + 60
+export async function verifyEditToken(token: string, secret: string | undefined, now = Date.now() / 1000) {
+  if (!secret || secret.length < 32) return false
+  const [payload, signature, extra] = token.split('.')
+  if (!payload || !signature || extra !== undefined) return false
+  try {
+    if (!constantTimeEqual(await sign(secret, payload), fromBase64Url(signature))) return false
+    const claims = JSON.parse(new TextDecoder().decode(fromBase64Url(payload))) as { aud?: unknown; sub?: unknown; exp?: unknown }
+    return claims.aud === EDIT_TOKEN_AUDIENCE && typeof claims.sub === 'string' && claims.sub.length > 0
+      && typeof claims.exp === 'number' && claims.exp > now && claims.exp - now <= MAX_TOKEN_SECONDS
+  } catch {
+    return false
+  }
+}
+
+function bearerToken(request: Request) {
+  const header = request.headers.get('authorization') ?? ''
+  return header.startsWith('Bearer ') ? header.slice(7).trim() : ''
+}
+
+// 편집해도 되는지 확인합니다: 로그인 없이 편집하는 설정, 홈페이지 운영자 허가증, 또는 이 앱의 관리자 로그인.
 export async function isAdmin(request: Request, env: Env) {
   if (openEditing(env)) return true
+  const token = bearerToken(request)
+  if (token && await verifyEditToken(token, env.MAP_EDIT_SECRET)) return true
   if (!configured(env)) return false
   const [payload, signature] = readCookie(request, COOKIE).split('.')
   if (!payload || !signature) return false
@@ -87,5 +114,5 @@ export async function login(request: Request, env: Env) {
 export const logout = () => json({ ok: true }, { headers: { 'set-cookie': cookie('', 0) } })
 
 export async function session(request: Request, env: Env) {
-  return json({ admin: await isAdmin(request, env), configured: configured(env), open: openEditing(env) })
+  return json({ admin: await isAdmin(request, env), configured: configured(env) || Boolean(env.MAP_EDIT_SECRET), open: openEditing(env) })
 }

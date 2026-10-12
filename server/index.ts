@@ -42,7 +42,7 @@ export async function handleApi(request: Request, env: Env, url: URL) {
   if (!route) return error('지원하지 않는 요청입니다.', 405)
   const [, pattern, admin, handler] = route
   if (!fromThisApp(request, url)) return error('이 앱 화면에서 보낸 요청만 받습니다.', 403)
-  if (admin && !await isAdmin(request, env)) return error('관리자로 로그인해 주세요.', 403)
+  if (admin && !await isAdmin(request, env)) return error('편집 권한이 없거나 만료되었습니다. 홈페이지 운영자 화면에서 지도 편집을 다시 열어 주세요.', 403)
   try {
     return await handler(request, env, url, pattern.exec(url.pathname)!.slice(1))
   } catch (cause) {

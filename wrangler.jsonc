@@ -24,9 +24,10 @@
       "bucket_name": "gamcheon-alley-map-models"
     }
   ],
-  // 로그인 없이 누구나 편집 앱(/studio/)을 씁니다. 다시 로그인을 받으려면 "false"로 바꾸고 배포합니다.
+  // "true"면 로그인 없이 누구나 편집 앱(/studio/)을 씁니다. 지금은 홈페이지 운영자 화면(/admin/map-editor)에서
+  // 발급한 허가증(MAP_EDIT_SECRET)이나 이 앱의 관리자 로그인이 있어야 편집합니다.
   "vars": {
-    "OPEN_EDITING": "true"
+    "OPEN_EDITING": "false"
   },
   "observability": {
     "enabled": true

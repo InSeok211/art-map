@@ -108,3 +108,35 @@ describe('open editing', () => {
     expect(await isAdmin(request('/api/admin/map-buildings'), { ...env, OPEN_EDITING: 'false' })).toBe(false)
   })
 })
+
+describe('homepage edit token', () => {
+  const secret = 's'.repeat(40)
+  const encode = (text: string) => btoa(text).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
+  async function token(claims: Record<string, unknown>, key = secret) {
+    const payload = encode(JSON.stringify(claims))
+    const hmac = await crypto.subtle.importKey('raw', new TextEncoder().encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+    const signature = new Uint8Array(await crypto.subtle.sign('HMAC', hmac, new TextEncoder().encode(payload)))
+    return `${payload}.${encode(String.fromCharCode(...signature))}`
+  }
+  const now = Math.floor(Date.now() / 1000)
+  const good = { aud: 'gamcheon-map-studio', sub: 'admin', exp: now + 3600 }
+
+  it('accepts a fresh pass signed with the shared secret', async () => {
+    const env = { ...await testEnv(), MAP_EDIT_SECRET: secret } as Env
+    const headers = { authorization: `Bearer ${await token(good)}` }
+    expect(await isAdmin(request('/api/admin/map-buildings', { headers }), env)).toBe(true)
+  })
+
+  it('rejects expired, too long, wrong audience or wrongly signed passes', async () => {
+    const env = { ...await testEnv(), MAP_EDIT_SECRET: secret } as Env
+    for (const bad of [
+      await token({ ...good, exp: now - 1 }),
+      await token({ ...good, exp: now + 60 * 60 * 24 }),
+      await token({ ...good, aud: 'other' }),
+      await token(good, 'x'.repeat(40)),
+      `${await token(good)}x`,
+    ]) expect(await isAdmin(request('/api/admin/map-buildings', { headers: { authorization: `Bearer ${bad}` } }), env)).toBe(false)
+    // 비밀값이 없으면 허가증을 받지 않습니다.
+    expect(await isAdmin(request('/api/admin/map-buildings', { headers: { authorization: `Bearer ${await token(good)}` } }), await testEnv())).toBe(false)
+  })
+})

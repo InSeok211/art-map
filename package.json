@@ -22,6 +22,7 @@
     "app:local": "npm run app:build && wrangler d1 migrations apply gamcheon-alley-map-db --local && wrangler dev --port 8788",
     "app:deploy": "npm run app:build && wrangler d1 migrations apply gamcheon-alley-map-db --remote && wrangler deploy",
     "admin:password": "node scripts/admin-password.mjs",
+    "link:homepage": "node scripts/link-homepage.mjs",
     "test": "vitest run",
     "build:road-ground": "node scripts/build-road-ground.mjs",
     "build:terrain": "node scripts/build-terrain.mjs",

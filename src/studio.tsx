@@ -9,6 +9,7 @@ import { useAlleyStore } from './alleys/alleyStore'
 import { useBuildingEditStore } from './buildings/buildingEditStore'
 import type { Place } from './types'
 import './studio.css'
+import { installEditToken } from './studioAuth'
 import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings } from './scene/streetSceneData'
 
 // 감천 골목지도 편집 앱(지도 앱 서버의 /studio/)입니다. 골목길과 건물을 고쳐 공개 지도(/)에 반영합니다.
@@ -17,6 +18,8 @@ import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings } from './
 const PREVIEW = import.meta.env.DEV
 // 건물 편집 저장소는 이 표시가 있으면 서버 저장소만 씁니다(서버를 못 읽을 때 몰래 브라우저에 저장하지 않게).
 if (!PREVIEW) document.documentElement.dataset.buildingEditServer = 'true'
+// 홈페이지 운영자 화면에서 열었으면 그곳이 발급한 편집 허가증을 서버 요청에 붙입니다.
+const EDIT_TOKEN = !PREVIEW && installEditToken()
 
 // Survey links open the same map at the building being reviewed.
 const query = new URLSearchParams(window.location.search)
@@ -80,7 +83,7 @@ function Studio({ open }: { open: boolean }) {
         <div className="studio-header-actions">
           {phoneLayout && <button className="demo-edit-toggle" type="button" onClick={() => setMobileEditing((current) => !current)}>{editing ? '지도만 보기' : '편집하기'}</button>}
           <a className="studio-link" href="/?view=public" target="_blank" rel="noreferrer">공개 지도 보기</a>
-          {!PREVIEW && !open && <button className="studio-link" type="button" onClick={logout}>로그아웃</button>}
+          {!PREVIEW && !open && !EDIT_TOKEN && <button className="studio-link" type="button" onClick={logout}>로그아웃</button>}
         </div>
       </header>
       <main className="demo-main">
@@ -113,7 +116,7 @@ function Login({ notice, onLogin }: { notice: string; onLogin: () => void }) {
     <form onSubmit={submit}>
       <span className="demo-brand-icon">G</span>
       <h1>골목지도 편집 앱</h1>
-      <p>관리자만 쓸 수 있습니다.</p>
+      <p>관리자만 쓸 수 있습니다. 홈페이지 운영자 화면의 <strong>지도 편집</strong>에서 열면 로그인 없이 바로 편집합니다.</p>
       {notice && <p className="studio-login__error" role="alert">{notice}</p>}
       <label>아이디<input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required /></label>
       <label>비밀번호<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
