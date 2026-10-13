@@ -159,6 +159,26 @@ describe('street scene', () => {
     }
   })
 
+  it('rebuilds only the alley that changed and draws all alleys in two meshes', () => {
+    const shapes = () => (layer as unknown as { extraAlleyShapes: Map<string, unknown> }).extraAlleyShapes
+    const meshes = () => (layer as unknown as { extraAlleyMeshes: THREE.Mesh[] }).extraAlleyMeshes
+    const alley = (index: number, width = 3) => ({ id: `a${index}`, widthMeters: width,
+      coordinates: [[129.0068 + index * 0.0005, 35.0935], [129.0071 + index * 0.0005, 35.0937]] as [number, number][] })
+    layer.setExtraAlleys([alley(0), alley(1), alley(2)])
+    const before = [...shapes().values()]
+    expect(before).toHaveLength(3)
+    expect(meshes()).toHaveLength(2)
+    layer.setExtraAlleys([alley(0), alley(1), alley(2, 5)])
+    const after = [...shapes().values()]
+    expect(after[0]).toBe(before[0])
+    expect(after[1]).toBe(before[1])
+    expect(after[2]).not.toBe(before[2])
+    expect(meshes()[0].material).toBe((layer as unknown as { extraAlleyMaterials: THREE.Material[] }).extraAlleyMaterials[0])
+    layer.setExtraAlleys([])
+    expect(shapes().size).toBe(0)
+    expect(meshes()).toHaveLength(0)
+  })
+
   // 이 시험은 장면을 바꾸므로 맨 끝에 둡니다.
   it('rebuilds only the edited building and hides its old shape (with its shadow)', () => {
     type Split = { runs: Int32Array; plain: THREE.Mesh; fade: THREE.Mesh; index: THREE.BufferAttribute }

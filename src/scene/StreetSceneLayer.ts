@@ -219,6 +219,10 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private group: 'scene' | number = 'scene'
   private extraAlleyMeshes: THREE.Mesh[] = []
   private extraAlleyTexture?: THREE.DataTexture
+  // 골목길 포장 재질 두 개(테두리, 포장)는 한 번 만들어 계속 씁니다.
+  private extraAlleyMaterials: THREE.MeshLambertMaterial[] = []
+  // 골목길마다 만든 포장 도형(모양·폭이 같으면 다시 만들지 않음). [테두리 도형들, 포장 도형들]
+  private extraAlleyShapes = new globalThis.Map<string, THREE.BufferGeometry[][]>()
   private workshopCenter: [number, number] = [0, 0]
   // 첫 화면 뒤에 나눠 만들 건물(화면 중심에서 가까운 순서)
   private pendingBuildings: { building: StreetBuilding; outline: [number, number][]; distance: number }[] = []
@@ -652,24 +656,37 @@ export class StreetSceneLayer implements CustomLayerInterface {
       mesh.geometry.dispose()
     }
     this.extraAlleyMeshes = []
-    const runs = alleys.filter((alley) => !isBakedAlley(alley)).map((alley) => ({
-      points: alley.coordinates.map(streetMeters), width: alley.widthMeters, type: 'foot', gaps: [],
-    }))
-    if (runs.length) {
+    // 골목길마다 포장 도형을 따로 만들어 두고, 바뀐 골목길만 다시 만듭니다. 예전에는 골목길 하나만 고쳐도 모든
+    // 골목길을 합쳐 다시 계산해, 골목길이 40개면 폭 조절바를 한 칸 움직일 때마다 약 0.08초씩 멈췄습니다.
+    // 겹치는 골목길은 합치지 않아도 같은 높이·색·무늬(지도 미터 기준)로 겹쳐 그려져 보이는 차이가 없고, 포장이
+    // 테두리보다 위에 있어 다른 골목길의 테두리를 덮습니다.
+    const used = new globalThis.Map<string, THREE.BufferGeometry[][]>()
+    for (const alley of alleys) {
+      if (isBakedAlley(alley)) continue
+      const key = JSON.stringify([alley.coordinates, alley.widthMeters])
+      let shapes = used.get(key) ?? this.extraAlleyShapes.get(key)
+      if (!shapes) {
+        const run = { points: alley.coordinates.map(streetMeters), width: alley.widthMeters, type: 'foot' as const, gaps: [] }
+        shapes = ([[ALLEY_EDGE, 0.052], [0, 0.062]] as const).map(([extra, y]) =>
+          unionRoadAreas(roadOutlines([{ ...run, width: run.width + extra }])).filter(isDrawablePolygon)
+            .map((polygon) => this.onTerrain(flatPolygonGeometry(polygon, y, GROUND_TEXTURE_METERS))))
+      }
+      used.set(key, shapes)
+    }
+    for (const [key, shapes] of this.extraAlleyShapes) if (!used.has(key)) shapes.flat().forEach((geometry) => geometry.dispose())
+    this.extraAlleyShapes = used
+    const shapes = [...used.values()]
+    if (shapes.length) {
       this.extraAlleyTexture ??= conceptTexture('ground-stone')
-      const layers: [polygonClipping.MultiPolygon, number, number][] = [
-        [unionRoadAreas(roadOutlines(runs.map((run) => ({ ...run, width: run.width + ALLEY_EDGE })))), 0.052, 0xffffff],
-        [unionRoadAreas(roadOutlines(runs)), 0.062, ALLEY_PAVING_COLOR],
-      ]
-      for (const [polygons, y, color] of layers) {
-        const geometries = polygons.filter(isDrawablePolygon).map((polygon) => flatPolygonGeometry(polygon, y, GROUND_TEXTURE_METERS))
+      if (!this.extraAlleyMaterials.length) this.extraAlleyMaterials = [0xffffff, ALLEY_PAVING_COLOR].map((color) =>
+        new THREE.MeshLambertMaterial({ color, map: this.extraAlleyTexture, depthWrite: !this.terrain }))
+      for (const layer of [0, 1]) {
+        const geometries = shapes.flatMap((item) => item[layer])
         if (!geometries.length) continue
-        const placed = geometries.map((geometry) => this.onTerrain(geometry))
-        const mesh = new THREE.Mesh(mergeGeometries(placed), new THREE.MeshLambertMaterial({ color, map: this.extraAlleyTexture, depthWrite: !this.terrain }))
-        placed.forEach((geometry) => geometry.dispose())
+        const mesh = new THREE.Mesh(mergeGeometries(geometries), this.extraAlleyMaterials[layer])
         mesh.receiveShadow = true
         mesh.frustumCulled = false
-        if (this.terrain) mesh.renderOrder = TERRAIN_EXTRA_ALLEY_ORDER[this.extraAlleyMeshes.length % 2]
+        if (this.terrain) mesh.renderOrder = TERRAIN_EXTRA_ALLEY_ORDER[layer]
         this.scene.add(mesh)
         this.extraAlleyMeshes.push(mesh)
       }
@@ -2497,6 +2514,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
 
   onRemove() {
     this.placedModels.detach()
+    this.setExtraAlleys([])
+    this.extraAlleyMaterials.forEach((material) => material.dispose())
+    this.extraAlleyMaterials = []
     this.modelFoundations.forEach((mesh) => {
       mesh.removeFromParent()
       mesh.geometry.dispose()
