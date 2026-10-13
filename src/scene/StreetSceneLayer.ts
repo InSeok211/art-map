@@ -146,6 +146,11 @@ const DISTRICT_BAY_WIDTH = 3.1
 const DISTRICT_FLOOR_HEIGHT = 2.65
 // 건물별 비침 정도를 담는 텍스처 한 변의 크기(64×64 = 건물 4096동까지)
 const FADE_TEXTURE_SIZE = 64
+// 고친 건물만 다시 만들 때 한 번에 다룰 최대 건물 수(이보다 많으면 3D 거리를 통째로 다시 만듭니다)
+const MAX_PATCHED_BUILDINGS = 40
+// 건물을 구별하는 키(관리자가 그린 건물은 편집 번호, 나머지는 OSM 번호)와 모양을 정하는 값
+const buildingKey = (building: StreetBuilding) => building.editorId ?? String(building.id)
+const buildingSpec = (building: StreetBuilding) => JSON.stringify(building)
 // 길을 가리는 거리 건물이 남기는 픽셀 비율(형태는 알아보되 뒤의 길이 보이도록)
 export const STREET_FADE_OPACITY = 0.45
 // 건물 숨기기 애니메이션: 공방 중심에서의 거리(m)로 나눈 고리, 고리 하나가 움직이는 시간과 고리 사이 간격
@@ -218,7 +223,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
   // 첫 화면 뒤에 나눠 만들 건물(화면 중심에서 가까운 순서)
   private pendingBuildings: { building: StreetBuilding; outline: [number, number][]; distance: number }[] = []
   private readonly focus?: [number, number]
-  private readonly buildingEdits?: BuildingEdits
+  private buildingEdits?: BuildingEdits
+  // 만든 건물: 키 → 모양을 정한 값과 그 건물이 받은 건물 번호(buildingIndex). 건물을 고치면 바뀐 건물만 옛 모양을
+  // 숨기고(hiddenBuildings) 새 모양을 덧붙입니다(updateBuildingEdits).
+  private builtBuildings = new globalThis.Map<string, { spec: string; indices: number[] }>()
+  private hiddenBuildings = new Set<number>()
   private readonly placedModels: PlacedModels
 
   // 3D 지형(켜져 있을 때만). 도로 쪽 지면에 기준 층을 두고, 일반 건물의 벽은 지형에서부터 생성합니다.
@@ -590,19 +599,18 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const changed = next.size !== this.occluding.size || [...next].some((index) => !this.occluding.has(index))
     if (!changed) return
     this.occluding = next
-    const fade = Math.round(STREET_FADE_OPACITY * 255)
-    for (let index = 0; index < this.occluders.length; index++) this.fadeData[index * 4] = next.has(index) ? fade : 255
-    this.fadeTexture.needsUpdate = true
+    this.writeFade()
     for (const split of this.fadeSplits) this.partition(split)
     map.triggerRepaint()
   }
 
   // 비치는 건물이 바뀐 메시만 인덱스를 다시 채웁니다: 앞쪽은 비치지 않는 건물, 뒤쪽은 비치는 건물.
+  // 고쳐서 숨긴 건물(옛 모양)은 어느 쪽에도 넣지 않아 그림자도 남지 않습니다.
   private partition(split: FadeSplit, force = false) {
     const { runs, state } = split
     let changed = force
     for (let run = 0; run < state.length; run++) {
-      const fading = this.occluding.has(runs[run * 3]) ? 1 : 0
+      const fading = this.hiddenBuildings.has(runs[run * 3]) ? 2 : this.occluding.has(runs[run * 3]) ? 1 : 0
       if (state[run] !== fading) { state[run] = fading; changed = true }
     }
     if (!changed) return
@@ -1822,8 +1830,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   private build() {
-    const buildings = applyBuildingEdits(getPhotographedStreetBuildings(), this.buildingEdits).filter((building) =>
-      !GREEN_HOUSE_FOOTPRINT_IDS.has(building.id) && building.id !== BEAUTIFUL_HANGUL_FOOTPRINT_ID)
+    const buildings = this.editedBuildings(this.buildingEdits)
     const workshop = buildings.find((building) => building.id === ARTIST_WORKSHOP_FOOTPRINT_ID)
     if (workshop) this.workshopCenter = outlineCenter(workshop.outline.map(streetMeters))
     this.buildGroundAndSideRoads(buildings)
@@ -1941,8 +1948,73 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
   }
 
-  // 건물 하나를 만듭니다. 바로 만들 때(build)와 나눠 만들 때(scheduleDistrictBuild) 함께 씁니다.
+  // 3D 거리에 둘 건물(고친 내용을 반영하고, 따로 만든 그린하우스·아름다운한글 자리는 뺌)
+  private editedBuildings(edits?: BuildingEdits) {
+    return applyBuildingEdits(getPhotographedStreetBuildings(), edits).filter((building) =>
+      !GREEN_HOUSE_FOOTPRINT_IDS.has(building.id) && building.id !== BEAUTIFUL_HANGUL_FOOTPRINT_ID)
+  }
+
+  // 건물 하나를 만들고, 그 건물이 받은 건물 번호를 적어 둡니다(나중에 그 건물만 숨기려고).
   private buildOne(building: StreetBuilding, outline: [number, number][]) {
+    const first = this.occluders.length
+    this.buildOneShape(building, outline)
+    const indices = Array.from({ length: this.occluders.length - first }, (_, offset) => first + offset)
+    this.builtBuildings.set(buildingKey(building), { spec: buildingSpec(building), indices })
+  }
+
+  // 건물 편집이 바뀌었을 때 바뀐 건물만 다시 만듭니다: 옛 모양은 숨기고(그리기 범위에서 빼고 점무늬도 완전히 비움)
+  // 새 모양을 작은 메시로 덧붙입니다. 3D 거리를 통째로 다시 만들면 화면이 몇 초 멈추기 때문입니다.
+  // 바뀐 건물이 너무 많거나 숨길 수 없는 건물(공방)이 바뀌면 false를 돌려줍니다(그때는 통째로 다시 만듦).
+  updateBuildingEdits(edits: BuildingEdits) {
+    if (!this.map) return false
+    const next = new globalThis.Map(this.editedBuildings(edits).map((building) => [buildingKey(building), building]))
+    const pending = new Set(this.pendingBuildings.map(({ building }) => buildingKey(building)))
+    const changed: string[] = []
+    for (const [key, built] of this.builtBuildings) {
+      const building = next.get(key)
+      if (!building || buildingSpec(building) !== built.spec) changed.push(key)
+    }
+    for (const key of next.keys()) if (!this.builtBuildings.has(key) && !pending.has(key)) changed.push(key)
+    if (changed.length > MAX_PATCHED_BUILDINGS) return false
+    if (this.occluders.length + changed.length > FADE_TEXTURE_SIZE * FADE_TEXTURE_SIZE) return false
+    if (changed.some((key) => this.builtBuildings.has(key) && !this.builtBuildings.get(key)!.indices.length)) return false
+    this.buildingEdits = edits
+    // 아직 만들지 않은 건물은 새 모양으로 바꿔 두기만 합니다.
+    this.pendingBuildings = this.pendingBuildings.flatMap((item) => {
+      const building = next.get(buildingKey(item.building))
+      return building ? [{ ...item, building, outline: building.outline.map(streetMeters) }] : []
+    })
+    for (const key of changed) {
+      const built = this.builtBuildings.get(key)
+      if (built) {
+        built.indices.forEach((index) => this.hiddenBuildings.add(index))
+        this.builtBuildings.delete(key)
+      }
+      const building = next.get(key)
+      if (building) this.buildOne(building, building.outline.map(streetMeters))
+    }
+    this.group = 'scene'
+    this.buildingContext = null
+    this.flushSlots()
+    this.writeFade()
+    for (const split of this.fadeSplits) this.partition(split, true)
+    this.scheduleOcclusion()
+    this.shadowsBaked = false
+    this.map.triggerRepaint()
+    return true
+  }
+
+  // 건물별 점무늬 값: 숨긴 건물 0(모두 버림), 내 위치를 가리는 건물은 반쯤, 나머지는 그대로.
+  private writeFade() {
+    const fade = Math.round(STREET_FADE_OPACITY * 255)
+    for (let index = 0; index < this.occluders.length; index++) {
+      this.fadeData[index * 4] = this.hiddenBuildings.has(index) ? 0 : this.occluding.has(index) ? fade : 255
+    }
+    this.fadeTexture.needsUpdate = true
+  }
+
+  // 건물 하나를 만듭니다. 바로 만들 때(build)와 나눠 만들 때(scheduleDistrictBuild) 함께 씁니다.
+  private buildOneShape(building: StreetBuilding, outline: [number, number][]) {
     this.group = building.id === ARTIST_WORKSHOP_FOOTPRINT_ID ? 'scene' : this.ringOf(outline)
     this.buildingContext = { outline, height: building.heightMeters }
     this.currentBuilding = -1

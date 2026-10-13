@@ -158,4 +158,46 @@ describe('street scene', () => {
       vi.useRealTimers()
     }
   })
+
+  // 이 시험은 장면을 바꾸므로 맨 끝에 둡니다.
+  it('rebuilds only the edited building and hides its old shape (with its shadow)', () => {
+    type Split = { runs: Int32Array; plain: THREE.Mesh; fade: THREE.Mesh; index: THREE.BufferAttribute }
+    const internals = layer as unknown as {
+      map: unknown; fadeSplits: Split[]; fadeData: Uint8Array; occluders: unknown[]
+      builtBuildings: Map<string, { spec: string; indices: number[] }>
+    }
+    internals.map = { triggerRepaint() {}, getBearing: () => 0, getPitch: () => 0 }
+    const drawn = (index: number) => internals.fadeSplits.some((split) => {
+      const order = split.index.array, ids = split.plain.geometry.getAttribute('buildingIndex')
+      const visible = split.plain.geometry.drawRange.count + split.fade.geometry.drawRange.count
+      for (let cursor = 0; cursor < visible; cursor++) if (ids.getX(order[cursor]) === index) return true
+      return false
+    })
+    const target = getPhotographedStreetBuildings().find((building) => building.id !== ARTIST_WORKSHOP_FOOTPRINT_ID
+      && (internals.builtBuildings.get(String(building.id))?.indices.length ?? 0) > 0)!
+    const old = internals.builtBuildings.get(String(target.id))!.indices
+    expect(drawn(old[0])).toBe(true)
+    const before = internals.occluders.length
+    const meshCount = layer['scene'].children.length
+
+    expect(layer.updateBuildingEdits({ overrides: { [target.id]: { heightMeters: 30 } }, added: [], models: [] })).toBe(true)
+    // 옛 모양은 어느 메시에서도 그리지 않고(그림자 포함) 점무늬도 완전히 비웁니다.
+    expect(drawn(old[0])).toBe(false)
+    expect(internals.fadeData[old[0] * 4]).toBe(0)
+    // 새 모양 하나만 새 번호로 덧붙고, 다른 건물은 그대로입니다.
+    const fresh = internals.builtBuildings.get(String(target.id))!.indices
+    expect(internals.occluders.length - before).toBe(fresh.length)
+    expect(drawn(fresh[0])).toBe(true)
+    expect(layer['scene'].children.length).toBe(meshCount)
+
+    // 숨기기만 하면 새로 만들지 않습니다.
+    expect(layer.updateBuildingEdits({ overrides: { [target.id]: { hidden: true } }, added: [], models: [] })).toBe(true)
+    expect(drawn(fresh[0])).toBe(false)
+    expect(internals.builtBuildings.has(String(target.id))).toBe(false)
+
+    // 한꺼번에 많이 바뀌면 통째로 다시 만들도록 false를 돌려줍니다.
+    const many = Object.fromEntries([...internals.builtBuildings.keys()].filter((key) => /^\d+$/.test(key)).slice(0, 60)
+      .map((key) => [key, { heightMeters: 20 }]))
+    expect(layer.updateBuildingEdits({ overrides: many, added: [], models: [] })).toBe(false)
+  })
 })

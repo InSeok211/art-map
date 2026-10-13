@@ -191,8 +191,8 @@ export function GamcheonMap({
     previewModels: (models) => streetLayerRef.current?.setPlacedModels(models),
   })
   // 3D 거리에 반영할 건물 고친 내용: 작업실은 초안, 공개 지도는 공개본.
-  //  - 건물 모양이 바뀌면(고친 건물·새 건물·모델이 대신하는 건물) 잠시 기다렸다가 3D 거리를 다시 만듭니다
-  //    (조절바를 끄는 동안 여러 번 다시 만들지 않게).
+  //  - 건물 모양이 바뀌면(고친 건물·새 건물·모델이 대신하는 건물) 바뀐 건물만 다시 만듭니다(updateBuildingEdits).
+  //    한꺼번에 많이 바뀌었을 때만 3D 거리를 통째로 다시 만듭니다(몇 초 멈춤).
   //  - 올린 3D 모델의 위치·크기·방향만 바뀌면 다시 만들지 않고 모델만 다시 놓습니다.
   const shownBuildingEdits = buildingEditor?.draft ?? buildingEdits
   const buildingEditsRef = useRef(shownBuildingEdits)
@@ -211,7 +211,12 @@ export function GamcheonMap({
   useEffect(() => {
     if (sceneEditsKeyRef.current === sceneEditsKey) return
     sceneEditsKeyRef.current = sceneEditsKey
-    const timer = window.setTimeout(() => rebuildStreetRef.current?.(terrainModeRef.current), 800)
+    // 조절바를 끄는 동안 잇달아 바뀌면 잠깐 기다렸다가 한 번에 반영합니다.
+    const timer = window.setTimeout(() => {
+      const edits = buildingEditsRef.current
+      if (edits && streetLayerRef.current?.updateBuildingEdits(edits)) return
+      rebuildStreetRef.current?.(terrainModeRef.current)
+    }, 120)
     return () => window.clearTimeout(timer)
   }, [sceneEditsKey])
   // 사용자가 그리거나 GPS 기록으로 추가한 골목길을 3D 거리 바닥에도 골목길 포장으로 그립니다.
