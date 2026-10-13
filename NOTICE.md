@@ -41,4 +41,4 @@
 
 개발·빌드 도구(vite, vitest 등)는 배포물에 들어가지 않습니다. 그중 lightningcss는 MPL-2.0이지만 수정·배포하지 않으므로 의무가 생기지 않습니다. GPL·AGPL 계열 패키지는 없습니다.
 
-번들에 들어가는 패키지(MapLibre GL JS: BSD-3-Clause, three.js: MIT, polygon-clipping: MIT, React: MIT 등)의 라이선스 전문은 `node scripts/third-party-notices.mjs <출력 파일>`로 모을 수 있습니다. 홈페이지로 내보낼 때(`npm run export:site`) `public/third-party-notices.txt`가 자동으로 만들어지고 사이트 바닥글에서 링크합니다.
+번들에 들어가는 패키지(MapLibre GL JS: BSD-3-Clause, MapLibre-Geoman Free: MIT, three.js: MIT, polygon-clipping: MIT, React: MIT 등)의 라이선스 전문은 `node scripts/third-party-notices.mjs <출력 파일>`로 모을 수 있습니다. 홈페이지로 내보낼 때(`npm run export:site`) `public/third-party-notices.txt`가 자동으로 만들어지고 사이트 바닥글에서 링크합니다.

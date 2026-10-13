@@ -152,7 +152,7 @@ export function BuildingEditor({
     </> : <div className="gamcheon-map__model-inspector">
       <strong>새 건물 그리기 · 꼭짓점 {drawingPoints}개</strong>
       <p className="gamcheon-map__model-help">
-        건물 모서리를 차례로 누르세요. 3개 이상 찍은 뒤 첫 점(주황)을 다시 누르거나 '완성'을 누르면 건물이 생깁니다.
+        건물 모서리를 차례로 누르세요. 3개 이상 찍은 뒤 첫 점을 다시 누르거나 '완성'을 누르면 건물이 생깁니다. Esc로 취소합니다.
       </p>
       <div className="gamcheon-map__model-primary-actions">
         <button type="button" className="gamcheon-map__model-place" disabled={drawingPoints < 3} onClick={onFinishDrawing}>완성</button>
@@ -163,6 +163,7 @@ export function BuildingEditor({
     {notice && <p className="gamcheon-map__model-error" role="alert">{notice}</p>}
 
     {(original || added || model) && <div className="gamcheon-map__model-inspector">
+      {added && <p className="gamcheon-map__model-help">윤곽 편집은 평면 보기로 전환됩니다. 꼭짓점을 드래그해 모양을 고치세요. 점 사이의 손잡이를 드래그하면 점이 추가되고, 꼭짓점을 오른쪽 클릭하면 지웁니다. 선택을 닫으면 3D 보기로 돌아갑니다.</p>}
       <strong>선택 ID · {original?.id ?? added?.id ?? model?.id}</strong>
       <label>건물 이름 <input type="text" aria-label="건물 이름" key={String(original?.id ?? added?.id ?? model?.id) + (settings.name ?? '')}
         defaultValue={settings.name ?? ''} maxLength={120} placeholder="이름을 입력하세요"

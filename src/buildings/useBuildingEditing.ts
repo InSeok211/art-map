@@ -22,14 +22,13 @@ import { loadTerrain } from '../map/terrain'
 import { terrainBuildingPlan } from '../scene/terrain/terrainBuildingGeometry'
 import { distanceToRoad } from '../scene/streetRoadGeometry'
 import { TERRAIN_GROUND_LIFT } from '../scene/groundGeometry'
+import { useGeomanGeometry } from '../map/useGeomanGeometry'
 
 // 작업실 '건물' 탭: 바닥의 건물 윤곽을 눌러 고르고, 고른 건물과 고친 건물을 지도에 표시합니다.
 // '새 건물 그리기'를 누르면 지도에 꼭짓점을 찍어 새 건물 윤곽을 그립니다(첫 점을 다시 누르거나 '완성').
 // 건물을 고른 뒤 올린 3D 모델(GLB)로 바꾸거나, 모델을 빈 땅에 둘 수 있습니다(모델 위치는 지도에 점으로 표시).
 // 따로 만든 모델 건물(공방·그린하우스·아름다운한글)은 고칠 수 없습니다.
 const EMPTY = { type: 'FeatureCollection' as const, features: [] }
-// 첫 점을 이만큼(화면 픽셀) 가까이 누르면 윤곽을 닫습니다.
-const CLOSE_PIXELS = 14
 // 이보다 작은 윤곽(제곱미터)은 실수로 찍은 것으로 봅니다.
 const MIN_AREA = 4
 
@@ -169,8 +168,6 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
     setNotice('')
     setSelection({ kind: 'added', id })
   }
-  const finishRef = useRef(finishDrawing)
-  finishRef.current = finishDrawing
 
   // 지도를 누르면: 그리는 중이면 꼭짓점을 찍고, 아니면 건물을 고릅니다.
   useEffect(() => {
@@ -184,26 +181,7 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
         else placeRef.current(point, currentPlacing)
         return
       }
-      const points = drawingRef.current
-      if (points) {
-        const first = points[0] && map.project(points[0])
-        if (first && points.length >= ADDED_OUTLINE_POINTS.min && Math.hypot(first.x - event.point.x, first.y - event.point.y) <= CLOSE_PIXELS) {
-          finishRef.current(points)
-          return
-        }
-        const point: Point = [event.lngLat.lng, event.lngLat.lat]
-        if (!isInsideGamcheonMap(point[0], point[1])) {
-          setNotice('지도 범위 밖에는 건물을 그릴 수 없습니다.')
-          return
-        }
-        if (points.length >= ADDED_OUTLINE_POINTS.max) {
-          setNotice(`꼭짓점은 ${ADDED_OUTLINE_POINTS.max}개까지 찍을 수 있습니다.`)
-          return
-        }
-        setNotice('')
-        setDrawing([...points, point])
-        return
-      }
+      if (drawingRef.current) return
       const { x, y } = event.point
       const picked = optionsRef.current?.pick(event.point)
       if (picked) { select(picked); return }
@@ -248,7 +226,7 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
       if (target?.closest('input,textarea,select,[contenteditable="true"]') || !(event.ctrlKey || event.metaKey)) return
       if (event.key.toLowerCase() === 'z') {
         event.preventDefault()
-        if (drawingRef.current && !event.shiftKey) setDrawing((points) => points ? points.slice(0, -1) : points)
+        if (drawingRef.current && !event.shiftKey) geometry.undo()
         else if (event.shiftKey) storeRef.current?.onRedo?.()
         else storeRef.current?.onUndo?.()
       } else if (event.key.toLowerCase() === 'y') { event.preventDefault(); storeRef.current?.onRedo?.() }
@@ -270,26 +248,6 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
       window.removeEventListener('keydown', key)
     }
   }, [isPlacing])
-
-  // 그리는 동안: 십자 커서, 마지막 점에서 커서까지 선 미리 보기, 두 번 눌러 확대 끄기, Esc로 취소.
-  const isDrawing = active && drawing !== null
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !isDrawing) return
-    const move = (event: MapMouseEvent) => setCursor([event.lngLat.lng, event.lngLat.lat])
-    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') setDrawing(null) }
-    map.getCanvas().style.cursor = 'crosshair'
-    map.doubleClickZoom.disable()
-    map.on('mousemove', move)
-    window.addEventListener('keydown', key)
-    return () => {
-      map.getCanvas().style.cursor = ''
-      map.doubleClickZoom.enable()
-      map.off('mousemove', move)
-      window.removeEventListener('keydown', key)
-      setCursor(null)
-    }
-  }, [isDrawing])
 
   const addedById = useMemo(() => new globalThis.Map((draft?.added ?? []).map((building) => [building.id, building])), [draft])
   const modelById = useMemo(() => new globalThis.Map((draft?.models ?? []).map((model) => [model.id, model])), [draft])
@@ -346,6 +304,24 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
   const selectedOsm = selection?.kind === 'osm' ? streetBuilding(selection.id) : undefined
   const selectedAdded = selection?.kind === 'added' ? addedById.get(selection.id) : undefined
   const selectedModel = selection?.kind === 'model' ? modelById.get(selection.id) : undefined
+  const geometry = useGeomanGeometry(mapRef, {
+    active: active && (drawing !== null || !!selectedAdded) && placing === null,
+    drawing: drawing !== null, shape: 'polygon', terrainEnabled: options?.terrainMode,
+    feature: drawing === null && selectedAdded ? { type: 'Feature', id: selectedAdded.id, properties: {},
+      geometry: { type: 'Polygon', coordinates: [[...placedOutline(selectedAdded.outline, selectedAdded.placement),
+        placedOutline(selectedAdded.outline, selectedAdded.placement)[0]]] } } : null,
+    onDraft: setDrawing,
+    onError: setNotice,
+    onCancel: () => { setDrawing(null); setNotice('') },
+    onCreate: finishDrawing,
+    onEdit: outline => {
+      const current = storeRef.current
+      const building = current?.draft.added.find(item => item.id === selectedAdded?.id)
+      if (current && building) current.onChange(setAdded(current.draft, building.id,
+        { ...building, outline, placement: undefined }))
+      setNotice('')
+    },
+  })
   const settings: BuildingSettings = selectedOsm ? draft?.overrides[selectedOsm.id] ?? {} : selectedAdded ?? selectedModel ?? {}
   const sourceOutline = selectedOsm?.outline ?? selectedAdded?.outline
   const placement = sourceOutline ? settings.placement ?? outlinePlacement(sourceOutline) : undefined
@@ -383,7 +359,7 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
   // 이동·회전·크기 손잡이는 드래그가 끝났을 때 한 번 저장합니다.
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !active || !selection || drawing || placing || (!placement && !selectedModel)) return
+    if (!map || !active || !selection || drawing || placing || selectedAdded || (!placement && !selectedModel)) return
     const center: Point = selectedModel ? [selectedModel.longitude, selectedModel.latitude] : [placement!.longitude, placement!.latitude]
     const [cx, cz] = streetMeters(center)
     const radius = selectedModel ? 5 : Math.max(3, ...sourceOutline!.map((p) => {
@@ -573,8 +549,8 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
         setNotice('')
         setDrawing([])
       },
-      onUndoPoint: () => setDrawing((points) => points ? points.slice(0, -1) : points),
-      onFinishDrawing: () => { if (drawing) finishDrawing(drawing) },
+      onUndoPoint: geometry.undo,
+      onFinishDrawing: geometry.finish,
       onCancelDrawing: () => { setDrawing(null); setNotice('') },
       onClose: () => setSelection(null),
       onPublish: store.onPublish,

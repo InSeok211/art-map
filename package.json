@@ -27,6 +27,7 @@
     "pull:alleys": "node scripts/pull-site-alleys.mjs"
   },
   "dependencies": {
+    "@geoman-io/maplibre-geoman-free": "0.10.1",
     "maplibre-gl": "^6.11.2",
     "polygon-clipping": "^0.15.7",
     "three": "^0.186.1"

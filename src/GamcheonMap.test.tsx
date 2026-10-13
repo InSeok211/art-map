@@ -13,6 +13,18 @@ const styleLoad = vi.hoisted(() => ({ current: null as null | (() => void) }))
 const markerRotations = vi.hoisted(() => [] as number[])
 const layerVisibility = vi.hoisted(() => ({} as Record<string, unknown>))
 const mapClick = vi.hoisted(() => ({ current: null as null | ((event: { lngLat: { lng: number; lat: number }; originalEvent?: { target: unknown } }) => void) }))
+const geometryDriver = vi.hoisted(() => ({ current: null as null | {
+  onDraft: (points: [number, number][]) => void
+  onCreate: (points: [number, number][]) => void
+  onError: (message: string) => void
+}, points: [] as [number, number][] }))
+
+// WebGL drawing is exercised by the Geoman adapter tests and browser checks.
+vi.mock('./map/useGeomanGeometry', () => ({ useGeomanGeometry: (_map: unknown, options: typeof geometryDriver.current & { active: boolean }) => {
+  if (options?.active) geometryDriver.current = options
+  return { ready: true, finish: () => geometryDriver.current?.onCreate(geometryDriver.points),
+    undo: () => { geometryDriver.points = geometryDriver.points.slice(0, -1); geometryDriver.current?.onDraft(geometryDriver.points) } }
+} }))
 
 // These tests exercise map controls against a mocked MapLibre canvas. Real
 // district geometry is checked separately and in the browser.
@@ -70,6 +82,8 @@ beforeEach(() => {
   mapOptions.length = 0
   mapFlyTo.length = 0
   mapClick.current = null
+  geometryDriver.current = null
+  geometryDriver.points = []
   for (const key of Object.keys(layerVisibility)) delete layerVisibility[key]
   vi.stubGlobal('ResizeObserver', class {
     observe() {}
@@ -132,15 +146,14 @@ describe('GamcheonMap', () => {
     setOpacity.mockRestore()
   })
 
-  it('draws an alley from map clicks and lets the editor rename and widen it', () => {
+  it('saves Geoman geometry and lets the editor rename and widen it', () => {
     const onAlleysChange = vi.fn()
     render(<GamcheonMap editable onAlleysChange={onAlleysChange} />)
 
     fireEvent.click(screen.getByRole('button', { name: '골목길' }))
     fireEvent.click(screen.getByRole('button', { name: /새 골목길 그리기/ }))
-    act(() => mapClick.current?.({ lngLat: { lng: 129.0100, lat: 35.0970 } }))
-    act(() => mapClick.current?.({ lngLat: { lng: 129.0104, lat: 35.0972 } }))
-    act(() => mapClick.current?.({ lngLat: { lng: 129.0107, lat: 35.0975 } }))
+    geometryDriver.points = [[129.0100, 35.0970], [129.0104, 35.0972], [129.0107, 35.0975]]
+    act(() => geometryDriver.current?.onDraft(geometryDriver.points))
     fireEvent.click(screen.getByRole('button', { name: '마지막 점 취소' }))
     fireEvent.click(screen.getByRole('button', { name: /완료/ }))
 
@@ -155,16 +168,17 @@ describe('GamcheonMap', () => {
     expect(onAlleysChange).toHaveBeenLastCalledWith([])
   })
 
-  it('ignores alley points outside the map area', () => {
+  it('shows geometry validation errors without saving an alley', () => {
     const onAlleysChange = vi.fn()
     render(<GamcheonMap editable onAlleysChange={onAlleysChange} />)
 
     fireEvent.click(screen.getByRole('button', { name: '골목길' }))
     fireEvent.click(screen.getByRole('button', { name: /새 골목길 그리기/ }))
-    act(() => mapClick.current?.({ lngLat: { lng: 129.01, lat: 35.08 } }))
+    act(() => geometryDriver.current?.onError('사각형 지도 안쪽에 그려 주세요.'))
 
     expect(screen.getByRole('alert').textContent).toContain('사각형 지도 안쪽')
     expect(screen.getByRole('button', { name: /완료/ }).hasAttribute('disabled')).toBe(true)
+    expect(onAlleysChange).not.toHaveBeenCalled()
   })
 
   it('tells the user while the 3D street is still being built after the base map', () => {

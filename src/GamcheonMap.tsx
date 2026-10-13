@@ -182,7 +182,7 @@ export function GamcheonMap({
     try { localStorage.setItem(TERRAIN_MODE_KEY, terrainMode ? '1' : '0') } catch { /* 이 기기에 기억하지 못해도 됩니다. */ }
     rebuildStreetRef.current?.(terrainMode)
   }, [terrainMode])
-  const alley = useAlleyEditing(mapRef, mode === 'alleys', alleys, onAlleysChange)
+  const alley = useAlleyEditing(mapRef, mode === 'alleys', alleys, onAlleysChange, terrainMode)
   // 골목길 탭 안의 두 도구: 지도에 점을 찍어 그리기(draw) / 걸으며 기록해 찾기(walk)
   const [alleyTool, setAlleyTool] = useState<'draw' | 'walk'>('draw')
   const alleyFinder = useAlleyFinder(mapRef, canEditAlleys && mode === 'alleys', gpsTrails, alley.editorProps.alleys, alley.addAlley)
