@@ -958,6 +958,14 @@
 .gamcheon-map__editor-handle.is-2 { background: #2f8064; }
 .gamcheon-map__editor-handle:active { cursor: grabbing; }
 .gamcheon-map__editor-handle:focus-visible { outline: 3px solid #29334a; outline-offset: 2px; }
+.gamcheon-map__editor-handle.is-dragging { min-width: 64px; box-shadow: 0 0 0 4px #ffffffaa, 0 4px 12px #1c263766; font-variant-numeric: tabular-nums; }
+/* 손잡이 안내선(handleGuide.ts): 회전 원·긴 쪽 축·옮긴 뒤의 건물 윤곽. 지도 조작을 막지 않습니다. */
+.gamcheon-map__handle-guide { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 3; filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff); }
+.gamcheon-map__handle-guide polygon, .gamcheon-map__handle-guide line { fill: none; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.gamcheon-map__handle-guide .is-ring { stroke: #5969e8; stroke-width: 3; stroke-dasharray: 8 6; opacity: .75; }
+.gamcheon-map__handle-guide .is-axis { stroke: #29334a; stroke-width: 2.5; opacity: .6; }
+.gamcheon-map__handle-guide .is-outline { stroke: #e88728; stroke-width: 2.5; stroke-dasharray: 7 4; fill: #e8872822; }
+.gamcheon-map__handle-guide.is-active .is-ring, .gamcheon-map__handle-guide.is-active .is-axis { opacity: 1; }
 .gamcheon-map__public-preview { position: fixed; inset: 20px; width: calc(100% - 40px); max-width: none; height: calc(100% - 40px); max-height: none; margin: auto; padding: 0; border: 1px solid #d5dbea; border-radius: 14px; background: #fff; }
 .gamcheon-map__public-preview[open] { display: grid; grid-template-rows: 48px minmax(0, 1fr); }
 .gamcheon-map__public-preview::backdrop { background: #1c2637aa; }

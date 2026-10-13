@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { GeoJSONSource, Map, MapMouseEvent } from 'maplibre-gl'
 import { Marker } from 'maplibre-gl'
-import { ADDED_OUTLINE_POINTS, editedBuildingCount, NEW_BUILDING_DEFAULTS, setAdded, setModel, setOverride } from './buildingEdits'
+import { ADDED_OUTLINE_POINTS, editedBuildingCount, MODEL_WIDTH_RANGE, NEW_BUILDING_DEFAULTS, setAdded, setModel, setOverride } from './buildingEdits'
 import type { AddedBuilding, BuildingOverride, PlacedModel } from './buildingEdits'
 import type { BuildingEditStore } from './buildingEditStore'
 import type { ModelTools } from './BuildingModelPanel'
@@ -23,6 +23,9 @@ import { terrainBuildingPlan } from '../scene/terrain/terrainBuildingGeometry'
 import { distanceToRoad } from '../scene/streetRoadGeometry'
 import { TERRAIN_GROUND_LIFT } from '../scene/groundGeometry'
 import { useGeomanGeometry } from '../map/useGeomanGeometry'
+import { createHandleGuide } from '../map/handleGuide'
+import { dragFrame, HANDLE_KINDS, handleLabel, handlePosition } from './transformHandles'
+import type { HandleKind, TransformFrame } from './transformHandles'
 
 // 작업실 '건물' 탭: 바닥의 건물 윤곽을 눌러 고르고, 고른 건물과 고친 건물을 지도에 표시합니다.
 // '새 건물 그리기'를 누르면 지도에 꼭짓점을 찍어 새 건물 윤곽을 그립니다(첫 점을 다시 누르거나 '완성').
@@ -40,6 +43,7 @@ type Placing = { kind: 'new'; file: ModelFile } | { kind: 'move'; id: string }
 // 빈 땅에 처음 둘 때의 모델 크기(m)
 const NEW_MODEL_WIDTH = 10
 const MODEL_PICK_PIXELS = 10
+const HANDLE_LABELS: Record<HandleKind, string> = { move: '이동', rotate: '회전', scale: '크기' }
 
 let buildingIndex: globalThis.Map<number, StreetBuilding> | null = null
 function streetBuilding(id: number) {
@@ -76,7 +80,12 @@ function outlineFit(outline: Point[]) {
   return { rotation: Math.round(rotation * 10) / 10, widthMeters: Math.round((Math.max(...along) - Math.min(...along)) * 10) / 10 }
 }
 export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolean, store: BuildingEditStore | undefined,
-  options?: { pick: (point: { x: number; y: number }) => Selection | null; terrainMode: boolean }) {
+  options?: {
+    pick: (point: { x: number; y: number }) => Selection | null
+    terrainMode: boolean
+    // 손잡이를 끄는 동안 3D 거리에 모델을 미리 놓아 봅니다(저장하지 않음).
+    previewModels?: (models: PlacedModel[]) => void
+  }) {
   const [selection, setSelection] = useState<Selection | null>(null)
   const [notice, setNotice] = useState('')
   const [drawing, setDrawing] = useState<Point[] | null>(null)
@@ -356,41 +365,100 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
     setNotice('')
   }
 
-  // 이동·회전·크기 손잡이는 드래그가 끝났을 때 한 번 저장합니다.
+  // 이동·회전·크기 손잡이(transformHandles.ts). 끄는 동안 모델은 3D 거리에서 바로 따라오고, 건물은 옮긴 뒤의 윤곽을
+  // 안내선으로 보여 줍니다(건물은 3D 거리를 다시 만들어야 해서 손을 놓은 뒤 반영). 저장은 손을 놓을 때 한 번 합니다.
   useEffect(() => {
     const map = mapRef.current
     if (!map || !active || !selection || drawing || placing || selectedAdded || (!placement && !selectedModel)) return
-    const center: Point = selectedModel ? [selectedModel.longitude, selectedModel.latitude] : [placement!.longitude, placement!.latitude]
-    const [cx, cz] = streetMeters(center)
-    const radius = selectedModel ? 5 : Math.max(3, ...sourceOutline!.map((p) => {
+    const model = selectedModel
+    const radius = model ? 1 : Math.max(3, ...sourceOutline!.map((p) => {
       const base = outlinePlacement(sourceOutline!), [bx, bz] = streetMeters([base.longitude, base.latitude]), [x, z] = streetMeters(p)
       return Math.hypot(x - bx, z - bz)
     }))
-    const angle = (selectedModel?.rotation ?? placement!.rotation) * Math.PI / 180
-    const reach = selectedModel ? selectedModel.widthMeters / 2 : radius * placement!.scale
-    const markers = (['이동', '회전', '크기'] as const).map((label, index) => {
+    const start: TransformFrame = model
+      ? { center: streetMeters([model.longitude, model.latitude]), angle: model.rotation, reach: model.widthMeters / 2 }
+      : { center: streetMeters([placement!.longitude, placement!.latitude]), angle: placement!.rotation, reach: radius * placement!.scale }
+    const [minReach, maxReach] = model ? [MODEL_WIDTH_RANGE.min / 2, MODEL_WIDTH_RANGE.max / 2] : [radius * 0.1, radius * 5]
+    const describeReach = (reach: number) => model ? `폭 ${(reach * 2).toFixed(1)}m` : `${Math.round(reach / radius * 100)}%`
+    const toModel = (frame: TransformFrame): PlacedModel => {
+      const [longitude, latitude] = streetLngLat(frame.center)
+      return { ...model!, longitude, latitude, rotation: frame.angle, widthMeters: Math.round(frame.reach * 20) / 10 }
+    }
+    const toPlacement = (frame: TransformFrame): BuildingPlacement => {
+      const [longitude, latitude] = streetLngLat(frame.center)
+      return { ...placement!, longitude, latitude, rotation: frame.angle, scale: frame.reach / radius }
+    }
+    const guide = createHandleGuide(map)
+    const showGuide = (frame: TransformFrame, dragging: boolean) => guide.set({
+      center: streetLngLat(frame.center),
+      ring: Array.from({ length: 48 }, (_, step) => streetLngLat([
+        frame.center[0] + Math.cos(step / 48 * Math.PI * 2) * frame.reach, frame.center[1] + Math.sin(step / 48 * Math.PI * 2) * frame.reach])),
+      axis: [streetLngLat(handlePosition(frame, 'scale')), streetLngLat(handlePosition(frame, 'rotate'))],
+      outline: model ? undefined : placedOutline(sourceOutline!, toPlacement(frame)),
+      active: dragging,
+    })
+    showGuide(start, false)
+    let frame = start
+    let previewed = false
+    let animation = 0
+    const previewModels = (shown: TransformFrame | null) => {
+      const current = storeRef.current
+      if (!model || !current) return
+      previewed = shown !== null
+      optionsRef.current?.previewModels?.(current.draft.models.map((item) => item.id === model.id && shown ? toModel(shown) : item))
+    }
+    const markers = HANDLE_KINDS.map((kind, index) => {
+      const label = HANDLE_LABELS[kind]
       const element = document.createElement('button')
       element.type = 'button'; element.className = `gamcheon-map__editor-handle is-${index}`; element.textContent = label
       element.setAttribute('aria-label', `선택 건물 ${label} 손잡이`)
       element.addEventListener('click', (event) => event.stopPropagation())
-      const direction = index === 1 ? 1 : index === 2 ? -1 : 0
-      const point = streetLngLat([cx + Math.cos(angle) * reach * direction, cz + Math.sin(angle) * reach * direction])
-      const marker = new Marker({ element, draggable: true }).setLngLat(point).addTo(map)
+      const marker = new Marker({ element, draggable: true }).setLngLat(streetLngLat(handlePosition(start, kind))).addTo(map)
+      marker.on('drag', () => {
+        const end = marker.getLngLat()
+        if (kind === 'move' && !isInsideGamcheonMap(end.lng, end.lat)) return
+        frame = dragFrame(start, kind, streetMeters([end.lng, end.lat]), minReach, maxReach)
+        element.textContent = handleLabel(kind, start, frame, describeReach)
+        element.classList.add('is-dragging')
+        markers.forEach((other, otherIndex) => {
+          if (other !== marker) other.setLngLat(streetLngLat(handlePosition(frame, HANDLE_KINDS[otherIndex])))
+        })
+        showGuide(frame, true)
+        if (model && !animation) animation = requestAnimationFrame(() => { animation = 0; previewModels(frame) })
+      })
       marker.on('dragend', () => {
-        const end = marker.getLngLat(), [x, z] = streetMeters([end.lng, end.lat])
-        if (!isInsideGamcheonMap(end.lng, end.lat)) { setNotice('지도 범위 밖으로 옮길 수 없습니다.'); marker.setLngLat(point); return }
-        const rotation = ((Math.atan2(z - cz, x - cx) * 180 / Math.PI) + 360) % 360
-        if (selectedModel) {
-          const patch = index === 0 ? { longitude: end.lng, latitude: end.lat } : index === 1 ? { rotation }
-            : { widthMeters: Math.max(1, Math.min(120, Math.hypot(x - cx, z - cz) * 2)) }
+        cancelAnimationFrame(animation); animation = 0
+        element.textContent = label
+        element.classList.remove('is-dragging')
+        const changed = frame !== start
+        const reset = () => {
+          frame = start
+          markers.forEach((item, itemIndex) => item.setLngLat(streetLngLat(handlePosition(start, HANDLE_KINDS[itemIndex]))))
+          showGuide(start, false)
+          if (previewed) previewModels(null)
+        }
+        if (!changed) return reset()
+        if (model) {
           const current = storeRef.current
-          if (current) current.onChange(setModel(current.draft, selectedModel.id, { ...selectedModel, ...patch }))
-        } else if (placement) setPlacement(index === 0 ? { ...placement, longitude: end.lng, latitude: end.lat }
-          : index === 1 ? { ...placement, rotation } : { ...placement, scale: Math.max(0.1, Math.min(5, Math.hypot(x - cx, z - cz) / radius)) })
+          if (current) current.onChange(setModel(current.draft, model.id, toModel(frame)))
+          setNotice('')
+        } else {
+          const next = toPlacement(frame)
+          if (!placedOutline(sourceOutline!, next).every(([lng, lat]) => isInsideGamcheonMap(lng, lat))) {
+            setNotice('건물 윤곽이 지도 범위를 벗어납니다.')
+            return reset()
+          }
+          setPlacement(next)
+        }
       })
       return marker
     })
-    return () => markers.forEach((marker) => marker.remove())
+    return () => {
+      cancelAnimationFrame(animation)
+      markers.forEach((marker) => marker.remove())
+      guide.remove()
+      if (previewed && storeRef.current?.draft === draft) previewModels(null)
+    }
   }, [active, selection, draft, drawing, placing])
   // 모델 파일을 지울 수 있는지(초안·공개본 어디에도 쓰이지 않을 때만)
   const published = store?.published

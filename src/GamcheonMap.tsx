@@ -188,6 +188,7 @@ export function GamcheonMap({
   const alleyFinder = useAlleyFinder(mapRef, canEditAlleys && mode === 'alleys', gpsTrails, alley.editorProps.alleys, alley.addAlley)
   const buildingEditing = useBuildingEditing(mapRef, canEditBuildings && mode === 'buildings', buildingEditor, {
     terrainMode, pick: (point) => streetLayerRef.current?.pickBuildingAt(point) ?? null,
+    previewModels: (models) => streetLayerRef.current?.setPlacedModels(models),
   })
   // 3D 거리에 반영할 건물 고친 내용: 작업실은 초안, 공개 지도는 공개본.
   //  - 건물 모양이 바뀌면(고친 건물·새 건물·모델이 대신하는 건물) 잠시 기다렸다가 3D 거리를 다시 만듭니다
