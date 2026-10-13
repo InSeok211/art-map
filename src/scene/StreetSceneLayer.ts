@@ -1912,7 +1912,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
 
   private *buildSteps(): Generator<void, void> {
     const buildings = this.editedBuildings(this.buildingEdits)
-    const workshop = buildings.find((building) => building.id === ARTIST_WORKSHOP_FOOTPRINT_ID)
+    // 고리 순서와 첫 화면의 기준점은 원래 공방 자리입니다(공방을 옮기거나 3D 모델로 바꿔도 그대로).
+    const workshop = getPhotographedStreetBuildings().find((building) => building.id === ARTIST_WORKSHOP_FOOTPRINT_ID)
     if (workshop) this.workshopCenter = outlineCenter(workshop.outline.map(streetMeters))
     yield* this.groundSteps(buildings)
     // 처음에는 지금 화면 중심 근처 건물(과 공방)만 만들어 3D 거리를 빨리 띄우고, 나머지는 가까운 순서로 나눠

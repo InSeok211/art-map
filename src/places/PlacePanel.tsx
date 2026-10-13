@@ -87,6 +87,7 @@ export function PlaceBrowser({
               <strong>{place.name}</strong>
               {place.address && <span className="gamcheon-map__place-address">{place.address}</span>}
               {place.description && <span className="gamcheon-map__place-description">{place.description}</span>}
+              {place.photo && <img className="gamcheon-map__place-photo" src={place.photo} alt={`${place.name} 사진`} loading="lazy" />}
             </span>
             <span className="gamcheon-map__place-arrow" aria-hidden="true">↗</span>
           </button>

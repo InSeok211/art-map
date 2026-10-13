@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ARTIST_WORKSHOP_PLACE } from './places/artistWorkshop'
+import { ARTIST_WORKSHOP_PLACE, artistWorkshopPlace } from './places/artistWorkshop'
 import { sanitizeAlleys } from './alleys/alleys'
 import type { Alley } from './alleys/alleys'
 import { useSiteBuildingEdits } from './buildings/siteBuildingEdits'
@@ -102,7 +102,8 @@ function EmbeddedMap() {
 }
 
 const EmbeddedMapView = memo(function EmbeddedMapView({ host, alleys, buildingEdits }: { host: HostState; alleys: Alley[]; buildingEdits: BuildingEdits }) {
-  const places = FULL ? [ARTIST_WORKSHOP_PLACE, ...host.places.filter((place) => place.id !== ARTIST_WORKSHOP_PLACE.id)] : host.places
+  // 작가님 공방은 편집 앱에서 공개한 장소 정보·위치를 씁니다.
+  const places = FULL ? [artistWorkshopPlace(buildingEdits), ...host.places.filter((place) => place.id !== ARTIST_WORKSHOP_PLACE.id)] : host.places
   return <GamcheonMap
     compact={!FULL}
     className={`${FULL ? 'artist-full-map' : 'artist-embed-map'}${SITE_HOSTED ? ' is-site-hosted' : ''}`}

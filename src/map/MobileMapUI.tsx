@@ -90,6 +90,7 @@ export function MobileMapUI({
           <div><small>{categoryLabel(selected)}</small><strong>{selected.name}</strong></div>
           <span className={`gm-mobile__icon gm-mobile__icon--${selected.category}`} aria-hidden="true">{placeIcon(selected)}</span>
         </div>
+        {selected.photo && <img className="gm-mobile__photo" src={selected.photo} alt={`${selected.name} 사진`} loading="lazy" />}
         {selected.description && <p className="gm-mobile__description">{selected.description}</p>}
         {selected.address && <p className="gm-mobile__address">⌖ {selected.address}</p>}
         <div className="gm-mobile__actions">

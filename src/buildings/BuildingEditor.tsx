@@ -6,6 +6,8 @@ import type { StreetBuilding } from '../scene/streetSceneData'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { NumberField, PlacementProperties, TerrainProperties } from './BuildingProperties'
+import { WorkshopInfoEditor } from './WorkshopEditor'
+import type { WorkshopTools } from './WorkshopEditor'
 import type { BuildingPlacement, BuildingSettings } from './buildingSettings'
 
 // 작업실 '건물' 탭의 패널입니다. 고친 내용은 초안에만 들어가고 '공개하기'를 눌러야 공개 지도에 나갑니다.
@@ -26,6 +28,8 @@ interface BuildingEditorProps {
   onPickEntrance: () => void
   onDuplicate: () => void
   selected: { building: StreetBuilding; override: BuildingOverride } | null
+  // 작가님 공방을 골랐을 때(전용 모델: 위치·크기, 3D 모델 교체, 장소 정보만 고침)
+  workshop: WorkshopTools | null
   // 새로 그린 건물을 골랐을 때
   added: AddedBuilding | null
   // 고른 새 건물이 차도·보행로와 겹치는지
@@ -102,7 +106,7 @@ function RoofChoice({ value, onChange }: { value: RoofStyle | undefined; onChang
 export function BuildingEditor({
   local, workspace, canUndo, canRedo, onUndo, onRedo, terrainMode, settings, elevationInfo, placement, onChangeSettings, onPlacement,
   onMoveBuilding, onPickEntrance, onDuplicate,
-  selected, added, onRoad, drawingPoints, models, sceneError, notice, editedIds, addedIds, editedCount, publishedCount, dirty, busy, status,
+  selected, workshop, added, onRoad, drawingPoints, models, sceneError, notice, editedIds, addedIds, editedCount, publishedCount, dirty, busy, status,
   onChange, onChangeAdded, onRemoveAdded, onTrimRoad, onSelect, onSelectAdded, onStartDrawing, onUndoPoint, onFinishDrawing, onCancelDrawing,
   onClose, onPublish, onDiscard,
 }: BuildingEditorProps) {
@@ -164,11 +168,11 @@ export function BuildingEditor({
 
     {(original || added || model) && <div className="gamcheon-map__model-inspector">
       {added && <p className="gamcheon-map__model-help">윤곽 편집은 평면 보기로 전환됩니다. 꼭짓점을 드래그해 모양을 고치세요. 점 사이의 손잡이를 드래그하면 점이 추가되고, 꼭짓점을 오른쪽 클릭하면 지웁니다. 선택을 닫으면 3D 보기로 돌아갑니다.</p>}
-      <strong>선택 ID · {original?.id ?? added?.id ?? model?.id}</strong>
-      <label>건물 이름 <input type="text" aria-label="건물 이름" key={String(original?.id ?? added?.id ?? model?.id) + (settings.name ?? '')}
+      <strong>{workshop ? '작가님 공방 · 위치와 크기' : `선택 ID · ${original?.id ?? added?.id ?? model?.id}`}</strong>
+      {!workshop && <label>건물 이름 <input type="text" aria-label="건물 이름" key={String(original?.id ?? added?.id ?? model?.id) + (settings.name ?? '')}
         defaultValue={settings.name ?? ''} maxLength={120} placeholder="이름을 입력하세요"
-        onBlur={(event) => onChangeSettings({ name: event.target.value || undefined })} /></label>
-      {placement && <PlacementProperties placement={placement} onChange={onPlacement} onMove={onMoveBuilding} onDuplicate={onDuplicate} />}
+        onBlur={(event) => onChangeSettings({ name: event.target.value || undefined })} /></label>}
+      {placement && <PlacementProperties placement={placement} onChange={onPlacement} onMove={onMoveBuilding} onDuplicate={workshop ? undefined : onDuplicate} />}
       <TerrainProperties settings={settings} terrainMode={terrainMode} model={!!model} onChange={onChangeSettings} onPickEntrance={onPickEntrance} />
       {elevationInfo && <p className="gamcheon-map__model-help" role="status">{elevationInfo}</p>}
     </div>}
@@ -194,7 +198,20 @@ export function BuildingEditor({
 
     {model && <ModelInspector model={model} tools={models} onClose={onClose} />}
 
-    {original && <div className="gamcheon-map__model-inspector">
+    {original && workshop && <div className="gamcheon-map__model-inspector">
+      <strong>작가님 공방 · 전용 모델</strong>
+      <p className="gamcheon-map__model-help">로드뷰로 만든 전용 모델입니다. 지도 위 이동·회전·크기 손잡이나 위의 배치 값으로 자리를 맞추고, 아래에서 장소 정보를 고치거나 3D 모델로 바꿀 수 있습니다. 높이·색은 전용 모델이라 바뀌지 않습니다.</p>
+      <WorkshopInfoEditor tools={workshop} />
+      <div className="gamcheon-map__model-item-actions">
+        <button type="button" disabled={!Object.keys(override).length} onClick={() => onChange(null)}>원래 자리로</button>
+        <button type="button" onClick={onClose}>선택 해제</button>
+      </div>
+      <div className="gamcheon-map__model-section-title">3D 모델로 바꾸기</div>
+      <p className="gamcheon-map__model-help">올린 모델이 공방 자리를 대신합니다. 모델을 지우면 원래 공방 모델로 돌아갑니다.</p>
+      <ModelFiles tools={models} mode="replace" />
+    </div>}
+
+    {original && !workshop && <div className="gamcheon-map__model-inspector">
       <strong>건물 {original.id}{original.concept || original.observed || original.roadview ? ' · 사진 시안 건물' : ''}</strong>
       {(original.concept || original.observed || original.roadview) && <p className="gamcheon-map__model-help">사진을 바탕으로 따로 꾸민 건물이라 색·지붕 일부는 바뀌지 않을 수 있습니다.</p>}
       <label className="gamcheon-map__building-toggle">

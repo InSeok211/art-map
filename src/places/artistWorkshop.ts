@@ -1,4 +1,6 @@
 import type { Place } from '../types'
+import type { BuildingEdits } from '../buildings/buildingEdits'
+import { ARTIST_WORKSHOP_FOOTPRINT_ID } from '../scene/streetSceneData'
 
 const ADDRESS_LONGITUDE = 129.00925868855
 const ADDRESS_LATITUDE = 35.095522407839
@@ -48,4 +50,26 @@ export function seedArtistWorkshopPlace(places: Place[], seeded: boolean): Place
   return seeded || places.some((place) => place.id === ARTIST_WORKSHOP_PLACE.id)
     ? places
     : [...places, { ...ARTIST_WORKSHOP_PLACE }]
+}
+
+// 편집 앱에서 올린 사진 번호를 주소로 바꿉니다(개발 미리보기의 data 주소는 그대로).
+export const workshopPhotoUrl = (photo: string) => photo.startsWith('data:') ? photo : `/api/map-images/${photo}`
+
+// 편집 앱에서 고친 내용을 반영한 작가님 공방 장소입니다.
+//  - 이름·주소·설명·사진: 건물 편집의 공방 장소 정보(workshop)
+//  - 핀: 공방을 옮겼으면 옮긴 자리, 3D 모델로 바꿨으면 그 모델 자리
+export function artistWorkshopPlace(edits?: BuildingEdits | null): Place {
+  const info = edits?.workshop
+  const model = edits?.models.find((item) => item.replaces.includes(ARTIST_WORKSHOP_FOOTPRINT_ID))
+  const placement = edits?.overrides[ARTIST_WORKSHOP_FOOTPRINT_ID]?.placement
+  const [longitude, latitude] = model ? [model.longitude, model.latitude]
+    : placement ? [placement.longitude, placement.latitude] : [ARTIST_WORKSHOP_PLACE.longitude, ARTIST_WORKSHOP_PLACE.latitude]
+  return {
+    ...ARTIST_WORKSHOP_PLACE,
+    longitude, latitude,
+    ...(info?.name ? { name: info.name } : {}),
+    ...(info?.address ? { address: info.address } : {}),
+    ...(info?.description ? { description: info.description } : {}),
+    ...(info?.photo ? { photo: workshopPhotoUrl(info.photo) } : {}),
+  }
 }

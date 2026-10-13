@@ -274,6 +274,12 @@
 .gamcheon-map__place-body strong { overflow: hidden; color: #29473c; font-size: 13px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 .gamcheon-map__place-address { color: #88988c; font-size: 10px; }
 .gamcheon-map__place-description { margin-top: 3px; color: #667d70; font-size: 10px; line-height: 1.5; }
+/* 장소 사진(작가님 공방처럼 편집 앱에서 올린 사진) */
+.gamcheon-map__place-photo { display: block; width: 100%; max-width: 240px; aspect-ratio: 4 / 3; margin-top: 7px; border-radius: 10px; object-fit: cover; background: #eef1ee; }
+.gamcheon-map__workshop-photo { display: grid; gap: 6px; margin-top: 4px; }
+.gamcheon-map__workshop-photo img { width: 100%; aspect-ratio: 4 / 3; border-radius: 10px; object-fit: cover; background: #eef1ee; }
+.gamcheon-map__workshop-photo > span { display: grid; place-items: center; aspect-ratio: 4 / 3; border: 1px dashed #c9d1cb; border-radius: 10px; color: #8a948d; font-size: 12px; }
+.gm-mobile__photo { display: block; width: 100%; max-height: 180px; margin: 8px 0 2px; border-radius: 12px; object-fit: cover; background: #eef1ee; }
 .gamcheon-map__place-arrow { margin: 10px 1px 0 0; color: #8ea89a; font-size: 17px; }
 
 .gamcheon-map__empty {

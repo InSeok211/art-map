@@ -45,7 +45,7 @@ export function TerrainProperties({ settings, terrainMode, model = false, onChan
 }
 
 export function PlacementProperties({ placement, onChange, onMove, onDuplicate }: {
-  placement: BuildingPlacement; onChange: (placement: BuildingPlacement) => void; onMove: () => void; onDuplicate: () => void
+  placement: BuildingPlacement; onChange: (placement: BuildingPlacement) => void; onMove: () => void; onDuplicate?: () => void
 }) {
   const field = (key: keyof BuildingPlacement, value: number | undefined) => value !== undefined && onChange({ ...placement, [key]: value })
   return <div className="gamcheon-map__property-section">
@@ -56,7 +56,7 @@ export function PlacementProperties({ placement, onChange, onMove, onDuplicate }
     <NumberField label="크기 배율" value={placement.scale} min={0.1} max={5} step={0.05} digits={2} onChange={(value) => field('scale', value)} />
     <div className="gamcheon-map__model-item-actions">
       <button type="button" onClick={onMove}>지도에서 위치 옮기기</button>
-      <button type="button" onClick={onDuplicate}>건물 복제</button>
+      {onDuplicate && <button type="button" onClick={onDuplicate}>건물 복제</button>}
     </div>
   </div>
 }

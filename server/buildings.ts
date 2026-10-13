@@ -48,6 +48,8 @@ export async function saveDraft(request: Request, env: MapEnv) {
     || new Set(draft.models.map((model) => model.id)).size !== draft.models.length) {
     return error('저장할 수 없는 건물 데이터나 중복 ID가 있습니다. 기존 초안은 유지됩니다.', 400)
   }
+  // 개발 미리보기용 사진(data 주소)은 서버에 저장하지 않습니다(사진은 /api/admin/map-images로 올린 번호만).
+  if (draft.workshop?.photo?.startsWith('data:')) return error('공방 사진은 서버에 올린 뒤 저장해 주세요. 기존 초안은 유지됩니다.', 400)
   await write(env, 'draft', draft)
   return json({ draft })
 }

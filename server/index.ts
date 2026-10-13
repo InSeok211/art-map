@@ -3,12 +3,13 @@ import { error, fromThisApp } from './http'
 import { adminAlleys, deleteTrail, listTrails, publicAlleys, saveAlleys, saveTrail } from './alleys'
 import { adminBuildings, discard, publicBuildings, publish, saveDraft } from './buildings'
 import { deleteModel, getModel, listModels, uploadModel } from './models'
+import { getPhoto, uploadPhoto } from './images'
 import { ensureMapTables } from './schema'
 
 export type { MapEnv } from './env'
 
 // 감천 골목지도 API입니다. 홈페이지 서버(감천 작가 지도)가 아래 주소의 요청을 handleApi로 넘깁니다.
-//  - /api/map-alleys, /api/map-buildings, /api/map-models/<번호>: 누구나 읽는 공개 지도용
+//  - /api/map-alleys, /api/map-buildings, /api/map-models/<번호>, /api/map-images/<번호>: 누구나 읽는 공개 지도용
 //  - /api/admin/...: 편집 앱 전용(홈페이지 운영자 로그인 필요, env.isAdmin으로 확인)
 type Handler = (request: Request, env: MapEnv, url: URL, params: string[]) => Promise<Response> | Response
 
@@ -30,6 +31,9 @@ const routes: [method: string, pattern: RegExp, admin: boolean, handler: Handler
   ['GET', /^\/api\/admin\/map-models$/, true, (_request, env) => listModels(env)],
   ['POST', /^\/api\/admin\/map-models$/, true, (request, env) => uploadModel(request, env)],
   ['DELETE', /^\/api\/admin\/map-models\/([\w-]+)$/, true, (_request, env, _url, [id]) => deleteModel(id, env)],
+
+  ['GET', /^\/api\/map-images\/([\w-]+)$/, false, (request, env, _url, [id]) => getPhoto(id, request, env)],
+  ['POST', /^\/api\/admin\/map-images$/, true, (request, env) => uploadPhoto(request, env)],
 ]
 
 // 홈페이지가 넘겨줄 주소 목록입니다(이 주소들만 handleApi로 보내면 됩니다).

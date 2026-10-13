@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { GeoJSONSource, Map, MapMouseEvent } from 'maplibre-gl'
 import { Marker } from 'maplibre-gl'
-import { ADDED_OUTLINE_POINTS, editedBuildingCount, MODEL_WIDTH_RANGE, NEW_BUILDING_DEFAULTS, setAdded, setModel, setOverride } from './buildingEdits'
+import { ADDED_OUTLINE_POINTS, editedBuildingCount, MODEL_WIDTH_RANGE, NEW_BUILDING_DEFAULTS, setAdded, setModel, setOverride, setWorkshopInfo } from './buildingEdits'
 import type { AddedBuilding, BuildingOverride, PlacedModel } from './buildingEdits'
 import type { BuildingEditStore } from './buildingEditStore'
 import type { ModelTools } from './BuildingModelPanel'
@@ -10,7 +10,7 @@ import { useModelLibrary } from './modelLibrary'
 import type { ModelFile } from './modelLibrary'
 import { isInsideGamcheonMap } from '../map/gamcheonBoundary'
 import { BUILDING_EDIT_SOURCE_ID } from '../map/mapStyle'
-import { clearOfCarriageways, getPhotographedStreetBuildings } from '../scene/streetSceneData'
+import { ARTIST_WORKSHOP_FOOTPRINT_ID, clearOfCarriageways, getPhotographedStreetBuildings } from '../scene/streetSceneData'
 import type { StreetBuilding } from '../scene/streetSceneData'
 import { streetMeters } from '../map/streetCoordinates'
 import { LANDMARK_BUILDING_IDS } from '../scene/landmarkBuildings'
@@ -23,6 +23,9 @@ import { terrainBuildingPlan } from '../scene/terrain/terrainBuildingGeometry'
 import { distanceToRoad } from '../scene/streetRoadGeometry'
 import { TERRAIN_GROUND_LIFT } from '../scene/groundGeometry'
 import { useGeomanGeometry } from '../map/useGeomanGeometry'
+import { ARTIST_WORKSHOP_PLACE, workshopPhotoUrl } from '../places/artistWorkshop'
+import { uploadWorkshopPhoto } from './workshopPhoto'
+import type { WorkshopTools } from './WorkshopEditor'
 import { createHandleGuide } from '../map/handleGuide'
 import { dragFrame, HANDLE_KINDS, handleLabel, handlePosition } from './transformHandles'
 import type { HandleKind, TransformFrame } from './transformHandles'
@@ -116,8 +119,9 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
   }
 
   function select(target: Selection) {
-    if (target.kind === 'osm' && LANDMARK_BUILDING_IDS.has(target.id)) {
-      setNotice('공방·그린하우스·아름다운한글은 전용 모델입니다. 일반 건물 편집에서는 변경하지 않습니다.')
+    // 작가님 공방은 전용 모델이지만 위치·방향·크기, 3D 모델 교체, 장소 정보를 고칠 수 있습니다.
+    if (target.kind === 'osm' && LANDMARK_BUILDING_IDS.has(target.id) && target.id !== ARTIST_WORKSHOP_FOOTPRINT_ID) {
+      setNotice('그린하우스·아름다운한글은 전용 모델이라 건물 편집에서는 바꾸지 않습니다.')
       return
     }
     if (target.kind === 'osm' && !streetBuilding(target.id)) { setNotice('해당 번호의 편집 가능한 건물이 없습니다.'); return }
@@ -211,8 +215,8 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
       const feature = map.queryRenderedFeatures(event.point, { layers: ['building-footprint-fill'] })[0]
       const id = Number(feature?.properties?.id)
       if (!feature || !Number.isFinite(id)) return
-      if (LANDMARK_BUILDING_IDS.has(id)) {
-        setNotice('따로 만든 모델 건물(공방·그린하우스·아름다운한글)은 여기서 고칠 수 없습니다.')
+      if (LANDMARK_BUILDING_IDS.has(id) && id !== ARTIST_WORKSHOP_FOOTPRINT_ID) {
+        setNotice('그린하우스·아름다운한글은 전용 모델이라 여기서 고칠 수 없습니다.')
         return
       }
       if (!streetBuilding(id)) {
@@ -311,6 +315,32 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
   }, [active, features])
 
   const selectedOsm = selection?.kind === 'osm' ? streetBuilding(selection.id) : undefined
+  // 작가님 공방 장소 정보(사진 올리기 상태)
+  const [photo, setPhoto] = useState<{ busy: boolean; status: string }>({ busy: false, status: '' })
+  const workshopInfo = draft?.workshop ?? {}
+  const changeWorkshop = (info: typeof workshopInfo) => {
+    const current = storeRef.current
+    if (current) current.onChange(setWorkshopInfo(current.draft, info))
+  }
+  const workshop: WorkshopTools | null = selectedOsm?.id === ARTIST_WORKSHOP_FOOTPRINT_ID && store ? {
+    info: workshopInfo,
+    defaults: ARTIST_WORKSHOP_PLACE,
+    photoUrl: workshopInfo.photo ? workshopPhotoUrl(workshopInfo.photo) : null,
+    photoBusy: photo.busy,
+    photoStatus: photo.status,
+    onChange: changeWorkshop,
+    onPhoto: (file: File) => {
+      setPhoto({ busy: true, status: '사진을 줄여 올리는 중…' })
+      uploadWorkshopPhoto(file, store.server === true)
+        .then((value) => {
+          const current = storeRef.current
+          if (current) current.onChange(setWorkshopInfo(current.draft, { ...(current.draft.workshop ?? {}), photo: value }))
+          setPhoto({ busy: false, status: '사진을 넣었습니다. 공개하기를 누르면 공개 지도에 나옵니다.' })
+        })
+        .catch((reason: Error) => setPhoto({ busy: false, status: reason.message }))
+    },
+    onRemovePhoto: () => { changeWorkshop({ ...workshopInfo, photo: undefined }); setPhoto({ busy: false, status: '' }) },
+  } : null
   const selectedAdded = selection?.kind === 'added' ? addedById.get(selection.id) : undefined
   const selectedModel = selection?.kind === 'model' ? modelById.get(selection.id) : undefined
   const geometry = useGeomanGeometry(mapRef, {
@@ -504,6 +534,7 @@ export function useBuildingEditing(mapRef: RefObject<Map | null>, active: boolea
         setSelection({ kind: 'added', id })
       },
       selected: selectedOsm ? { building: selectedOsm, override: draft?.overrides[selectedOsm.id] ?? {} } : null,
+      workshop,
       added: selectedAdded ?? null,
       models: {
         selected: selectedModel ?? null,

@@ -42,15 +42,29 @@ export interface PlacedModel extends BuildingSettings {
   replaces: number[]
 }
 
+// 작가님 공방 장소 정보(지도 장소 카드). 비운 값은 기본 정보(places/artistWorkshop.ts)를 씁니다.
+// photo: 지도 앱 서버에 올린 사진 번호(i-로 시작), 또는 서버가 없는 개발 미리보기에서만 쓰는 data:image/jpeg 주소
+export interface WorkshopInfo {
+  name?: string
+  address?: string
+  description?: string
+  photo?: string
+}
+
 export interface BuildingEdits {
   overrides: Record<string, BuildingOverride>
   added: AddedBuilding[]
   models: PlacedModel[]
+  workshop?: WorkshopInfo
 }
 
 export const EMPTY_BUILDING_EDITS: BuildingEdits = { overrides: {}, added: [], models: [] }
 export const MODEL_WIDTH_RANGE = { min: 1, max: 120 } as const
 export const MODEL_FILE_ID = /^m-[a-z0-9]{8,40}$/
+export const PHOTO_FILE_ID = /^i-[a-z0-9]{8,40}$/
+export const WORKSHOP_TEXT_LIMITS = { name: 60, address: 160, description: 500 } as const
+// 개발 미리보기의 사진(data 주소)은 줄인 JPEG만, 이 길이까지 받습니다(약 500KB).
+const MAX_PREVIEW_PHOTO = 700_000
 // 새 건물을 처음 그렸을 때의 모양(2층, 흰 벽, 파란 지붕, 평지붕)
 export const NEW_BUILDING_DEFAULTS = { heightMeters: 6.1, wallColor: 0xf2efe6, roofColor: 0x3f8fb5, roofStyle: 'flat' as RoofStyle }
 export const ADDED_OUTLINE_POINTS = { min: 3, max: 60 } as const
@@ -144,7 +158,32 @@ export function sanitizeBuildingEdits(value: unknown): BuildingEdits {
   const models = Array.isArray(modelInput)
     ? modelInput.slice(0, MAX_MODELS).flatMap((item) => sanitizeModel(item) ?? [])
     : []
-  return { overrides, added, models }
+  const workshop = sanitizeWorkshopInfo((value as { workshop?: unknown } | null)?.workshop)
+  return workshop ? { overrides, added, models, workshop } : { overrides, added, models }
+}
+
+// 공방 장소 정보에서 쓸 수 있는 값만 남깁니다. 남는 값이 없으면 null.
+export function sanitizeWorkshopInfo(value: unknown): WorkshopInfo | null {
+  if (!value || typeof value !== 'object') return null
+  const input = value as Record<string, unknown>
+  const info: WorkshopInfo = {}
+  for (const key of ['name', 'address', 'description'] as const) {
+    const text = typeof input[key] === 'string' ? (input[key] as string).trim().slice(0, WORKSHOP_TEXT_LIMITS[key]) : ''
+    if (text) info[key] = text
+  }
+  const photo = input.photo
+  if (typeof photo === 'string' && (PHOTO_FILE_ID.test(photo)
+    || (photo.startsWith('data:image/jpeg;base64,') && photo.length <= MAX_PREVIEW_PHOTO && /^[A-Za-z0-9+/=]+$/.test(photo.slice(23))))) {
+    info.photo = photo
+  }
+  return Object.keys(info).length ? info : null
+}
+
+// 공방 장소 정보를 바꿉니다. 빈 내용이면 기본 정보로 되돌립니다.
+export function setWorkshopInfo(edits: BuildingEdits, info: WorkshopInfo | null): BuildingEdits {
+  const clean = info && sanitizeWorkshopInfo(info)
+  const { workshop: _previous, ...rest } = edits
+  return clean ? { ...rest, workshop: clean } : rest
 }
 
 // 한 건물의 고친 내용을 바꿉니다. 빈 내용이면 그 건물을 원래대로 되돌립니다.
@@ -242,5 +281,6 @@ export function applyBuildingEdits(buildings: StreetBuilding[], edits: BuildingE
 
 export const sameBuildingEdits = (a: BuildingEdits, b: BuildingEdits) =>
   JSON.stringify(a.overrides) === JSON.stringify(b.overrides) && JSON.stringify(a.added) === JSON.stringify(b.added)
-  && JSON.stringify(a.models) === JSON.stringify(b.models)
+  && JSON.stringify(a.models) === JSON.stringify(b.models) && JSON.stringify(a.workshop ?? null) === JSON.stringify(b.workshop ?? null)
 export const editedBuildingCount = (edits: BuildingEdits) => Object.keys(edits.overrides).length + edits.added.length + edits.models.length
+  + (edits.workshop ? 1 : 0)

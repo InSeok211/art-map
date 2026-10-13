@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { GamcheonMap } from './GamcheonMap'
 import type { EditTool } from './GamcheonMap'
-import { ARTIST_WORKSHOP_PLACE } from './places/artistWorkshop'
+import { ARTIST_WORKSHOP_PLACE, artistWorkshopPlace } from './places/artistWorkshop'
 import { BEAUTIFUL_HANGUL_PLACE } from './scene/beautifulHangul'
 import { useAlleyStore } from './alleys/alleyStore'
 import { useBuildingEditStore } from './buildings/buildingEditStore'
@@ -35,8 +35,9 @@ const reviewView = Number(reviewId) === ARTIST_WORKSHOP_FOOTPRINT_ID ? {
   bearing: Number.isFinite(reviewBearing) && query.has('bearing') ? reviewBearing : 45,
 } : undefined
 
-// 장소는 공개 지도와 같은 기본 장소만 보여 줍니다(작가 위치는 홈페이지가 공개 지도에 넘겨 줌).
-const PLACES: Place[] = [ARTIST_WORKSHOP_PLACE, BEAUTIFUL_HANGUL_PLACE]
+// 장소는 공개 지도와 같은 기본 장소만 보여 줍니다(작가 위치는 홈페이지가 공개 지도에 넘겨 줌). 작가님 공방은
+// 건물 탭에서 고친 장소 정보와 위치를 바로 보여 줍니다(초안).
+const placesFor = (edits: Parameters<typeof artistWorkshopPlace>[0]): Place[] => [artistWorkshopPlace(edits), BEAUTIFUL_HANGUL_PLACE]
 const EDIT_TOOLS: EditTool[] = ['alleys', 'buildings']
 
 function Studio() {
@@ -44,6 +45,7 @@ function Studio() {
   const [mobileEditing, setMobileEditing] = useState(true)
   const alleyStore = useAlleyStore()
   const buildingStore = useBuildingEditStore()
+  const places = useMemo(() => placesFor(buildingStore.draft), [buildingStore.draft])
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 720px)')
@@ -71,7 +73,7 @@ function Studio() {
         </div>
       </header>
       <main className="demo-main">
-        <GamcheonMap initialView={reviewView} places={PLACES} editable={editing} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} buildingEditor={buildingStore} />
+        <GamcheonMap initialView={reviewView} places={places} editable={editing} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} buildingEditor={buildingStore} />
       </main>
       {alleyStore.notice && <div className="demo-note is-alert" role="status">{alleyStore.notice}</div>}
     </div>

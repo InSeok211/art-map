@@ -545,7 +545,7 @@ export function GamcheonMap({
     if (Number.isFinite(place.latitude) && Number.isFinite(place.longitude)) {
       const map = mapRef.current
       if (place.id === ARTIST_WORKSHOP_PLACE.id) {
-        map?.flyTo({ center: [ARTIST_WORKSHOP_PLACE.longitude, ARTIST_WORKSHOP_PLACE.latitude], zoom: 19, pitch: 63, bearing: 35 })
+        map?.flyTo({ center: [place.longitude, place.latitude], zoom: 19, pitch: 63, bearing: 35 })
       } else {
         map?.flyTo({ center: [place.longitude, place.latitude], zoom: Math.max(map.getZoom(), 17) })
       }
