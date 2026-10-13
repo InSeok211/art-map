@@ -21,7 +21,7 @@ import type { BuildingEdits, PlacedModel } from '../buildings/buildingEdits'
 import type { BuildingSettings } from '../buildings/buildingSettings'
 import type { BuildingSelection } from '../buildings/buildingSelection'
 import { pickBuilding } from './buildingPicking'
-import { drapeOnTerrain, flatPolygonGeometry, isDrawablePolygon, TERRAIN_GROUND_LIFT } from './groundGeometry'
+import { drapeOnTerrainSteps, flatPolygonGeometry, isDrawablePolygon, TERRAIN_GROUND_LIFT } from './groundGeometry'
 import { buildingFoundationFaces } from './terrain/buildingFoundation'
 import { terrainBuildingPlan, terrainWallGeometry } from './terrain/terrainBuildingGeometry'
 import { BEAUTIFUL_HANGUL_URL, GREEN_HOUSE_URL, loadModel } from './modelFiles'
@@ -146,9 +146,24 @@ const DISTRICT_BAY_WIDTH = 3.1
 const DISTRICT_FLOOR_HEIGHT = 2.65
 // 건물별 비침 정도를 담는 텍스처 한 변의 크기(64×64 = 건물 4096동까지)
 const FADE_TEXTURE_SIZE = 64
+// 지도(그래픽 연결)마다 하나씩 두고 함께 쓰는 렌더러. 다음 3D 거리를 미리 준비할 때 지도 캔버스로도 찾습니다.
+const sharedRenderers = new WeakMap<WebGL2RenderingContext, THREE.WebGLRenderer>()
+const renderersByCanvas = new WeakMap<HTMLCanvasElement, THREE.WebGLRenderer>()
+// 먼 동네를 나눠 만들 때 이만큼 모이면 메시로 합쳐 보여 줍니다
+const DISTRICT_FLUSH_BUILDINGS = 150
 // 고친 건물만 다시 만들 때 한 번에 다룰 최대 건물 수(이보다 많으면 3D 거리를 통째로 다시 만듭니다)
 const MAX_PATCHED_BUILDINGS = 40
 // 건물을 구별하는 키(관리자가 그린 건물은 편집 번호, 나머지는 OSM 번호)와 모양을 정하는 값
+// 도로·보도 면(미리 계산한 저장본)을 삼각형으로 나눈 결과를 기억해 둡니다. 큰 면은 구멍이 수백 개라 나누는 데만
+// 0.1~0.2초씩 걸리는데, 3D 지형을 켜고 끌 때마다 다시 나누지 않게 합니다(같은 면이면 복사해 씀).
+const flatPolygonCache = new WeakMap<object, globalThis.Map<number, THREE.BufferGeometry>>()
+function cachedFlatPolygon(polygon: polygonClipping.Polygon, y: number) {
+  let byHeight = flatPolygonCache.get(polygon)
+  if (!byHeight) flatPolygonCache.set(polygon, byHeight = new globalThis.Map())
+  let geometry = byHeight.get(y)
+  if (!geometry) byHeight.set(y, geometry = flatPolygonGeometry(polygon, y, GROUND_TEXTURE_METERS))
+  return geometry.clone()
+}
 const buildingKey = (building: StreetBuilding) => building.editorId ?? String(building.id)
 const buildingSpec = (building: StreetBuilding) => JSON.stringify(building)
 // 길을 가리는 거리 건물이 남기는 픽셀 비율(형태는 알아보되 뒤의 길이 보이도록)
@@ -228,6 +243,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private pendingBuildings: { building: StreetBuilding; outline: [number, number][]; distance: number }[] = []
   private readonly focus?: [number, number]
   private buildingEdits?: BuildingEdits
+  // 나눠 만드는 중인 첫 장면(바닥·길·화면 근처 건물·나무). 다 만들면 null
+  private buildJob: Generator<void, void> | null = null
+  private buildStarted = 0
+  // 성능 확인용: 첫 장면을 만드는 데 실제로 쓴 시간(나눠 만든 조각들의 합, ms)
+  buildWork = 0
   // 만든 건물: 키 → 모양을 정한 값과 그 건물이 받은 건물 번호(buildingIndex). 건물을 고치면 바뀐 건물만 옛 모양을
   // 숨기고(hiddenBuildings) 새 모양을 덧붙입니다(updateBuildingEdits).
   private builtBuildings = new globalThis.Map<string, { spec: string; indices: number[] }>()
@@ -263,9 +283,10 @@ export class StreetSceneLayer implements CustomLayerInterface {
     // 휴대폰·태블릿(터치 화면)은 그림자 지도를 2048로 줄여 그래픽 메모리와 그리기 부담을 덜어 줍니다.
     addSceneLights(this.scene, SHADOW_CENTER, SHADOW_EXTENT, isTouchDevice() ? 2048 : 4096)
     this.buildingRings.forEach((ring) => this.scene.add(ring))
-    this.build()
-    // 성능 예산 확인용: 브라우저 개발자 도구의 Performance 탭이나 performance.getEntriesByName으로 볼 수 있습니다.
-    performance.measure(SCENE_BUILD_MEASURE, { start: started, end: performance.now() })
+    // 장면은 여기서 바로 만들지 않고 조금씩 나눠 만듭니다(prepare). 바로 다 만들면 바닥·길을 지형에 얹는 계산 때문에
+    // 화면이 1~3초 멈췄습니다(3D 지형을 켤 때). 테스트처럼 바로 필요하면 finishBuild로 한 번에 만듭니다.
+    this.buildJob = this.buildSteps()
+    this.buildStarted = started
     const bounds = getStreetSceneBounds(20)
     this.shadowCatcher = createShadowCatcher()
     fitShadowCatcher(this.shadowCatcher, bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ)
@@ -460,6 +481,15 @@ export class StreetSceneLayer implements CustomLayerInterface {
   // 3D 지형이면 도형을 제 높이로 올립니다: 건물(과 그 간판·장식)은 건물 바닥 높이만큼 통째로, 바닥처럼 납작한
   // 도형은 지형에 얹고, 나무 같은 작은 물체는 그 자리 땅 높이만큼 올립니다.
   private onTerrain(geometry: THREE.BufferGeometry, maxGroundEdge = 6) {
+    const steps = this.onTerrainSteps(geometry, maxGroundEdge)
+    for (;;) {
+      const step = steps.next()
+      if (step.done) return step.value
+    }
+  }
+
+  // onTerrain을 조금씩 나눠 합니다(큰 바닥 면을 지형에 얹을 때 화면이 멈추지 않게).
+  private *onTerrainSteps(geometry: THREE.BufferGeometry, maxGroundEdge = 6, expand = false): Generator<void, THREE.BufferGeometry> {
     const terrain = this.terrain
     if (this.buildingContext) {
       if (this.buildingBase) geometry.translate(0, this.buildingBase, 0)
@@ -468,7 +498,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     if (!terrain) return geometry
     geometry.computeBoundingBox()
     const box = geometry.boundingBox!
-    if (box.max.y - box.min.y < 0.6) return drapeOnTerrain(geometry, terrain, TERRAIN_GROUND_LIFT, maxGroundEdge)
+    if (box.max.y - box.min.y < 0.6) return yield* drapeOnTerrainSteps(geometry, terrain, TERRAIN_GROUND_LIFT, maxGroundEdge, expand)
     geometry.translate(0, terrain.height((box.min.x + box.max.x) / 2, (box.min.z + box.max.z) / 2), 0)
     return geometry
   }
@@ -509,7 +539,14 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   private addGeometry(color: number, geometry: THREE.BufferGeometry, glass = false, surface?: ConceptSurface, maxGroundEdge = 6) {
-    geometry = this.onTerrain(geometry, maxGroundEdge)
+    const steps = this.addGeometrySteps(color, geometry, glass, surface, maxGroundEdge)
+    while (!steps.next().done) { /* 한 번에 끝까지 */ }
+  }
+
+  // addGeometry를 조금씩 나눠 합니다(지형에 얹는 큰 바닥 면).
+  private *addGeometrySteps(color: number, geometry: THREE.BufferGeometry, glass = false, surface?: ConceptSurface, maxGroundEdge = 6): Generator<void, void> {
+    // 지형에 얹을 때 바로 펼친 도형(인덱스 없음)으로 받아 toNonIndexed를 따로 하지 않습니다.
+    geometry = yield* this.onTerrainSteps(geometry, maxGroundEdge, true)
     const plain = geometry.index ? geometry.toNonIndexed() : geometry
     if (plain !== geometry) geometry.dispose()
     this.tagBuilding(plain)
@@ -517,8 +554,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const linear = new THREE.Color(color)
     const count = plain.getAttribute('position').count
     const colors = new Uint8Array(count * 3)
-    const rgb = [Math.round(linear.r * 255), Math.round(linear.g * 255), Math.round(linear.b * 255)]
-    for (let index = 0; index < count; index++) colors.set(rgb, index * 3)
+    const r = Math.round(linear.r * 255), g = Math.round(linear.g * 255), b = Math.round(linear.b * 255)
+    for (let index = 0; index < count; index++) {
+      colors[index * 3] = r; colors[index * 3 + 1] = g; colors[index * 3 + 2] = b
+      if (index % 50_000 === 49_999) yield
+    }
     plain.setAttribute('color', new THREE.BufferAttribute(colors, 3, true))
     this.material(glass, surface).geometries.push(plain)
   }
@@ -701,7 +741,18 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   private box(color: number, width: number, height: number, depth: number, x: number, y: number, z: number, rotation = 0, glass = false, surface?: ConceptSurface) {
-    if (width <= 0 || height <= 0 || depth <= 0) return
+    const geometry = this.boxGeometry(width, height, depth, x, y, z, rotation, surface)
+    if (geometry) this.addGeometry(color, geometry, glass, surface)
+  }
+
+  // 지형에 얹는 큰 바닥 상자를 조금씩 나눠 놓습니다.
+  private *boxSteps(color: number, width: number, height: number, depth: number, x: number, y: number, z: number, rotation = 0, surface?: ConceptSurface): Generator<void, void> {
+    const geometry = this.boxGeometry(width, height, depth, x, y, z, rotation, surface)
+    if (geometry) yield* this.addGeometrySteps(color, geometry, false, surface)
+  }
+
+  private boxGeometry(width: number, height: number, depth: number, x: number, y: number, z: number, rotation = 0, surface?: ConceptSurface) {
+    if (width <= 0 || height <= 0 || depth <= 0) return null
     // 상자를 수만 개 만들기 때문에 매번 BoxGeometry를 새로 짓지 않고 단위 상자를 복사해 늘립니다.
     // 면별 UV(0~1)와 축 방향 법선은 늘려도 그대로라 결과는 BoxGeometry(width, height, depth)와 같습니다.
     const geometry = UNIT_BOX.clone()
@@ -725,16 +776,18 @@ export class StreetSceneLayer implements CustomLayerInterface {
       new THREE.Vector3(1, 1, 1),
     )
     geometry.applyMatrix4(transform)
-    this.addGeometry(color, geometry, glass, surface)
+    return geometry
   }
 
   private roof(color: number, outline: [number, number][], height: number, surface?: ConceptSurface) {
     this.addGeometry(color, flatPolygonGeometry([outline], height + 0.05, undefined, true), false, surface)
   }
 
-  private roadArea(polygons: polygonClipping.MultiPolygon, y: number, color: number, surface?: ConceptSurface) {
+  // 도로·보도 면을 하나씩 만들고 쉽니다(지형에 얹는 계산이 무거워 나눠 만듭니다).
+  private *roadAreaSteps(polygons: polygonClipping.MultiPolygon, y: number, color: number, surface?: ConceptSurface): Generator<void, void> {
     for (const polygon of polygons) {
-      if (isDrawablePolygon(polygon)) this.addGeometry(color, flatPolygonGeometry(polygon, y, GROUND_TEXTURE_METERS), false, surface)
+      if (isDrawablePolygon(polygon)) yield* this.addGeometrySteps(color, cachedFlatPolygon(polygon, y), false, surface)
+      yield
     }
   }
 
@@ -969,9 +1022,15 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
   }
 
-  private landscape(buildings: StreetBuilding[]) {
-    const polygons = buildings.map((building) => building.outline.map(streetMeters))
-    const occupied = (x: number, z: number) => polygons.some((polygon) => {
+  private *landscapeSteps(buildings: StreetBuilding[]): Generator<void, void> {
+    // 나무 자리가 건물 안인지 볼 때, 둘레 상자 밖의 건물은 바로 건너뜁니다(건물 1,270동을 매번 다 보지 않게).
+    const polygons = buildings.map((building) => {
+      const points = building.outline.map(streetMeters)
+      const xs = points.map(([x]) => x), zs = points.map(([, z]) => z)
+      return { points, minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) }
+    })
+    const occupied = (x: number, z: number) => polygons.some(({ points: polygon, minX, maxX, minZ, maxZ }) => {
+      if (x < minX || x > maxX || z < minZ || z > maxZ) return false
       let inside = false
       for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
         const [xi, zi] = polygon[i]
@@ -1024,11 +1083,12 @@ export class StreetSceneLayer implements CustomLayerInterface {
           if ((zi > tz) !== (zj > tz) && tx < (xj - xi) * (tz - zi) / (zj - zi) + xi) inside = !inside
         }
         if (inside && !occupied(tx, tz)) this.tree(tx, tz, 2.7 + (Math.abs(tx + tz) % 1.2), Math.sin(tx * 0.8 + tz * 1.3) > 0.72)
+        yield
       }
     }
   }
 
-  private buildGroundAndSideRoads(buildings: StreetBuilding[]) {
+  private *groundSteps(buildings: StreetBuilding[]): Generator<void, void> {
     const bounds = getStreetSceneBounds()
     const width = bounds.maxX - bounds.minX
     const depth = bounds.maxZ - bounds.minZ
@@ -1036,23 +1096,25 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const cz = (bounds.minZ + bounds.maxZ) / 2
     // The solid base belongs only to the flat map. On sloped terrain, moving
     // this scene-wide box to one sampled height makes it bury downhill blocks.
-    if (!this.terrain) this.box(0xd1ddd3, width, 0.85, depth, cx, -0.455, cz)
+    if (!this.terrain) yield* this.boxSteps(0xd1ddd3, width, 0.85, depth, cx, -0.455, cz)
     // 지형에서는 길과 바닥판을 휴대폰 메모리에 맞게 6m 단위로 굵게 나눠 얹으므로, 굽은 비탈에서 두 면의 높이가
     // 수십 cm까지 어긋납니다. 바닥판을 길보다 0.5m 아래에 깔아 길 위로 뚫고 올라오지 않게 합니다.
     // (길을 2.5m로 잘게 나누면 꼭짓점이 3.5배로 늘어 브라우저가 메모리 부족으로 멈췄습니다.)
-    this.box(0xffffff, width, 0.035, depth, cx, this.terrain ? -0.5 : -0.012, cz, 0, false, 'ground-pavers')
+    yield* this.boxSteps(0xffffff, width, 0.035, depth, cx, this.terrain ? -0.5 : -0.012, cz, 0, 'ground-pavers')
+    yield
     for (const [x, z, alongX, length] of [
       [cx, bounds.minZ, true, width], [cx, bounds.maxZ, true, width],
       [bounds.minX, cz, false, depth], [bounds.maxX, cz, false, depth],
     ] as const) {
-      this.box(0xd6e0d7, length, 0.12, 0.16, x, -0.015, z, alongX ? 0 : Math.PI / 2)
+      yield* this.boxSteps(0xd6e0d7, length, 0.12, 0.16, x, -0.015, z, alongX ? 0 : Math.PI / 2)
+      yield
     }
 
     // OSM woodland polygons mark the few genuinely open parcels. Clip their
     // geometry to the modeled slab instead of extending them into the map.
     for (const area of STREET_SURFACE_WAYS.green) {
       const polygon = clipPolygonToBounds(area.points.map(streetMeters), bounds)
-      if (polygon.length >= 3) this.roof(0xffffff, polygon, -0.034, 'ground-grass')
+      if (polygon.length >= 3) yield* this.addGeometrySteps(0xffffff, flatPolygonGeometry([polygon], -0.034 + 0.05, undefined, true), false, 'ground-grass')
       if (area.id === 1468551467) for (let i = 0; i < polygon.length; i++) {
         const [ax, az] = polygon[i]
         const [bx, bz] = polygon[(i + 1) % polygon.length]
@@ -1060,6 +1122,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
         this.beam(0xaaa79d, [ax, 0.2, az], [bx, 0.2, bz], 0.32)
         this.beam(0xd0cbc0, [ax, 0.41, az], [bx, 0.41, bz], 0.14)
       }
+      yield
     }
 
     // Narrow stone aprons make each footprint meet the ground as a parcel,
@@ -1088,15 +1151,16 @@ export class StreetSceneLayer implements CustomLayerInterface {
           [cxApron + ux + wx, 0.023, czApron + uz + wz], [cxApron - ux + wx, 0.023, czApron - uz + wz],
         ], 'ground-stone')
       }
+      yield
     }
 
     // 도로·보도 면은 미리 계산한 저장본을 그립니다(roadGround.ts, npm run build:road-ground).
     const ground = ROAD_GROUND
-    this.roadArea(ground.outer, 0.05, 0xffffff, 'ground-stone')
-    this.roadArea(ground.roads, 0.07, 0xffffff, 'ground-lane')
+    yield* this.roadAreaSteps(ground.outer, 0.05, 0xffffff, 'ground-stone')
+    yield* this.roadAreaSteps(ground.roads, 0.07, 0xffffff, 'ground-lane')
     // 골목길은 차도와 구별되는 따뜻한 베이지 포장으로 그리고, 차도보다 살짝 낮게 깔아 교차하는 곳에서는 차도가
     // 위로 보이게 합니다. 가장자리에는 아래 돌 포장(outer)이 밝은 테두리로 드러납니다.
-    this.roadArea(ground.footways, 0.06, ALLEY_PAVING_COLOR, 'ground-stone')
+    yield* this.roadAreaSteps(ground.footways, 0.06, ALLEY_PAVING_COLOR, 'ground-stone')
   }
 
   private sign(text: string, x: number, y: number, z: number, rotation: number, nx: number, nz: number, width: number, color: string) {
@@ -1846,11 +1910,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
   }
 
-  private build() {
+  private *buildSteps(): Generator<void, void> {
     const buildings = this.editedBuildings(this.buildingEdits)
     const workshop = buildings.find((building) => building.id === ARTIST_WORKSHOP_FOOTPRINT_ID)
     if (workshop) this.workshopCenter = outlineCenter(workshop.outline.map(streetMeters))
-    this.buildGroundAndSideRoads(buildings)
+    yield* this.groundSteps(buildings)
     // 처음에는 지금 화면 중심 근처 건물(과 공방)만 만들어 3D 거리를 빨리 띄우고, 나머지는 가까운 순서로 나눠
     // 만듭니다(scheduleDistrictBuild). 예전에는 촬영 거리 75m 안의 건물을 모두 한 번에 만들어, 휴대폰에서
     // 화면이 5초 넘게 멈췄습니다.
@@ -1859,8 +1923,10 @@ export class StreetSceneLayer implements CustomLayerInterface {
       const outline = building.outline.map(streetMeters)
       const [cx, cz] = outlineCenter(outline)
       const distance = Math.hypot(cx - focus[0], cz - focus[1])
-      if (building.id === ARTIST_WORKSHOP_FOOTPRINT_ID || distance <= FIRST_BUILD_RADIUS) this.buildOne(building, outline)
-      else this.pendingBuildings.push({ building, outline, distance })
+      if (building.id === ARTIST_WORKSHOP_FOOTPRINT_ID || distance <= FIRST_BUILD_RADIUS) {
+        this.buildOne(building, outline)
+        yield
+      } else this.pendingBuildings.push({ building, outline, distance })
     }
 
 
@@ -1870,11 +1936,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
     // Only its pavement edges are drawn separately, outside intersections.
     const points = PHOTOGRAPHED_STREET.map(streetMeters)
     const laneLift = 0.03
-    this.roadArea(ROAD_GROUND.kerbStone, 0.083 + laneLift, 0xffffff, 'ground-stone')
-    this.roadArea(ROAD_GROUND.kerbLine, 0.105 + laneLift, 0xe5e9df)
+    yield* this.roadAreaSteps(ROAD_GROUND.kerbStone, 0.083 + laneLift, 0xffffff, 'ground-stone')
+    yield* this.roadAreaSteps(ROAD_GROUND.kerbLine, 0.105 + laneLift, 0xe5e9df)
     // 원형 포장 무늬(위치·크기는 streetSceneData의 MEETING_CIRCLE_* 참고)
     const [roundX, roundZ] = streetMeters(MEETING_CIRCLE_CENTER)
-    this.roadArea(ROAD_GROUND.meeting, 0.088 + laneLift, 0xffffff, 'ground-stone')
+    yield* this.roadAreaSteps(ROAD_GROUND.meeting, 0.088 + laneLift, 0xffffff, 'ground-stone')
     for (const radius of [2.3, 2.66]) {
       const border = new THREE.TorusGeometry(radius, 0.03, 4, 48)
       border.rotateX(-Math.PI / 2)
@@ -1898,14 +1964,50 @@ export class StreetSceneLayer implements CustomLayerInterface {
       this.beam(0x4c5557, [ax - 1.25, 8.4, az], [bx - 1.25, 8.4, bz], 0.026)
       this.beam(0x6b7775, [ax - 0.5, 8.35, az], [bx - 0.5, 8.35, bz], 0.018)
     }
-    this.landscape(buildings)
-    this.flushSlots()
+    yield* this.landscapeSteps(buildings)
+    yield* this.flushSlotsSteps()
     // 화면에 가까운 건물부터 채워지도록 가까운 순서로 만듭니다.
     this.pendingBuildings.sort((a, b) => a.distance - b.distance)
   }
 
+  // 첫 장면을 deadline(performance.now 기준)까지 만듭니다. 다 만들면 true.
+  private runBuild(deadline: number) {
+    const job = this.buildJob
+    if (!job) return true
+    const started = performance.now()
+    let done = false
+    while (!done && performance.now() < deadline) done = !!job.next().done
+    this.buildWork += performance.now() - started
+    if (!done) return false
+    this.buildJob = null
+    // 성능 예산 확인용: 처음부터 다 만들 때까지 걸린 시간(나눠 만든 사이의 쉬는 시간 포함)
+    performance.measure(SCENE_BUILD_MEASURE, { start: this.buildStarted, end: performance.now() })
+    return true
+  }
+
+  // 첫 장면을 화면이 멈추지 않게 조금씩(한 번에 약 12ms) 만들고, 다 만들면 끝납니다. 지도에 붙이기 전에 기다립니다.
+  prepare() {
+    return new Promise<void>((resolve) => {
+      const step = () => this.runBuild(performance.now() + 12) ? resolve() : setTimeout(step, 0)
+      step()
+    })
+  }
+
+  // 이 지도에서 이미 3D 거리를 그린 적이 있으면, 바꿔 붙이기 전에 새 장면의 셰이더를 미리 컴파일해 둡니다.
+  // 그래야 지금 거리를 뗀 뒤 새 거리가 그려지기까지 3D 거리가 잠깐 사라지는 틈이 없습니다.
+  async warmUp(map: Map) {
+    const renderer = renderersByCanvas.get(map.getCanvas())
+    if (renderer) await renderer.compileAsync(this.scene, this.camera).catch(() => undefined)
+  }
+
+  // 남은 첫 장면을 한 번에 만듭니다(테스트, 또는 기다리지 않고 바로 붙일 때).
+  finishBuild() {
+    this.runBuild(Infinity)
+  }
+
   // 나눠 만들려고 미뤄 둔 건물을 한 번에 모두 만듭니다(지도에 붙지 않은 장면을 채울 때, 테스트).
   completePendingBuildings() {
+    this.finishBuild()
     while (this.pendingBuildings.length) {
       const next = this.pendingBuildings.shift()!
       this.buildOne(next.building, next.outline)
@@ -2228,7 +2330,14 @@ export class StreetSceneLayer implements CustomLayerInterface {
 
   // 모아 둔 도형을 재질별로 하나의 메시로 합쳐 장면에 넣습니다.
   private flushSlots() {
+    const steps = this.flushSlotsSteps()
+    while (!steps.next().done) { /* 한 번에 모두 */ }
+  }
+
+  // 재질별로 하나씩 합치고 쉽니다(첫 장면을 나눠 만들 때).
+  private *flushSlotsSteps(): Generator<void, void> {
     for (const slot of this.slots.values()) {
+      yield
       if (slot.geometries.length === 0) continue
       const merged = mergeGeometries(slot.geometries)
       if (!merged) continue
@@ -2286,7 +2395,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
       }
       this.flushSlots()
       for (const { meshes } of old) for (const mesh of meshes) mesh.geometry.dispose()
-      this.shadowsBaked = false
+      // 같은 도형을 합치기만 하므로 그림자는 그대로입니다(다시 굽지 않음).
       this.map.triggerRepaint()
       if (pending.length) setTimeout(step, 0)
     }
@@ -2322,45 +2431,66 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private scheduleDistrictBuild() {
     const started = performance.now()
     let sinceFlush = 0
+    // 모은 건물을 메시로 합치는 일도 재질 하나씩 나눠 합니다(한 번에 합치면 0.2~0.5초 멈춤).
+    let flushing: Generator<void, void> | null = null
+    const flushed = () => {
+      // 새로 붙은 먼 동네 건물도 길을 가리는지 다시 봅니다.
+      this.scheduleOcclusion()
+      // 그림자 지도는 전체 장면을 한 번 더 그려야 해서 무겁습니다. 먼 동네를 다 붙인 뒤 한 번만 다시 계산합니다.
+      if (!this.pendingBuildings.length) {
+        this.shadowsBaked = false
+        this.consolidateSlots()
+      }
+      this.map?.triggerRepaint()
+    }
     const step = () => {
       if (!this.map) return
       const deadline = performance.now() + 12
-      while (this.pendingBuildings.length && performance.now() < deadline) {
+      while (performance.now() < deadline) {
+        if (flushing) {
+          if (flushing.next().done) { flushing = null; flushed() }
+          continue
+        }
+        if (!this.pendingBuildings.length) break
         const next = this.pendingBuildings.shift()!
         this.buildOne(next.building, next.outline)
         sinceFlush++
+        if (sinceFlush >= DISTRICT_FLUSH_BUILDINGS || !this.pendingBuildings.length) {
+          // 새 메시는 이미 고리 묶음 안에 들어가므로, 숨긴 상태면 함께 숨겨진 채로 붙습니다.
+          this.group = 'scene'
+          this.buildingContext = null
+          flushing = this.flushSlotsSteps()
+          sinceFlush = 0
+        }
       }
       this.group = 'scene'
       this.buildingContext = null
-      if (sinceFlush >= 300 || !this.pendingBuildings.length) {
-        // 새 메시는 이미 고리 묶음 안에 들어가므로, 숨긴 상태면 함께 숨겨진 채로 붙습니다.
-        this.flushSlots()
-        // 새로 붙은 먼 동네 건물도 길을 가리는지 다시 봅니다.
-        this.scheduleOcclusion()
-        sinceFlush = 0
-        // 그림자 지도는 전체 장면을 한 번 더 그려야 해서 무겁습니다. 먼 동네를 다 붙인 뒤 한 번만 다시 계산합니다.
-        if (!this.pendingBuildings.length) {
-          this.shadowsBaked = false
-          this.consolidateSlots()
-        }
-        this.map.triggerRepaint()
-      }
-      if (this.pendingBuildings.length) setTimeout(step, 0)
+      if (this.pendingBuildings.length || flushing) setTimeout(step, 0)
       else performance.measure(DISTRICT_BUILD_MEASURE, { start: started, end: performance.now() })
     }
     setTimeout(step, 0)
   }
 
   onAdd(map: Map, gl: WebGL2RenderingContext) {
+    // prepare를 기다리지 않고 붙였으면 남은 첫 장면을 여기서 마저 만듭니다.
+    this.finishBuild()
     this.map = map
     // 그래픽 연결이 다시 붙어 층을 다시 추가한 경우에도 그림자 지도를 새로 계산합니다.
     this.shadowsBaked = false
     if (this.pendingBuildings.length) this.scheduleDistrictBuild()
     map.on('moveend', this.scheduleOcclusion)
     this.scheduleOcclusion()
-    this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true })
-    // 장면이 움직이지 않으므로 그림자 지도는 첫 프레임에 한 번만 계산합니다.
-    configureRenderer(this.renderer)
+    // 같은 지도(그래픽 연결)에서는 렌더러를 함께 씁니다. 3D 거리를 다시 만들 때(지형 켜고 끄기) 셰이더를 처음부터
+    // 다시 컴파일하지 않아 멈춤이 줄어듭니다.
+    let shared = sharedRenderers.get(gl)
+    if (!shared) {
+      shared = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true })
+      // 장면이 움직이지 않으므로 그림자 지도는 첫 프레임에 한 번만 계산합니다.
+      configureRenderer(shared)
+      sharedRenderers.set(gl, shared)
+    }
+    renderersByCanvas.set(map.getCanvas(), shared)
+    this.renderer = shared
     // 처음 그릴 때 셰이더 수십 개를 한꺼번에 컴파일하느라 화면이 몇 초 멈췄습니다(휴대폰에서 특히). 그래픽
     // 드라이버가 뒤에서 컴파일하도록(KHR_parallel_shader_compile) 미리 맡겨 두고, 끝나면 그리기 시작합니다.
     // 그동안 바탕 지도는 그대로 보이고 움직일 수 있습니다.
@@ -2556,7 +2686,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.conceptTextures.forEach((texture) => texture.dispose())
     this.sharedMaterials.forEach((shared) => { shared.material.dispose(); shared.plain?.dispose() })
     this.fadeSplits = []
-    this.renderer?.dispose()
+    // 렌더러는 같은 지도의 다음 3D 거리가 이어 씁니다. 이 장면의 그림자 지도만 정리합니다.
+    this.scene.traverse((object) => { if ((object as THREE.DirectionalLight).shadow) (object as THREE.DirectionalLight).shadow.dispose() })
     this.renderer = null
     this.map = null
   }

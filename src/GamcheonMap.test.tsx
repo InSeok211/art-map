@@ -29,7 +29,7 @@ vi.mock('./map/useGeomanGeometry', () => ({ useGeomanGeometry: (_map: unknown, o
 // These tests exercise map controls against a mocked MapLibre canvas. Real
 // district geometry is checked separately and in the browser.
 vi.mock('./scene/modelFiles', () => ({ prefetchStreetModels: () => {}, prefetchPlacedModels: () => {} }))
-vi.mock('./scene/StreetSceneLayer', () => ({ SEE_THROUGH_OPACITY: 0.35, StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d'; setOtherBuildingsHidden() {}; setBuildingOpacity() {}; setMyPosition() {}; setExtraAlleys() {}; setRouteLine() {}; setPlacedModels() {} } }))
+vi.mock('./scene/StreetSceneLayer', () => ({ SEE_THROUGH_OPACITY: 0.35, StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d'; prepare() { return Promise.resolve() }; warmUp() { return Promise.resolve() }; updateBuildingEdits() { return true }; setOtherBuildingsHidden() {}; setBuildingOpacity() {}; setMyPosition() {}; setExtraAlleys() {}; setRouteLine() {}; setPlacedModels() {} } }))
 
 vi.mock('maplibre-gl', () => ({
   Map: class {
@@ -122,13 +122,14 @@ describe('GamcheonMap', () => {
     expect(layerVisibility).toEqual({ 'building-footprint-fill': 'none', 'building-footprint-line': 'none' })
   })
 
-  it('makes 3D buildings see-through on request and automatically while editing alleys', () => {
+  it('makes 3D buildings see-through on request and automatically while editing alleys', async () => {
     const setOpacity = vi.spyOn(StreetSceneLayer.prototype, 'setBuildingOpacity')
     vi.useFakeTimers()
     try {
       render(<GamcheonMap editable />)
       act(() => styleLoad.current!())
-      act(() => { vi.advanceTimersByTime(STREET_LAYER_FALLBACK_MS + 10) })
+      // 3D 거리는 나눠 만든(prepare) 뒤에 붙습니다.
+      await act(async () => { await vi.advanceTimersByTimeAsync(STREET_LAYER_FALLBACK_MS + 10) })
     } finally {
       vi.useRealTimers()
     }
@@ -246,14 +247,14 @@ describe('GamcheonMap', () => {
     expect(mapFlyTo.at(-1)).toMatchObject({ center: [129.0105, 35.0978] })
   })
 
-  it('builds the 3D street even if the base map never finishes loading its tiles', () => {
+  it('builds the 3D street even if the base map never finishes loading its tiles', async () => {
     vi.useFakeTimers()
     try {
       render(<GamcheonMap />)
       expect(screen.getByRole('status').textContent).toContain('3D 거리를 불러오는 중')
       // 스타일은 준비됐지만 타일이 오지 않아 'idle'이 끝내 오지 않는 경우
       act(() => styleLoad.current!())
-      act(() => { vi.advanceTimersByTime(STREET_LAYER_FALLBACK_MS + 10) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(STREET_LAYER_FALLBACK_MS + 10) })
       expect(screen.queryByText('3D 거리를 불러오는 중입니다.')).toBeNull()
     } finally {
       vi.useRealTimers()

@@ -330,20 +330,32 @@ export function GamcheonMap({
       raiseRoute()
     }
     // 3D 거리를 (다시) 만듭니다. 지형을 넘기면 건물·길을 언덕 높이에 맞추고 바탕 지도에도 지형을 켭니다.
-    const createStreetLayer = (terrain?: TerrainSampler) => {
-      if (streetLayer && map.getLayer(streetLayer.id)) map.removeLayer(streetLayer.id)
+    // 새 거리는 화면을 멈추지 않게 조금씩 만들고(prepare), 다 만들 때까지 지금 거리를 그대로 보여 준 뒤 바꿉니다.
+    let buildVersion = 0
+    const createStreetLayer = async (terrain?: TerrainSampler) => {
+      const version = ++buildVersion
       // 지금 화면 중심 근처 건물부터 만들어 3D 거리를 빨리 띄웁니다.
-      setPlacedModelError('')
-      streetLayer = new StreetSceneLayer({
-        terrain, focus: map.getCenter().toArray() as [number, number], buildingEdits: buildingEditsRef.current,
+      const edits = buildingEditsRef.current
+      const next = new StreetSceneLayer({
+        terrain, focus: map.getCenter().toArray() as [number, number], buildingEdits: edits,
         picking: !!buildingEditor,
         onModelError: (name) => setPlacedModelError(`3D 모델 '${name}'을(를) 불러오지 못했습니다.`),
       })
+      await next.prepare()
+      await next.warmUp(map)
+      // 만드는 사이에 다른 설정으로 다시 만들기 시작했으면 이 거리는 버립니다.
+      if (disposed || version !== buildVersion) return
+      if (streetLayer && map.getLayer(streetLayer.id)) map.removeLayer(streetLayer.id)
+      setPlacedModelError('')
+      streetLayer = next
       streetLayer.setOtherBuildingsHidden(workshopOnlyRef.current, false)
       streetLayer.setBuildingOpacity(modelsSeeThroughRef.current ? SEE_THROUGH_OPACITY : 1)
       streetLayerRef.current = streetLayer
       addStreetLayer()
       if (map.getSource(DEM_SOURCE_ID)) map.setTerrain(terrain ? { source: DEM_SOURCE_ID, exaggeration: 1 } : null)
+      // 만드는 사이에 건물을 고쳤으면 바뀐 건물만 반영합니다(많이 바뀌었으면 다시 만듭니다).
+      const latest = buildingEditsRef.current
+      if (latest && latest !== edits && !streetLayer.updateBuildingEdits(latest)) void createStreetLayer(terrain)
       setSceneStatus('ready')
     }
     let buildStarted = false
@@ -351,15 +363,13 @@ export function GamcheonMap({
       if (disposed || buildStarted) return
       buildStarted = true
       const terrain = terrainModeRef.current ? await loadTerrain().catch(() => undefined) : undefined
-      if (!disposed) createStreetLayer(terrain)
+      if (!disposed) void createStreetLayer(terrain)
     }, 0)
     rebuildStreetRef.current = async (useTerrain) => {
       if (!buildStarted) return // 처음 만들 때 지금 설정을 따릅니다.
       setSceneStatus('loading')
       const terrain = useTerrain ? await loadTerrain().catch(() => undefined) : undefined
-      // '불러오는 중' 표시가 먼저 그려지도록 한 박자 쉬고 만듭니다(만드는 동안 화면이 멈춥니다).
-      await new Promise((resolve) => window.setTimeout(resolve, 40))
-      if (!disposed && terrainModeRef.current === useTerrain) createStreetLayer(terrain)
+      if (!disposed && terrainModeRef.current === useTerrain) await createStreetLayer(terrain)
     }
     // 길찾기 경로 선은 3D 건물에 가리지 않도록 3D 층보다 위에 둡니다.
     const raiseRoute = () => { for (const id of [...BUILDING_EDIT_LAYER_IDS, ...TRAIL_LAYER_IDS, ...ROUTE_LAYER_IDS]) if (map.getLayer(id)) map.moveLayer(id) }

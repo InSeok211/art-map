@@ -3,10 +3,13 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import * as THREE from 'three'
 import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings, streetMeters } from './streetSceneData'
 import { StreetSceneLayer } from './StreetSceneLayer'
+import { loadTerrain } from '../map/terrain'
 
 // 성능 예산: 첫 화면을 막는 3D 거리 장면 만들기 시간입니다. 개발 PC(Node)에서 약 3.5초이고, 도로 면을 미리
 // 계산하기 전에는 17초가 넘었습니다. 느린 CI 기계를 고려해 넉넉히 잡되, 큰 퇴보는 잡아냅니다.
 const SCENE_BUILD_BUDGET_MS = 9000
+// 나눠 만드는 첫 장면의 한 조각(개발 PC Node 기준)
+const STEP_BUDGET_MS = 150
 
 let layer: StreetSceneLayer
 let elapsed = 0
@@ -15,6 +18,8 @@ beforeAll(() => {
   getPhotographedStreetBuildings()
   const started = performance.now()
   layer = new StreetSceneLayer()
+  // 지도에서는 prepare로 나눠 만들고, 여기서는 첫 장면을 한 번에 만들어 시간을 잽니다.
+  layer.finishBuild()
   elapsed = performance.now() - started
   deferred = (layer as unknown as { pendingBuildings: unknown[] }).pendingBuildings.length
   // 지도에 붙으면 나눠 만들 나머지 건물을 테스트에서는 한 번에 채웁니다.
@@ -28,6 +33,25 @@ describe('street scene', () => {
     expect(deferred).toBeGreaterThan(getPhotographedStreetBuildings().length / 2)
     expect((layer as unknown as { pendingBuildings: unknown[] }).pendingBuildings.length).toBe(0)
   })
+
+  it('splits the first view into small steps so the map never freezes, also on terrain', async () => {
+    const terrain = await loadTerrain()
+    for (const options of [{}, { terrain }]) {
+      const next = new StreetSceneLayer(options)
+      const job = (next as unknown as { buildJob: Generator<void, void> }).buildJob
+      let longest = 0, steps = 0
+      for (;;) {
+        const started = performance.now()
+        const done = job.next().done
+        longest = Math.max(longest, performance.now() - started)
+        steps++
+        if (done) break
+      }
+      // Node는 브라우저보다 느립니다. 한 조각이 이보다 길면 지도가 눈에 띄게 멈춥니다.
+      expect(longest).toBeLessThan(STEP_BUDGET_MS)
+      expect(steps).toBeGreaterThan(50)
+    }
+  }, 120000)
 
   it('hides every building except the artist workshop on request', () => {
     const rings = (layer as unknown as { buildingRings: THREE.Group[] }).buildingRings

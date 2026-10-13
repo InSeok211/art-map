@@ -45,4 +45,19 @@ describe('drapeOnTerrain', () => {
     // 이웃 삼각형이 변의 가운데 점을 함께 쓰므로 꼭짓점 수가 삼각형마다 따로 만든 것보다 훨씬 적습니다.
     expect(position.count).toBeLessThan(triangles * 3 / 2)
   })
+
+  it('computes the same lighting normals as three.js while working in small steps', () => {
+    const hill = { height: (x: number, z: number) => Math.sin(x / 7) * 3 + Math.cos(z / 5) * 2 }
+    const ground = new THREE.PlaneGeometry(60, 40, 1, 1)
+    ground.rotateX(-Math.PI / 2)
+    const draped = drapeOnTerrain(ground, hill, 0, 3)
+    const expected = draped.clone()
+    expected.computeVertexNormals()
+    const ours = draped.getAttribute('normal'), theirs = expected.getAttribute('normal')
+    for (let index = 0; index < ours.count; index++) {
+      expect(ours.getX(index)).toBeCloseTo(theirs.getX(index), 5)
+      expect(ours.getY(index)).toBeCloseTo(theirs.getY(index), 5)
+      expect(ours.getZ(index)).toBeCloseTo(theirs.getZ(index), 5)
+    }
+  })
 })
