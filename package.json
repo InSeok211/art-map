@@ -24,6 +24,10 @@
     "build:terrain": "node scripts/build-terrain.mjs",
     "build:greenhouse": "node scripts/build-greenhouse-from-plan.mjs",
     "build:beautiful-hangul": "node scripts/build-beautiful-hangul.mjs",
+    "build:brep-building": "node scripts/build-brep-building.mjs",
+    "build:domido": "node scripts/build-brep-building.mjs --building domido",
+    "build:domido-design": "node scripts/build-brep-building.mjs --building domido --detail design",
+    "build:greenhouse-brep": "node scripts/build-brep-building.mjs --building greenhouse --detail design",
     "pull:alleys": "node scripts/pull-site-alleys.mjs"
   },
   "dependencies": {

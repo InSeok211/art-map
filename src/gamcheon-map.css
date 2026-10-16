@@ -1009,6 +1009,47 @@
 .gamcheon-map__building-model-file strong { overflow: hidden; color: #20232a; text-overflow: ellipsis; white-space: nowrap; }
 .gamcheon-map__building-model-file small { flex: none; color: #8a90a0; font-size: 11px; }
 .gamcheon-map__building-models .gamcheon-map__model-import { position: relative; flex: 1; }
+/* 건물 편집: 저장 도구는 고정하고 선택 대상의 속성만 스크롤합니다. */
+.gamcheon-map__building-editor { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+.gamcheon-map__building-editor > .gamcheon-map__building-publish { flex: none; margin: 0 24px 10px; padding: 10px 12px; gap: 7px; }
+.gamcheon-map__publish-heading, .gamcheon-map__publish-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gamcheon-map__publish-heading strong { color: #20232a; font-size: 12px; }
+.gamcheon-map__publish-heading > span { flex: none; padding: 3px 6px; border-radius: 5px; background: rgba(255,255,255,.8); color: #737b89; font-size: 10px; }
+.gamcheon-map__publish-meta > span { color: #747b89; font-size: 10px; }
+.gamcheon-map__history-actions { display: flex; gap: 6px; }
+.gamcheon-map__history-actions button { min-height: 28px; padding: 3px 6px; border: 0; border-radius: 5px; background: transparent; color: #495774; font: inherit; font-size: 11px; cursor: pointer; }
+.gamcheon-map__history-actions button:disabled { opacity: .4; cursor: default; }
+.gamcheon-map__save-status { display: -webkit-box; margin: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: #657185; font-size: 10px; line-height: 1.5; }
+.gamcheon-map__building-scroll { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 24px 20px; scrollbar-gutter: stable; }
+.gamcheon-map__selection-empty { margin: 12px 0; padding: 16px 13px; border: 1px dashed #d5dbea; border-radius: 10px; background: #fafbfe; }
+.gamcheon-map__selection-empty strong { color: #34405a; font-size: 13px; }
+.gamcheon-map__selection-empty p { margin: 7px 0 0; color: #737b89; font-size: 11px; line-height: 1.7; }
+.gamcheon-map__selection-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 0 10px; }
+.gamcheon-map__selection-heading > div { min-width: 0; }
+.gamcheon-map__selection-heading span { display: block; color: #6374ca; font-size: 10px; font-weight: 800; }
+.gamcheon-map__selection-heading strong { display: block; margin: 5px 0; overflow-wrap: anywhere; color: #26334c; font-size: 16px; }
+.gamcheon-map__selection-heading small { color: #858d9a; font-size: 10px; }
+.gamcheon-map__selection-heading > button { flex: none; min-height: 32px; padding: 5px 10px; border: 1px solid #dde2ee; border-radius: 7px; background: #fff; color: #637089; font: inherit; font-size: 11px; cursor: pointer; }
+.gamcheon-map__inspector-section { margin: 8px 0; border: 1px solid #e1e5ef; border-radius: 10px; background: #fff; }
+.gamcheon-map__inspector-section > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 42px; padding: 10px 12px; list-style: none; color: #34405a; font-size: 12px; font-weight: 800; cursor: pointer; }
+.gamcheon-map__inspector-section > summary::-webkit-details-marker { display: none; }
+.gamcheon-map__inspector-section > summary::after { content: ''; width: 7px; height: 7px; flex: none; border-right: 1.5px solid #7d89a2; border-bottom: 1.5px solid #7d89a2; transform: rotate(45deg); transition: transform .15s; }
+.gamcheon-map__inspector-section[open] > summary { border-bottom: 1px solid #edf0f6; }
+.gamcheon-map__inspector-section[open] > summary::after { transform: rotate(225deg); }
+.gamcheon-map__inspector-section > .gamcheon-map__inspector-section-body { margin: 0; padding: 13px 12px; border: 0; border-radius: 0 0 10px 10px; background: #fafbfe; }
+.gamcheon-map__inspector-section-body .gamcheon-map__model-inspector { margin: 0; padding: 0; border: 0; background: transparent; }
+.gamcheon-map__inspector-section-body .gamcheon-map__building-search { margin: 0; }
+.gamcheon-map__inspector-section-body .gamcheon-map__model-help { margin-bottom: 3px; }
+.gamcheon-map__inspector-section-body .gamcheon-map__workspace-tools { margin: 0; padding: 0; border: 0; background: transparent; }
+.gamcheon-map__inspector-section summary:focus-visible, .gamcheon-map__selection-heading button:focus-visible, .gamcheon-map__history-actions button:focus-visible { outline: 2px solid #5b6cf0; outline-offset: 2px; }
+@media (max-width: 720px) {
+  .gamcheon-map__panel.is-building-panel:not(.is-sheet-open) { max-height: min(60%, 440px); }
+  .gamcheon-map__panel.is-building-panel.is-sheet-open { max-height: min(76%, 620px); }
+  .gamcheon-map__building-editor > .gamcheon-map__building-publish { margin-right: 16px; margin-left: 16px; }
+  .gamcheon-map__building-scroll { padding-right: 16px; padding-left: 16px; }
+  .gamcheon-map__panel.is-building-panel .gamcheon-map__tool-head { flex: none; }
+  .gamcheon-map__panel.is-building-panel .gamcheon-map__mode-tabs { flex: none; margin-bottom: 10px; }
+}
 
 /* 09 컴팩트 앱: 홈페이지가 브랜드 헤더와 홈/작가 목록 메뉴를 담당합니다. */
 .gamcheon-map.is-compact-app { min-height:0; }

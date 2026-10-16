@@ -652,7 +652,7 @@ export function GamcheonMap({
 
       <aside
         ref={panelRef}
-        className={`gamcheon-map__panel${editor ? ' is-editing' : ''}${sheetOpen ? ' is-sheet-open' : ''}`}
+        className={`gamcheon-map__panel${mode === 'buildings' ? ' is-building-panel' : ''}${editor ? ' is-editing' : ''}${sheetOpen ? ' is-sheet-open' : ''}`}
         aria-label={mode === 'route' ? '길찾기' : mode === 'alleys' ? '골목길 편집' : mode === 'buildings' ? '건물 고치기' : '장소 탐색'}
         // 휴대폰에서 검색창이나 선택 상자를 누르면 시트를 펼쳐 키보드·목록이 가리지 않게 합니다.
         onFocusCapture={(event) => { if (/^(INPUT|SELECT|TEXTAREA)$/.test((event.target as HTMLElement).tagName)) setSheetOpen(true) }}

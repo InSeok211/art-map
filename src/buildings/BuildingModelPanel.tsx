@@ -72,7 +72,7 @@ export function PlacingBanner({ tools }: { tools: ModelTools }) {
 }
 
 // 고른 모델의 크기·방향·위치 조절
-export function ModelInspector({ model, tools, onClose }: { model: PlacedModel; tools: ModelTools; onClose: () => void }) {
+export function ModelInspector({ model, tools }: { model: PlacedModel; tools: ModelTools }) {
   return <div className="gamcheon-map__model-inspector">
     <strong>3D 모델 · {model.name || model.modelId}</strong>
     <NumberField label="모델 경도" value={model.longitude} min={128} max={130} step={0.000001} digits={7}
@@ -101,7 +101,6 @@ export function ModelInspector({ model, tools, onClose }: { model: PlacedModel; 
       <button type="button" onClick={tools.onMove}>위치 옮기기</button>
       {tools.onDuplicate && <button type="button" onClick={tools.onDuplicate}>모델 복제</button>}
       <button type="button" onClick={() => { if (window.confirm('이 모델을 지도에서 지울까요?')) tools.onRemove() }}>모델 지우기</button>
-      <button type="button" onClick={onClose}>선택 해제</button>
     </div>
   </div>
 }

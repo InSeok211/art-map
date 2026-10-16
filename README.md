@@ -8,6 +8,7 @@
 - [수정 위치·실행 방법·홈페이지 반영·인수인계 설명](docs/MAINTENANCE_GUIDE.md)
 - [로컬 편집기: 선택·배치·고도·실행 취소·백업·서버 공개](docs/LOCAL_EDITOR_GUIDE.md)
 - [최신 커밋 통합: 포함·제외·보류 기능 결정](docs/FEATURE_INTEGRATION.md)
+- [USD BRep로 CAD 건물 제작·GLB 내보내기](docs/USD_BREP_BUILDINGS.md)
 
 이 저장소는 지도 원본입니다. 상위 `실서버_배포본_20261001/`의 `worker/`·`static/`는 과거 홈페이지 배포본입니다.
 

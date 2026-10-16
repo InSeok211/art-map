@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>USD BRep 건물 제작 실험</title>
+<style>
+body{margin:0;background:#e5edf0;font-family:system-ui,sans-serif;color:#213b43}canvas{display:block}
+aside{position:absolute;top:30px;left:36px;pointer-events:none}small{letter-spacing:.14em;color:#4e737e}
+h1{margin:10px 0;font-size:27px}p{line-height:1.6;font-size:14px;color:#4e6570}
+#status{position:absolute;bottom:24px;left:36px;font-size:13px}
+</style>
+<aside><small>GAMCHEON · CAD EXPERIMENT</small><h1>USD BRep로 만든 2층 건물</h1>
+<p>문과 창문 개구부 · 옥상 난간<br>마우스로 회전하고 확대할 수 있습니다.</p></aside>
+<div id="status">모델을 불러오는 중…</div>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three'
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js'
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js'
+const scene=new THREE.Scene();scene.background=new THREE.Color('#e5edf0')
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2))
+renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap
+document.body.append(renderer.domElement)
+const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,.1,100);camera.position.set(12,10,14)
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,3,0);controls.update()
+scene.add(new THREE.HemisphereLight(0xffffff,0x68777a,2.6))
+const sun=new THREE.DirectionalLight(0xffecd5,3.2);sun.position.set(8,14,9);sun.castShadow=true
+sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-10,right:10,top:10,bottom:-10});scene.add(sun)
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:0xd5dfe1,roughness:1}))
+ground.rotation.x=-Math.PI/2;ground.position.y=-.02;ground.receiveShadow=true;scene.add(ground)
+try{
+ const gltf=await new GLTFLoader().loadAsync('gamcheon-brep-building.glb')
+ gltf.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});scene.add(gltf.scene)
+ document.querySelector('#status').textContent='CAD → 테셀레이션 → GLB · 미터 단위 · 제작 경로 검증용 샘플'
+ window.modelReady=true
+}catch(error){document.querySelector('#status').textContent=error.message;throw error}
+renderer.setAnimationLoop(()=>renderer.render(scene,camera))
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)})
+</script>
+</html>

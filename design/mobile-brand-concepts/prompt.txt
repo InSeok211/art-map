@@ -1,0 +1,25 @@
+Built-in image generation
+
+Use case: ui-mockup. Generate ONE high-resolution editorial design contact sheet showing TEN distinctly different mobile web app design concepts for the SAME EXISTING company, GAMCHEON ARTISTS. This is a single comparison board asset. Landscape large canvas, ideally 3840 by 2560 or as high resolution as available. Exact organized layout FIVE columns by TWO rows of concept groups. Each concept group has TWO full mobile screens side by side: left HOME MAP, right ARTIST DIRECTORY. Total TWENTY mobile screens. Do not crop any screen. Maintain portrait screen proportions approximately 390:844. No device hardware, hands or perspective. Every group numbered 01 through 10 with a small Korean concept caption. Neutral light-gray board background with generous consistent gutters, top title 'GAMCHEON ARTISTS' and subtitle '모바일 디자인 시안 · 홈 & 작가 목록'. Make elegant polished finished Figma-like UI, readable Korean labels, prioritize consistent company identity over arbitrary varied palettes.
+
+Brand source from actual existing website: wordmark exact 'GAMCHEON ARTISTS', tiny letter-spaced subtitle 'LOCAL ARTS AGENCY'. Wordmark is ultra-bold condensed sans-serif, tight spacing. Main UI font Pretendard / Noto Sans KR style Korean sans, heavy compact headlines, strong typographic hierarchy. Signature periwinkle blue HEX #6981FF. Black #151515, white #FFFFFF, gray #777777, hairline borders #E5E5E5. Existing site uses spacious white sections, large black headings, monochrome artist studio photography, fine black dividers, pill outlined CTA buttons with small right arrow, selective black sections and blue accents. Preserve these exact brand cues ACROSS ALL TEN concepts. NO warm-orange branding, purple candy branding, green brand, invented new logos, generic app mascots, serif branding. They must all feel like mobile apps made by same company as this editorial arts agency website.
+
+Reference image supplied is ONLY visual reference for the Gamcheon hillside village map art already used in the website: pastel buildings, winding stairs, trees, pale stone alleys; carry that village look into map screens, adjust viewing angle per concept. This is NOT an edit of reference image. Map art is schematic preview not actual wayfinding data.
+
+Nonnegotiable functionality in ALL twenty screens: bottom fixed navigation has EXACTLY TWO buttons with simple consistent line icons and Korean labels '홈' and '작가 목록'. Home tab active on left, artist directory active on right. NO other tabs, no undefined tabs, no plus button, no profile, no favorites, no menu placeholders. Home is primarily map with search '작가·공방 검색', compact '2D / 3D' switch, current location circular button, blue studio markers, small selected-place info panel '소담 도예공방' and action '작가 보기'. Directory has title '작가 목록', search '이름 또는 공방 검색', category filter '전체 회화 공예 도예 사진', artist photos/artwork thumbnails and sample artist names '김하늘', '이서연', '박도윤'. Do NOT use decorative abstract map placeholder; show detailed village terrain art. Artist names and pictures illustrative.
+
+Ten concepts, each with genuinely different placement and content hierarchy while preserving same brand:
+01 '브랜드 기본형': white wordmark header, inline search, map below, compact horizontal artist list, blue thin active tab underline.
+02 '지도 몰입형': edge-to-edge 3D village map, floating white search, small wordmark badge, floating place card; directory minimal image-and-text rows.
+03 '에디토리얼': large bold black section labels, small blue uppercase captions, flat fine-line panels; directory two-column artwork grid.
+04 '블랙 헤더': short black masthead with white wordmark and blue accents, white map controls and content; directory black title band and white list.
+05 '갤러리 그리드': clean white home, discreet controls and small place strip; directory tall large two-column artist photos with compact captions beneath.
+06 '타이포 중심': bold stacked compact wordmark, strong fine dividers, black and white navigation with blue selected state; directory text-dominant artist rows and small square photos.
+07 '하단 시트': big map, shallow white draggable bottom sheet directly above nav; directory category tabs with blue underline, compact studio cards.
+08 '컬렉션': small monochrome artist-work thumbnail strip ABOVE map, blue-selected studio marker; directory full-width exhibition-style photo cards with small numbered artist labels.
+09 '컴팩트': smaller masthead, maximum visible map, compact selected-place row; directory dense readable list with small portrait images, subtle separators.
+10 '다크 갤러리': black-and-charcoal chrome with white type, signature periwinkle controls, colorful village map and monochrome artworks; directory matching restrained dark photo list.
+Make these ten coherent design explorations, not ten recolors. Every panel must look professional and content-specific to Korean local art agency. No explanation paragraphs on board, no gradients, no glows, no fake metrics, no lorem ipsum.
+
+Final edit: replace third top-row caption with 03 에디토리얼; preserve other content.
+
