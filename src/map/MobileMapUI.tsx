@@ -100,6 +100,7 @@ export function MobileMapUI({
       </> : <p className="gm-mobile__empty">지도에서 장소를 눌러 보세요.</p>}
     </section>
 
+    <button type="button" className="gm-mobile__compact-locate" aria-label="내 위치로 이동" onClick={onLocate} aria-pressed={located}>◎</button>
     <nav className="gm-mobile__nav" aria-label="지도 메뉴">
       {([['map', '⌖', '지도'], ['list', '☷', '목록'], ['route', '➚', '길찾기']] as const).map(([target, icon, label]) => <button
         key={target}

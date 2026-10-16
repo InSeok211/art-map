@@ -23,7 +23,8 @@ const FULL = new URLSearchParams(window.location.search).get('mode') === 'full' 
 const HOST_ORIGINS = [window.location.origin]
 // ?host=site: 홈페이지가 제목 카드(← 감천 작가 지도 · 작가 목록)를 지도 위에 띄우므로, 휴대폰 화면의 지도 쪽
 // 이름표를 숨기고 검색·분류를 그 카드 아래에 둡니다(CSS의 is-site-hosted).
-const SITE_HOSTED = new URLSearchParams(window.location.search).get('host') === 'site'
+const HOST_MODE = new URLSearchParams(window.location.search).get('host')
+const SITE_HOSTED = HOST_MODE === 'site' || HOST_MODE === 'compact'
 
 interface HostState { places: Place[]; selectedId: string | null; canPick: boolean }
 
@@ -106,7 +107,7 @@ const EmbeddedMapView = memo(function EmbeddedMapView({ host, alleys, buildingEd
   const places = FULL ? [artistWorkshopPlace(buildingEdits), ...host.places.filter((place) => place.id !== ARTIST_WORKSHOP_PLACE.id)] : host.places
   return <GamcheonMap
     compact={!FULL}
-    className={`${FULL ? 'artist-full-map' : 'artist-embed-map'}${SITE_HOSTED ? ' is-site-hosted' : ''}`}
+    className={`${FULL ? 'artist-full-map' : 'artist-embed-map'}${SITE_HOSTED ? ' is-site-hosted' : ''}${HOST_MODE === 'compact' ? ' is-compact-app' : ''}`}
     places={places}
     alleys={alleys}
     buildingEdits={buildingEdits}

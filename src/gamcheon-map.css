@@ -684,6 +684,7 @@
 /* 공개 지도의 휴대폰 화면: 06 '지도 몰입' 시안(MobileMapUI). 흰 카드·파란 강조색, 위 이름표·검색·분류,
    아래 장소 카드와 하단 메뉴. 넓은 화면과 편집 화면에서는 쓰지 않습니다. */
 .gm-mobile { display: none; }
+.gm-mobile__compact-locate { display: none; }
 .gamcheon-map__desktop-nav, .gamcheon-map__desktop-selection { display: none; }
 
 @media (max-width: 720px) {
@@ -1008,3 +1009,28 @@
 .gamcheon-map__building-model-file strong { overflow: hidden; color: #20232a; text-overflow: ellipsis; white-space: nowrap; }
 .gamcheon-map__building-model-file small { flex: none; color: #8a90a0; font-size: 11px; }
 .gamcheon-map__building-models .gamcheon-map__model-import { position: relative; flex: 1; }
+
+/* 09 컴팩트 앱: 홈페이지가 브랜드 헤더와 홈/작가 목록 메뉴를 담당합니다. */
+.gamcheon-map.is-compact-app { min-height:0; }
+@media(max-width:720px) {
+  .gamcheon-map.is-immersive.is-compact-app .gm-mobile__top { top:12px; right:16px; left:16px; gap:8px; }
+  .gamcheon-map.is-compact-app .gm-mobile__chips { display:none; }
+  .gamcheon-map.is-compact-app .gm-mobile__search { height:46px; border:1px solid #e5e5e5; border-radius:9px; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+  .gamcheon-map.is-compact-app .gm-mobile__search input { font-size:16px; }
+  .gamcheon-map.is-compact-app .gm-mobile__nav { display:none; }
+  .gamcheon-map.is-compact-app .gm-mobile__card { bottom:12px; right:16px; left:16px; padding:0 12px 12px; max-height:calc(100% - 140px); border-radius:10px; border-color:#e5e5e5; box-shadow:0 3px 12px rgba(0,0,0,.1); }
+  .gamcheon-map.is-compact-app .gm-mobile__card.is-list { height:min(380px,calc(100% - 140px)); }
+  .gamcheon-map.is-compact-app .gm-mobile__card.is-route { max-height:60%; }
+  .gamcheon-map.is-compact-app .gm-mobile__head strong { font-size:17px; }
+  .gamcheon-map.is-compact-app .gm-mobile__photo { display:none; }
+  .gamcheon-map.is-compact-app .gm-mobile__description { display:none; }
+  .gamcheon-map.is-compact-app .gm-mobile__actions { margin-top:8px; }
+  .gamcheon-map.is-compact-app .gm-mobile__actions button { min-height:44px; }
+  .gamcheon-map.is-immersive.is-compact-app .gamcheon-map__map-tools { top:72px; right:16px; }
+  .gamcheon-map.is-immersive.is-compact-app .gamcheon-map__more-menu { top:72px; right:64px; }
+  .gamcheon-map.is-compact-app .gamcheon-map__scene-status { top:72px; }
+  .gamcheon-map.is-compact-app .gm-mobile__compact-locate { display:grid; place-items:center; position:absolute; z-index:521; right:16px; bottom:186px; width:44px; height:44px; border:1px solid #e5e5e5; border-radius:50%; background:#fff; color:#526ae5; font-size:26px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  .gamcheon-map.is-compact-app:has(.gm-mobile__card.is-list) .gm-mobile__compact-locate,
+  .gamcheon-map.is-compact-app:has(.gm-mobile__card.is-route) .gm-mobile__compact-locate { display:none; }
+  .gamcheon-map.is-compact-app .maplibregl-ctrl-bottom-right { bottom:170px; }
+}
