@@ -1070,8 +1070,9 @@
   .gamcheon-map.is-immersive.is-compact-app .gamcheon-map__map-tools { top:72px; right:16px; }
   .gamcheon-map.is-immersive.is-compact-app .gamcheon-map__more-menu { top:72px; right:64px; }
   .gamcheon-map.is-compact-app .gamcheon-map__scene-status { top:72px; }
-  .gamcheon-map.is-compact-app .gm-mobile__compact-locate { display:grid; place-items:center; position:absolute; z-index:521; right:16px; bottom:186px; width:44px; height:44px; border:1px solid #e5e5e5; border-radius:50%; background:#fff; color:#526ae5; font-size:26px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  .gamcheon-map.is-compact-app .gm-mobile__compact-locate { display:grid; place-items:center; position:absolute; z-index:521; right:16px; bottom:240px; width:44px; height:44px; border:1px solid #e5e5e5; border-radius:50%; background:#fff; color:#526ae5; font-size:26px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
   .gamcheon-map.is-compact-app:has(.gm-mobile__card.is-list) .gm-mobile__compact-locate,
   .gamcheon-map.is-compact-app:has(.gm-mobile__card.is-route) .gm-mobile__compact-locate { display:none; }
-  .gamcheon-map.is-compact-app .maplibregl-ctrl-bottom-right { bottom:170px; }
+  /* 아래 카드 바로 위에 지도 출처, 그 위에 나침반, 맨 위에 내 위치 버튼을 겹치지 않게 쌓습니다. */
+  .gamcheon-map.is-compact-app .maplibregl-ctrl-bottom-right { bottom:162px; }
 }
