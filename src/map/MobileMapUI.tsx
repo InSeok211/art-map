@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { PLACE_CATEGORY_ICONS, PLACE_CATEGORY_LABELS } from '../types'
 import type { CategoryFilter, Place } from '../types'
 
 // 공개 지도의 휴대폰 화면(06 '지도 몰입' 시안). 지도를 넓게 두고 위에는 이름표·검색·분류를, 아래에는 고른 장소
@@ -25,9 +26,9 @@ interface MobileMapUIProps {
   route: ReactNode
 }
 
-const CATEGORIES: [CategoryFilter, string][] = [['all', '전체'], ['attraction', '명소'], ['shop', '가게']]
-const categoryLabel = (place: Place) => place.category === 'attraction' ? '명소' : '가게'
-const placeIcon = (place: Place) => place.category === 'attraction' ? '✦' : '⌂'
+const CATEGORIES: [CategoryFilter, string][] = [['all', '전체'], ['attraction', '명소'], ['shop', '가게'], ['toilets', '화장실'], ['bus_stop', '버스 정류장']]
+const categoryLabel = (place: Place) => PLACE_CATEGORY_LABELS[place.category]
+const placeIcon = (place: Place) => PLACE_CATEGORY_ICONS[place.category]
 
 export function MobileMapUI({
   query, onQueryChange, category, onCategoryChange, counts, places, selected, view, onView,
@@ -48,7 +49,7 @@ export function MobileMapUI({
         <input
           type="search"
           aria-label="장소 검색"
-          placeholder="공방·가게·명소 검색"
+          placeholder="공방·가게·명소·화장실·정류장 검색"
           value={query}
           onChange={(event) => { onQueryChange(event.target.value); if (view !== 'list') onView('list') }}
         />

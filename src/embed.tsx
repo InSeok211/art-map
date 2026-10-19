@@ -8,6 +8,7 @@ import type { BuildingEdits } from './buildings/buildingEdits'
 import { GamcheonMap } from './GamcheonMap'
 import { LOCAL_PUBLIC_PREVIEW, PUBLISHED_ALLEYS_KEY } from './buildings/publicPreview'
 import { isInsideGamcheonMap } from './map/gamcheonBoundary'
+import { useMapPlaces } from './places/mapPlaceStore'
 import type { Place } from './types'
 import './embed.css'
 
@@ -81,6 +82,7 @@ function EmbeddedMap() {
   const [host, setHost] = useState<HostState>({ places: [], selectedId: null, canPick: false })
   const alleys = useSiteAlleys()
   const buildingEdits = useSiteBuildingEdits()
+  const { places: mapPlaces } = useMapPlaces()
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       if (event.source !== window.parent || !HOST_ORIGINS.includes(event.origin)) return
@@ -97,14 +99,15 @@ function EmbeddedMap() {
     return () => window.removeEventListener('message', receive)
   }, [])
 
-  return <>{buildingEdits && <EmbeddedMapView host={host} alleys={alleys} buildingEdits={buildingEdits} />}
+  return <>{buildingEdits && <EmbeddedMapView host={host} alleys={alleys} buildingEdits={buildingEdits} mapPlaces={mapPlaces} />}
     {LOCAL_PUBLIC_PREVIEW && <div className="embed-local-preview">로컬 공개본 미리보기</div>}
   </>
 }
 
-const EmbeddedMapView = memo(function EmbeddedMapView({ host, alleys, buildingEdits }: { host: HostState; alleys: Alley[]; buildingEdits: BuildingEdits }) {
+const EmbeddedMapView = memo(function EmbeddedMapView({ host, alleys, buildingEdits, mapPlaces }: { host: HostState; alleys: Alley[]; buildingEdits: BuildingEdits; mapPlaces: Place[] }) {
   // 작가님 공방은 편집 앱에서 공개한 장소 정보·위치를 씁니다.
-  const places = FULL ? [artistWorkshopPlace(buildingEdits), ...host.places.filter((place) => place.id !== ARTIST_WORKSHOP_PLACE.id)] : host.places
+  const basePlaces = FULL ? [artistWorkshopPlace(buildingEdits), ...host.places.filter((place) => place.id !== ARTIST_WORKSHOP_PLACE.id)] : host.places
+  const places = [...basePlaces, ...mapPlaces.filter(place => !basePlaces.some(base => base.id === place.id))]
   return <GamcheonMap
     compact={!FULL}
     className={`${FULL ? 'artist-full-map' : 'artist-embed-map'}${SITE_HOSTED ? ' is-site-hosted' : ''}${HOST_MODE === 'compact' ? ' is-compact-app' : ''}`}

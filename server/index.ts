@@ -5,6 +5,7 @@ import { adminBuildings, discard, publicBuildings, publish, saveDraft } from './
 import { deleteModel, getModel, listModels, uploadModel } from './models'
 import { getPhoto, uploadPhoto } from './images'
 import { ensureMapTables } from './schema'
+import { readPlaces, savePlaces } from './places'
 
 export type { MapEnv } from './env'
 
@@ -14,6 +15,9 @@ export type { MapEnv } from './env'
 type Handler = (request: Request, env: MapEnv, url: URL, params: string[]) => Promise<Response> | Response
 
 const routes: [method: string, pattern: RegExp, admin: boolean, handler: Handler][] = [
+  ['GET', /^\/api\/map-places$/, false, (_request, env) => readPlaces(env)],
+  ['GET', /^\/api\/admin\/map-places$/, true, (_request, env) => readPlaces(env)],
+  ['PUT', /^\/api\/admin\/map-places$/, true, (request, env) => savePlaces(request, env)],
   ['GET', /^\/api\/map-alleys$/, false, (_request, env) => publicAlleys(env)],
   ['GET', /^\/api\/admin\/map-alleys$/, true, (_request, env) => adminAlleys(env)],
   ['PUT', /^\/api\/admin\/map-alleys$/, true, (request, env) => saveAlleys(request, env)],

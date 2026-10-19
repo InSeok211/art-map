@@ -1,3 +1,4 @@
+import { PLACE_CATEGORY_ICONS, PLACE_CATEGORY_LABELS } from '../types'
 import type { CategoryFilter, Place } from '../types'
 
 export interface PlaceDraft {
@@ -14,6 +15,8 @@ const categories: { value: CategoryFilter; label: string }[] = [
   { value: 'all', label: '전체' },
   { value: 'attraction', label: '명소' },
   { value: 'shop', label: '가게' },
+  { value: 'toilets', label: '화장실' },
+  { value: 'bus_stop', label: '버스 정류장' },
 ]
 
 interface PlaceBrowserProps {
@@ -80,10 +83,10 @@ export function PlaceBrowser({
             onClick={() => onSelect(place)}
           >
             <span className={`gamcheon-map__place-icon gamcheon-map__place-icon--${place.category}`} aria-hidden="true">
-              {place.category === 'attraction' ? '✦' : '⌂'}
+              {PLACE_CATEGORY_ICONS[place.category]}
             </span>
             <span className="gamcheon-map__place-body">
-              <span className="gamcheon-map__place-meta">{place.category === 'attraction' ? '명소' : '가게'} <span>·</span> {String(index + 1).padStart(2, '0')}</span>
+              <span className="gamcheon-map__place-meta">{PLACE_CATEGORY_LABELS[place.category]} <span>·</span> {String(index + 1).padStart(2, '0')}</span>
               <strong>{place.name}</strong>
               {place.address && <span className="gamcheon-map__place-address">{place.address}</span>}
               {place.description && <span className="gamcheon-map__place-description">{place.description}</span>}
@@ -130,7 +133,7 @@ export function PlaceForm({ draft, onChange, locationError, onSave, onCancel, on
         {located ? `위치 선택됨 · ${draft.latitude!.toFixed(5)}, ${draft.longitude!.toFixed(5)}` : '위치를 선택해 주세요'}
       </div>
       <label>장소 이름<input aria-label="장소 이름" value={draft.name} maxLength={80} onChange={(event) => onChange({ ...draft, name: event.target.value })} placeholder="예: 골목 카페" /></label>
-      <label>분류<select aria-label="장소 분류 선택" value={draft.category} onChange={(event) => onChange({ ...draft, category: event.target.value as Place['category'] })}><option value="shop">가게</option><option value="attraction">명소</option></select></label>
+      <label>분류<select aria-label="장소 분류 선택" value={draft.category} onChange={(event) => onChange({ ...draft, category: event.target.value as Place['category'] })}>{categories.filter(item => item.value !== 'all').map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
       <label>주소<input aria-label="주소" value={draft.address} maxLength={160} onChange={(event) => onChange({ ...draft, address: event.target.value })} placeholder="주소를 입력하세요" /></label>
       <label>설명<textarea aria-label="설명" value={draft.description} maxLength={500} onChange={(event) => onChange({ ...draft, description: event.target.value })} placeholder="장소를 소개해 주세요" rows={3} /></label>
       <div className="gamcheon-map__editor-actions">

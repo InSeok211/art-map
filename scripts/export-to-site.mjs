@@ -41,6 +41,13 @@ await cp(work, appTarget, { recursive: true })
 // 2) 지도 API
 const apiTarget = path.join(site, 'app/map/generated')
 await mkdir(apiTarget, { recursive: true })
+for (const [route, source] of [
+  ['app/api/map-places', '../../map/map-api'],
+  ['app/api/admin/map-places', '../../../map/map-api'],
+]) {
+  await mkdir(path.join(site, route), { recursive: true })
+  await writeFile(path.join(site, route, 'route.ts'), `// 지도 장소 API: art-map 내보내기로 생성합니다.\nexport { GET, POST, PUT, DELETE } from '${source}';\n`)
+}
 await bundle({
   entryPoints: ['server/index.ts'],
   outfile: path.join(apiTarget, 'map-api.js'),

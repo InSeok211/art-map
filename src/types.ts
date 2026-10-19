@@ -1,4 +1,12 @@
-export type PlaceCategory = 'shop' | 'attraction'
+export type PlaceCategory = 'shop' | 'attraction' | 'toilets' | 'bus_stop'
+
+export const PLACE_CATEGORY_LABELS: Record<PlaceCategory, string> = {
+  shop: '가게', attraction: '명소', toilets: '화장실', bus_stop: '버스 정류장',
+}
+
+export const PLACE_CATEGORY_ICONS: Record<PlaceCategory, string> = {
+  shop: '⌂', attraction: '✦', toilets: 'WC', bus_stop: 'BUS',
+}
 
 export interface Place {
   id: string

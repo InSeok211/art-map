@@ -198,10 +198,11 @@
   line-height: 1;
 }
 
-.gamcheon-map__categories { display: flex; gap: 7px; padding: 17px 24px 20px; }
+.gamcheon-map__categories { display: flex; flex-wrap: wrap; gap: 7px; padding: 17px 24px 20px; }
 
 .gamcheon-map__category {
   min-width: 55px;
+  flex: none;
   padding: 8px 13px;
   border: 1px solid #e5ebe5;
   border-radius: 8px;
@@ -210,6 +211,7 @@
   font: inherit;
   font-size: 11px;
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
   transition: background .15s, color .15s, border-color .15s;
 }
@@ -268,6 +270,8 @@
 
 .gamcheon-map__place-icon--attraction { background: #fff0e8; color: #d77b4b; }
 .gamcheon-map__place-icon--shop { background: #e7f3ef; color: #278376; }
+.gamcheon-map__place-icon--toilets { background: #e6f3fb; color: #2377b8; font-size: 12px; }
+.gamcheon-map__place-icon--bus_stop { background: #f1eafa; color: #7555ad; font-size: 10px; }
 .gamcheon-map__place-body { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
 .gamcheon-map__place-meta { color: #9aa8a0; font-size: 10px; font-weight: 700; }
 .gamcheon-map__place-meta span { padding: 0 2px; color: #c9d3cc; }
@@ -380,6 +384,15 @@
 }
 
 .gamcheon-map__marker--shop { background: #247d72; }
+.gamcheon-map__marker.gamcheon-map__marker--toilets,
+.gamcheon-map__marker.gamcheon-map__marker--bus_stop {
+  display: grid; width: 32px; height: 32px; place-items: center;
+  border-radius: 10px; color: #fff; font-size: 10px; font-weight: 900;
+}
+.gamcheon-map__marker.gamcheon-map__marker--toilets { background: #2377b8; }
+.gamcheon-map__marker.gamcheon-map__marker--bus_stop { background: #7555ad; }
+.gamcheon-map__marker.gamcheon-map__marker--toilets.is-active,
+.gamcheon-map__marker.gamcheon-map__marker--bus_stop.is-active { width: 36px; height: 36px; }
 .gamcheon-map__marker.is-active { width: 23px; height: 23px; border-width: 3px; }
 .gamcheon-map__scene-status {
   position: absolute;
@@ -710,8 +723,8 @@
   .gm-mobile__search svg { width: 19px; height: 19px; flex: none; }
   .gm-mobile__search input { width: 100%; min-width: 0; border: 0; outline: 0; background: none; color: var(--m-ink); font: inherit; font-size: 14px; }
   .gm-mobile__search input::placeholder { color: var(--m-ink); opacity: .45; }
-  .gm-mobile__chips { display: flex; gap: 6px; }
-  .gm-mobile__chips button { min-height: 34px; padding: 6px 13px; border-radius: 999px; box-shadow: 0 3px 10px rgba(0, 0, 0, .14); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+  .gm-mobile__chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: thin; }
+  .gm-mobile__chips button { min-height: 34px; flex: none; padding: 6px 13px; border-radius: 999px; box-shadow: 0 3px 10px rgba(0, 0, 0, .14); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
   .gm-mobile__chips button[aria-pressed='true'] { border-color: var(--m-blue); background: var(--m-blue); color: #fff; }
 
   /* 지도 도구: 오른쪽에 흰 네모 버튼으로 세로로 둡니다. */
@@ -773,6 +786,8 @@
 
   /* 고른 표식: 파란 고리와 이름표 */
   .gamcheon-map.is-immersive .gamcheon-map__marker.is-active { width: 26px; height: 26px; border-width: 3px; box-shadow: 0 0 0 6px rgba(105, 129, 255, .4), 0 4px 12px rgba(0, 0, 0, .45); }
+  .gamcheon-map.is-immersive .gamcheon-map__marker--toilets.is-active,
+  .gamcheon-map.is-immersive .gamcheon-map__marker--bus_stop.is-active { width: 36px; height: 36px; }
   .gamcheon-map.is-immersive .gamcheon-map__marker.is-active::after {
     position: absolute; bottom: calc(100% + 10px); left: 50%; padding: 5px 10px; border-radius: 999px; background: #fff; color: var(--m-ink);
     box-shadow: 0 4px 12px rgba(0, 0, 0, .3); content: attr(data-name); font-size: 11px; font-weight: 800; white-space: nowrap; transform: translateX(-50%); pointer-events: none;

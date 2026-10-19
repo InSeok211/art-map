@@ -29,7 +29,7 @@ vi.mock('./map/useGeomanGeometry', () => ({ useGeomanGeometry: (_map: unknown, o
 // These tests exercise map controls against a mocked MapLibre canvas. Real
 // district geometry is checked separately and in the browser.
 vi.mock('./scene/modelFiles', () => ({ prefetchStreetModels: () => {}, prefetchPlacedModels: () => {} }))
-vi.mock('./scene/StreetSceneLayer', () => ({ SEE_THROUGH_OPACITY: 0.35, StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d'; prepare() { return Promise.resolve() }; warmUp() { return Promise.resolve() }; updateBuildingEdits() { return true }; setOtherBuildingsHidden() {}; setBuildingOpacity() {}; setMyPosition() {}; setExtraAlleys() {}; setRouteLine() {}; setPlacedModels() {} } }))
+vi.mock('./scene/StreetSceneLayer', () => ({ SEE_THROUGH_OPACITY: 0.35, StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d'; prepare() { return Promise.resolve() }; warmUp() { return Promise.resolve() }; updateBuildingEdits() { return true }; setOtherBuildingsHidden() {}; setBuildingOpacity() {}; setMyPosition() {}; setExtraAlleys() {}; setRouteLine() {}; setPlacedModels() {}; setMapPlaces() {} } }))
 
 vi.mock('maplibre-gl', () => ({
   Map: class {

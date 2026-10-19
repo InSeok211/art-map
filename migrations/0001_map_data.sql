@@ -17,6 +17,13 @@ CREATE TABLE IF NOT EXISTS gps_trails (
 );
 
 -- 건물 편집 초안(draft)·공개본(published)
+CREATE TABLE IF NOT EXISTS map_places (
+  id TEXT PRIMARY KEY NOT NULL DEFAULT 'active',
+  places_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 건물 편집 초안(draft)·공개본(published)
 CREATE TABLE IF NOT EXISTS map_building_edits (
   id TEXT PRIMARY KEY NOT NULL CHECK (id IN ('draft', 'published')),
   edits_json TEXT NOT NULL,

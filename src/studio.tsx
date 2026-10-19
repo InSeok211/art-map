@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { GamcheonMap } from './GamcheonMap'
 import type { EditTool } from './GamcheonMap'
-import { ARTIST_WORKSHOP_PLACE, artistWorkshopPlace } from './places/artistWorkshop'
-import { BEAUTIFUL_HANGUL_PLACE } from './scene/beautifulHangul'
+import { ARTIST_WORKSHOP_PLACE } from './places/artistWorkshop'
 import { useAlleyStore } from './alleys/alleyStore'
 import { useBuildingEditStore } from './buildings/buildingEditStore'
-import type { Place } from './types'
 import './studio.css'
 import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings } from './scene/streetSceneData'
+import { useMapPlaces } from './places/mapPlaceStore'
 
 // 감천 골목지도 편집 앱입니다. 홈페이지 운영자 화면의 '지도 편집'(/admin/map-editor)이 /map-app/studio/를 띄우고,
 // 골목길과 건물을 고쳐 공개 지도(홈페이지 /map)에 반영합니다.
@@ -35,17 +34,16 @@ const reviewView = Number(reviewId) === ARTIST_WORKSHOP_FOOTPRINT_ID ? {
   bearing: Number.isFinite(reviewBearing) && query.has('bearing') ? reviewBearing : 45,
 } : undefined
 
-// 장소는 공개 지도와 같은 기본 장소만 보여 줍니다(작가 위치는 홈페이지가 공개 지도에 넘겨 줌). 작가님 공방은
-// 건물 탭에서 고친 장소 정보와 위치를 바로 보여 줍니다(초안).
-const placesFor = (edits: Parameters<typeof artistWorkshopPlace>[0]): Place[] => [artistWorkshopPlace(edits), BEAUTIFUL_HANGUL_PLACE]
-const EDIT_TOOLS: EditTool[] = ['alleys', 'buildings']
+// 장소 메뉴는 공개 지도의 편의시설을 관리합니다. 공방은 기존 건물 메뉴에서 관리합니다.
+const EDIT_TOOLS: EditTool[] = ['places', 'alleys', 'buildings']
 
 function Studio() {
   const [phoneLayout, setPhoneLayout] = useState(() => window.matchMedia('(max-width: 720px)').matches)
   const [mobileEditing, setMobileEditing] = useState(true)
   const alleyStore = useAlleyStore()
   const buildingStore = useBuildingEditStore()
-  const places = useMemo(() => placesFor(buildingStore.draft), [buildingStore.draft])
+  const placeStore = useMapPlaces(true)
+  const places = placeStore.places
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 720px)')
@@ -56,9 +54,9 @@ function Studio() {
 
   const editing = !phoneLayout || mobileEditing
   const saveState = PREVIEW ? '이 브라우저에만 저장(미리보기)' : '홈페이지 서버에 저장'
-  if (!alleyStore.ready) return <main className="studio-login">
-    <p role="status">{alleyStore.notice || '골목길 서버 데이터를 불러오는 중…'}</p>
-    {alleyStore.notice && <button type="button" onClick={() => window.location.reload()}>새로고침</button>}
+  if (!alleyStore.ready || !placeStore.ready) return <main className="studio-login">
+    <p role="status">{alleyStore.notice || placeStore.notice || '지도 서버 데이터를 불러오는 중…'}</p>
+    {(alleyStore.notice || placeStore.notice) && <button type="button" onClick={() => window.location.reload()}>새로고침</button>}
   </main>
   return (
     <div className="demo-shell">
@@ -68,14 +66,16 @@ function Studio() {
           <span><strong>골목지도 편집 앱</strong><small>{saveState}</small></span>
         </div>
         <div className="studio-header-actions">
+          <button className="studio-place-publish" type="button" disabled={!placeStore.dirty || placeStore.saving} onClick={() => void placeStore.publish()}>{placeStore.saving ? '저장 중…' : '장소 공개하기'}</button>
           {phoneLayout && <button className="demo-edit-toggle" type="button" onClick={() => setMobileEditing((current) => !current)}>{editing ? '지도만 보기' : '편집하기'}</button>}
           <a className="studio-link" href={PREVIEW ? '../' : '/map'} target="_blank" rel="noreferrer">공개 지도 보기</a>
         </div>
       </header>
       <main className="demo-main">
-        <GamcheonMap initialView={reviewView} places={places} editable={editing} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} buildingEditor={buildingStore} />
+        <GamcheonMap initialView={reviewView} places={places} onPlacesChange={placeStore.update} editable={editing && !placeStore.saving} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} buildingEditor={buildingStore} />
       </main>
       {alleyStore.notice && <div className="demo-note is-alert" role="status">{alleyStore.notice}</div>}
+      {placeStore.notice && <div className="studio-place-status" role="status">{placeStore.notice}</div>}
     </div>
   )
 }

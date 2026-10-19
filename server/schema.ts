@@ -5,6 +5,9 @@ import type { MapEnv } from './env'
 let ready: Promise<unknown> | null = null
 export function ensureMapTables(env: Pick<MapEnv, 'DB'>) {
   ready ??= env.DB.batch([
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS map_places (
+      id TEXT PRIMARY KEY NOT NULL DEFAULT 'active', places_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS map_alleys (
       id TEXT PRIMARY KEY NOT NULL DEFAULT 'active', alleys_json TEXT NOT NULL,
       dismissed_json TEXT NOT NULL DEFAULT '[]', updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),

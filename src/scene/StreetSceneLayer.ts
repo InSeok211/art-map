@@ -28,6 +28,8 @@ import { BEAUTIFUL_HANGUL_URL, GREEN_HOUSE_URL, loadModel } from './modelFiles'
 import { PlacedModels } from './placedModels'
 import { mergeByMaterial } from './mergeModel'
 import { routeLineMeshes } from './routeLine'
+import { createRoadviewBusShelter } from './roadviewBusShelter'
+import type { Place } from '../types'
 import type { RoadGround } from './roadGround'
 // 길을 가리는 건물 반투명(findRoadOccluders)은 2026-10-09 주석 처리했습니다. 되살릴 때 아래 두 줄의 주석을 풉니다.
 // import { buildRoadRuns } from './roadGround'
@@ -204,6 +206,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private signTextures: THREE.CanvasTexture[] = []
   private conceptTextures = new globalThis.Map<ConceptSurface, THREE.DataTexture>()
   private shadowCatcher: THREE.Mesh | null = null
+  private busShelter: THREE.Group | null = null
   private shadowsBaked = false
   // 공방을 뺀 건물(벽·지붕·간판·사진 외관)은 이 묶음에 넣어 한꺼번에 숨기거나 보일 수 있게 합니다.
   // 도로·바닥·나무·전신주와 공방은 장면에 바로 넣어 늘 보입니다.
@@ -1966,6 +1969,12 @@ export class StreetSceneLayer implements CustomLayerInterface {
       this.beam(0x6b7775, [ax - 0.5, 8.35, az], [bx - 0.5, 8.35, bz], 0.018)
     }
     yield* this.landscapeSteps(buildings)
+    // OSM 정류장 표지는 도로 쪽에 두고 쉘터는 동쪽 보도 쪽으로 약 1.1m 물린다.
+    // 현장 실측 전까지 크기와 방향은 근사치.
+    const [shelterX, shelterZ] = streetMeters([129.0101505, 35.0972086])
+    this.busShelter = createRoadviewBusShelter()
+    this.busShelter.position.set(shelterX + 1.1, this.terrain?.height(shelterX + 1.1, shelterZ) ?? 0, shelterZ)
+    this.scene.add(this.busShelter)
     yield* this.flushSlotsSteps()
     // 화면에 가까운 건물부터 채워지도록 가까운 순서로 만듭니다.
     this.pendingBuildings.sort((a, b) => a.distance - b.distance)
@@ -2643,11 +2652,34 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.placedModels.set(models)
   }
 
+  setMapPlaces(places: readonly Place[]) {
+    if (!this.busShelter) return
+    const stop = places.find(place => place.id === 'osm-node-3859163057' && place.category === 'bus_stop')
+    this.busShelter.visible = !!stop
+    if (stop) {
+      const [x, z] = streetMeters([stop.longitude, stop.latitude])
+      this.busShelter.position.set(x + 1.1, this.terrain?.height(x + 1.1, z) ?? 0, z)
+    }
+    this.shadowsBaked = false
+    this.map?.triggerRepaint()
+  }
+
   onRemove() {
     this.placedModels.detach()
     this.setExtraAlleys([])
     this.extraAlleyMaterials.forEach((material) => material.dispose())
     this.extraAlleyMaterials = []
+    if (this.busShelter) {
+      const materials = new Set<THREE.Material>()
+      this.busShelter.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return
+        object.geometry.dispose()
+        materials.add(object.material as THREE.Material)
+      })
+      materials.forEach((material) => material.dispose())
+      this.busShelter.removeFromParent()
+      this.busShelter = null
+    }
     this.modelFoundations.forEach((mesh) => {
       mesh.removeFromParent()
       mesh.geometry.dispose()
