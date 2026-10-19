@@ -8,6 +8,7 @@ import type { BuildingEdits } from './buildings/buildingEdits'
 import { GamcheonMap } from './GamcheonMap'
 import { LOCAL_PUBLIC_PREVIEW, PUBLISHED_ALLEYS_KEY } from './buildings/publicPreview'
 import { isInsideGamcheonMap } from './map/gamcheonBoundary'
+import { MAP_AMENITIES } from './data/mapAmenities'
 import type { Place } from './types'
 import './embed.css'
 
@@ -104,7 +105,7 @@ function EmbeddedMap() {
 
 const EmbeddedMapView = memo(function EmbeddedMapView({ host, alleys, buildingEdits }: { host: HostState; alleys: Alley[]; buildingEdits: BuildingEdits }) {
   // 작가님 공방은 편집 앱에서 공개한 장소 정보·위치를 씁니다.
-  const places = FULL ? [artistWorkshopPlace(buildingEdits), ...host.places.filter((place) => place.id !== ARTIST_WORKSHOP_PLACE.id)] : host.places
+  const places = FULL ? [artistWorkshopPlace(buildingEdits), ...host.places.filter((place) => place.id !== ARTIST_WORKSHOP_PLACE.id), ...MAP_AMENITIES] : host.places
   return <GamcheonMap
     compact={!FULL}
     className={`${FULL ? 'artist-full-map' : 'artist-embed-map'}${SITE_HOSTED ? ' is-site-hosted' : ''}${HOST_MODE === 'compact' ? ' is-compact-app' : ''}`}

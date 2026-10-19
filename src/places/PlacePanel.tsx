@@ -1,3 +1,4 @@
+import { PLACE_CATEGORY_ICONS, PLACE_CATEGORY_LABELS } from '../types'
 import type { CategoryFilter, Place } from '../types'
 
 export interface PlaceDraft {
@@ -14,6 +15,8 @@ const categories: { value: CategoryFilter; label: string }[] = [
   { value: 'all', label: '전체' },
   { value: 'attraction', label: '명소' },
   { value: 'shop', label: '가게' },
+  { value: 'toilets', label: '화장실' },
+  { value: 'bus_stop', label: '버스 정류장' },
 ]
 
 interface PlaceBrowserProps {
@@ -80,10 +83,10 @@ export function PlaceBrowser({
             onClick={() => onSelect(place)}
           >
             <span className={`gamcheon-map__place-icon gamcheon-map__place-icon--${place.category}`} aria-hidden="true">
-              {place.category === 'attraction' ? '✦' : '⌂'}
+              {PLACE_CATEGORY_ICONS[place.category]}
             </span>
             <span className="gamcheon-map__place-body">
-              <span className="gamcheon-map__place-meta">{place.category === 'attraction' ? '명소' : '가게'} <span>·</span> {String(index + 1).padStart(2, '0')}</span>
+              <span className="gamcheon-map__place-meta">{PLACE_CATEGORY_LABELS[place.category]} <span>·</span> {String(index + 1).padStart(2, '0')}</span>
               <strong>{place.name}</strong>
               {place.address && <span className="gamcheon-map__place-address">{place.address}</span>}
               {place.description && <span className="gamcheon-map__place-description">{place.description}</span>}

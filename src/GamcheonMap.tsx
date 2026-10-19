@@ -34,6 +34,7 @@ import type { PlaceDraft } from './places/PlacePanel'
 import { ARTIST_WORKSHOP_PLACE } from './places/artistWorkshop'
 import { newId } from './map/listUtils'
 import baseStyle from './data/positron-style.json'
+import { PLACE_CATEGORY_ICONS, PLACE_CATEGORY_LABELS } from './types'
 import type { CategoryFilter, Place } from './types'
 
 const CENTER: [number, number] = [129.00905, 35.09512]
@@ -253,11 +254,18 @@ export function GamcheonMap({
       .sort((a, b) => Number(b.id === ARTIST_WORKSHOP_PLACE.id) - Number(a.id === ARTIST_WORKSHOP_PLACE.id)),
     [localPlaces, query, category],
   )
+  const shownSelectedPlace = selectedPlace && visiblePlaces.some((place) => place.id === selectedPlace.id) ? selectedPlace : null
 
   // 휴대폰 분류 칩의 개수(검색어만 반영)
   const categoryCounts = useMemo(() => {
     const matching = filterPlaces(localPlaces.filter((place) => isInsideGamcheonMap(place.longitude, place.latitude)), { query, category: 'all' })
-    return { all: matching.length, attraction: matching.filter((place) => place.category === 'attraction').length, shop: matching.filter((place) => place.category === 'shop').length }
+    return {
+      all: matching.length,
+      attraction: matching.filter((place) => place.category === 'attraction').length,
+      shop: matching.filter((place) => place.category === 'shop').length,
+      toilets: matching.filter((place) => place.category === 'toilets').length,
+      bus_stop: matching.filter((place) => place.category === 'bus_stop').length,
+    }
   }, [localPlaces, query])
 
   useEffect(() => setLocalPlaces(places), [places])
@@ -512,6 +520,8 @@ export function GamcheonMap({
         const pin = document.createElement('span')
         pin.className = 'gamcheon-map__featured-pin'
         element.append(label, pin)
+      } else if (place.category === 'toilets' || place.category === 'bus_stop') {
+        element.textContent = PLACE_CATEGORY_ICONS[place.category]
       }
       element.addEventListener('click', () => {
         setSelectedId(place.id)
@@ -546,6 +556,8 @@ export function GamcheonMap({
       const map = mapRef.current
       if (place.id === ARTIST_WORKSHOP_PLACE.id) {
         map?.flyTo({ center: [place.longitude, place.latitude], zoom: 19, pitch: 63, bearing: 35 })
+      } else if (place.id === 'osm-node-3859163057') {
+        map?.flyTo({ center: [place.longitude, place.latitude], zoom: 19.5, pitch: 62, bearing: 85 })
       } else {
         map?.flyTo({ center: [place.longitude, place.latitude], zoom: Math.max(map.getZoom(), 17) })
       }
@@ -732,7 +744,7 @@ export function GamcheonMap({
         onCategoryChange={setCategory}
         counts={categoryCounts}
         places={visiblePlaces}
-        selected={selectedPlace ?? visiblePlaces.find((place) => place.id === ARTIST_WORKSHOP_PLACE.id) ?? null}
+        selected={shownSelectedPlace ?? visiblePlaces.find((place) => place.id === ARTIST_WORKSHOP_PLACE.id) ?? visiblePlaces[0] ?? null}
         view={mode === 'route' ? 'route' : mobileView === 'route' ? 'map' : mobileView}
         onView={changeMobileView}
         onSelect={selectPlace}
@@ -747,14 +759,15 @@ export function GamcheonMap({
         route={mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : null}
       />}
 
-      {selectedPlace && mode === 'places' && !editor && <div className="gamcheon-map__desktop-selection" role="region" aria-label="선택한 장소">
-        <span className="gamcheon-map__desktop-selection-icon" aria-hidden="true">{selectedPlace.category === 'attraction' ? '✦' : '⌂'}</span>
+      {shownSelectedPlace && mode === 'places' && !editor && <div className="gamcheon-map__desktop-selection" role="region" aria-label="선택한 장소">
+        <span className="gamcheon-map__desktop-selection-icon" aria-hidden="true">{PLACE_CATEGORY_ICONS[shownSelectedPlace.category]}</span>
         <div className="gamcheon-map__desktop-selection-copy">
-          <small>{selectedPlace.category === 'attraction' ? '명소' : '가게'} · 선택한 장소</small>
-          <strong>{selectedPlace.name}</strong>
-          {selectedPlace.address && <span>{selectedPlace.address}</span>}
+          <small>{PLACE_CATEGORY_LABELS[shownSelectedPlace.category]} · 선택한 장소</small>
+          <strong>{shownSelectedPlace.name}</strong>
+          {shownSelectedPlace.address && <span>{shownSelectedPlace.address}</span>}
+          {shownSelectedPlace.description && <span>{shownSelectedPlace.description}</span>}
         </div>
-        <button type="button" onClick={() => { routeFinder.panelProps.onDestination({ kind: 'place', id: selectedPlace.id }); switchMode('route') }}>길찾기 ↗</button>
+        <button type="button" onClick={() => { routeFinder.panelProps.onDestination({ kind: 'place', id: shownSelectedPlace.id }); switchMode('route') }}>길찾기 ↗</button>
       </div>}
 
       <div className="gamcheon-map__map-tools">
