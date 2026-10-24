@@ -1,149 +1,261 @@
 [
   {
-    "id": "busan-BSB215880203",
-    "name": "감천2동행정복지센터",
-    "next": "구감",
-    "latitude": 35.0942518,
-    "longitude": 129.0101845,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB215880203",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
+    "id": "busan-BSB168800201",
+    "name": "부산서교회",
+    "next": "한형석자유아동극장",
+    "latitude": 35.1020221,
+    "longitude": 129.0165728,
     "routes": [
-      "사하구1",
-      "사하구1-1",
-      "서구2-2"
-    ]
+      "서구3",
+      "서구3-1"
+    ],
+    "stopIds": [
+      "168800201"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168800201"
+    ],
+    "checkedAt": "2026-10-24"
   },
   {
-    "id": "busan-BSB215880201",
-    "name": "감천2동삼거리",
-    "next": "감천2동행정복지센터",
-    "latitude": 35.0928287,
-    "longitude": 129.0090255,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB215880201",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
+    "id": "busan-BSB168600301",
+    "name": "까치새길입구",
+    "next": "아름다운교회",
+    "latitude": 35.1013748,
+    "longitude": 129.0117167,
     "routes": [
-      "사하구1",
-      "사하구1-1",
-      "서구2-2"
-    ]
+      "61",
+      "87"
+    ],
+    "stopIds": [
+      "168600301"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168600301"
+    ],
+    "checkedAt": "2026-10-24"
   },
   {
-    "id": "busan-BSB177890203",
-    "name": "한샘슈퍼",
-    "next": "대진슈퍼",
-    "latitude": 35.0978101,
-    "longitude": 129.0114563,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890203",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
+    "id": "busan-BSB208270202",
+    "name": "까치새길입구",
+    "next": "대성사",
+    "latitude": 35.1013347,
+    "longitude": 129.0113731,
+    "routes": [
+      "61",
+      "87"
+    ],
+    "stopIds": [
+      "208270202"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB208270202"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168600201",
+    "name": "세신빌라",
+    "next": "대성사",
+    "latitude": 35.1006042,
+    "longitude": 129.011417,
+    "routes": [
+      "서구2-2"
+    ],
+    "stopIds": [
+      "168600201"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168600201"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168800101",
+    "name": "아미파출소",
+    "next": "아미시장",
+    "latitude": 35.1005349,
+    "longitude": 129.0163013,
+    "routes": [
+      "서구3",
+      "서구3-1"
+    ],
+    "stopIds": [
+      "168800101"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168800101"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168500302",
+    "name": "천주교아파트",
+    "next": "까치새길입구",
+    "latitude": 35.1002762,
+    "longitude": 129.0134317,
+    "routes": [
+      "87"
+    ],
+    "stopIds": [
+      "168500302"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168500302"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168380403",
+    "name": "아미파출소",
+    "next": "광성사",
+    "latitude": 35.1002688,
+    "longitude": 129.0167904,
+    "routes": [
+      "사하구1-1",
+      "서구3",
+      "서구3-1"
+    ],
+    "stopIds": [
+      "168380403"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168380403"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB214130201",
+    "name": "세신빌라",
+    "next": "천주교아파트",
+    "latitude": 35.1002652,
+    "longitude": 129.0115321,
+    "routes": [
+      "서구2-2"
+    ],
+    "stopIds": [
+      "214130201"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB214130201"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB515070000",
+    "name": "천주교아파트",
+    "next": "세신빌라",
+    "latitude": 35.1001908,
+    "longitude": 129.0135624,
+    "routes": [
+      "서구2-2"
+    ],
+    "stopIds": [
+      "515070000"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB515070000"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168600104",
+    "name": "천주교아파트",
+    "next": "아동보호종합센터",
+    "latitude": 35.1001114,
+    "longitude": 129.0133274,
+    "routes": [
+      "서구2-2",
+      "87"
+    ],
+    "stopIds": [
+      "168600104",
+      "168600101"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168600104",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168600101"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168500303",
+    "name": "아동보호종합센터",
+    "next": "천주교아파트",
+    "latitude": 35.1000816,
+    "longitude": 129.015931,
+    "routes": [
+      "서구2-2",
+      "87"
+    ],
+    "stopIds": [
+      "168500303",
+      "168500301"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168500303",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168500301"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168490301",
+    "name": "아미파출소",
+    "next": "토성역·아미동입구",
+    "latitude": 35.0999988,
+    "longitude": 129.0167726,
+    "routes": [
+      "134",
+      "190"
+    ],
+    "stopIds": [
+      "168490301"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490301"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168500103",
+    "name": "아미시장",
+    "next": "토성역",
+    "latitude": 35.0999713,
+    "longitude": 129.0168426,
     "routes": [
       "사하구1-1",
       "서구2",
-      "서구2-2"
-    ]
+      "서구2-2",
+      "서구3",
+      "서구3-1"
+    ],
+    "stopIds": [
+      "168500103"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168500103"
+    ],
+    "checkedAt": "2026-10-24"
   },
   {
-    "id": "busan-BSB168490207",
-    "name": "한샘슈퍼",
-    "next": "아미동감천삼거리",
-    "latitude": 35.0986386,
-    "longitude": 129.0120141,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490207",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
+    "id": "busan-BSB168600103",
+    "name": "아동보호종합센터",
+    "next": "아미시장",
+    "latitude": 35.0999034,
+    "longitude": 129.0160114,
     "routes": [
-      "사하구1-1",
-      "서구2"
-    ]
-  },
-  {
-    "id": "busan-BSB177890202",
-    "name": "구감",
-    "next": "감천문화마을·부산교육역사관",
-    "latitude": 35.0956798,
-    "longitude": 129.0105951,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890202",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
-    "routes": [
-      "사하구1",
-      "사하구1-1",
-      "서구2-2"
-    ]
-  },
-  {
-    "id": "busan-BSB168590203",
-    "name": "아미동감천삼거리",
-    "next": "감천문화마을·부산교육역사관",
-    "latitude": 35.0980416,
-    "longitude": 129.0113878,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590203",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
-    "routes": [
-      "사하구1-1",
-      "서구2"
-    ]
-  },
-  {
-    "id": "busan-BSB177890303",
-    "name": "감천2동행정복지센터",
-    "next": "감천2동삼거리",
-    "latitude": 35.0944935,
-    "longitude": 129.0100766,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890303",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
-    "routes": [
-      "사하구1",
-      "사하구1-1",
-      "서구2-2"
-    ]
-  },
-  {
-    "id": "busan-BSB177890301",
-    "name": "감천2동삼거리",
-    "next": "감천2동새마을금고",
-    "latitude": 35.0928666,
-    "longitude": 129.008809,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890301",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
-    "routes": [
-      "사하구1",
-      "사하구1-1",
-      "서구2-2"
-    ]
-  },
-  {
-    "id": "busan-BSB168590202",
-    "name": "구감",
-    "next": "감천2동행정복지센터",
-    "latitude": 35.09559,
-    "longitude": 129.0103809,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590202",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
-    "routes": [
-      "사하구1",
-      "사하구1-1",
-      "서구2-2"
-    ]
-  },
-  {
-    "id": "busan-BSB214130101",
-    "name": "대성사",
-    "next": "감천문화마을·부산교육역사관",
-    "latitude": 35.0984326,
-    "longitude": 129.0112805,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB214130101",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
-    "routes": [
-      "서구2-2"
-    ]
+      "서구2-2",
+      "87"
+    ],
+    "stopIds": [
+      "168600103",
+      "168600102"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168600103",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168600102"
+    ],
+    "checkedAt": "2026-10-24"
   },
   {
     "id": "busan-BSB168590103",
@@ -151,82 +263,19 @@
     "next": "아미동공영주차장",
     "latitude": 35.0997435,
     "longitude": 129.0121239,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590103",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
     "routes": [
       "사하구1-1",
       "서구2"
-    ]
-  },
-  {
-    "id": "busan-BSB168590106",
-    "name": "아미청년회",
-    "next": "산상교회·비석문화마을",
-    "latitude": 35.0990847,
-    "longitude": 129.0121164,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590106",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
-    "routes": [
-      "사하구1-1",
-      "서구2"
-    ]
-  },
-  {
-    "id": "busan-BSB168590102",
-    "name": "대진슈퍼",
-    "next": "아미청년회",
-    "latitude": 35.0983199,
-    "longitude": 129.0119922,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590102",
-    "checkedAt": "2026-10-19",
-    "replaces": "osm-node-9657838805",
-    "routes": [
-      "사하구1-1",
-      "서구2"
-    ]
-  },
-  {
-    "id": "busan-BSB168490202",
-    "name": "산상교회·비석문화마을",
-    "next": "아미청년회",
-    "latitude": 35.0998039,
-    "longitude": 129.0120733,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490202",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
-    "routes": [
-      "사하구1-1",
-      "서구2"
-    ]
-  },
-  {
-    "id": "busan-BSB168490205",
-    "name": "아미청년회",
-    "next": "한샘슈퍼",
-    "latitude": 35.0991799,
-    "longitude": 129.0119605,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490205",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
-    "routes": [
-      "사하구1-1",
-      "서구2"
-    ]
-  },
-  {
-    "id": "busan-BSB168590108",
-    "name": "미화당슈퍼",
-    "next": "아미동공영주차장",
-    "latitude": 35.09933,
-    "longitude": 129.0130313,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590108",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
-    "routes": [
-      "서구2"
-    ]
+    ],
+    "stopIds": [
+      "168590103",
+      "168490202"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590103",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490202"
+    ],
+    "checkedAt": "2026-10-24"
   },
   {
     "id": "busan-BSB168490208",
@@ -234,12 +283,233 @@
     "next": "산상교회·비석문화마을",
     "latitude": 35.0994588,
     "longitude": 129.0131442,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490208",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
     "routes": [
       "서구2"
-    ]
+    ],
+    "stopIds": [
+      "168490208"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490208"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168500201",
+    "name": "아미파출소",
+    "next": "아미초등학교",
+    "latitude": 35.099435,
+    "longitude": 129.0160775,
+    "routes": [
+      "134",
+      "190"
+    ],
+    "stopIds": [
+      "168500201"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168500201"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168590108",
+    "name": "미화당슈퍼",
+    "next": "아미동공영주차장",
+    "latitude": 35.09933,
+    "longitude": 129.0130313,
+    "routes": [
+      "서구2"
+    ],
+    "stopIds": [
+      "168590108"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590108"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168490204",
+    "name": "아미동공영주차장",
+    "next": "산상교회·비석문화마을",
+    "latitude": 35.0991888,
+    "longitude": 129.0133172,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168490204"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490204"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168490205",
+    "name": "아미청년회",
+    "next": "한샘슈퍼",
+    "latitude": 35.0991799,
+    "longitude": 129.0119605,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168490205"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490205"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168490203",
+    "name": "세화어린이집",
+    "next": "아미동공영주차장",
+    "latitude": 35.0991646,
+    "longitude": 129.0145198,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168490203"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490203"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168590106",
+    "name": "아미청년회",
+    "next": "산상교회·비석문화마을",
+    "latitude": 35.0990847,
+    "longitude": 129.0121164,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168590106"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590106"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168590105",
+    "name": "아미동공영주차장",
+    "next": "세화어린이집",
+    "latitude": 35.0990125,
+    "longitude": 129.0134309,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168590105"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590105"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168590104",
+    "name": "세화어린이집",
+    "next": "아미초등학교",
+    "latitude": 35.0988833,
+    "longitude": 129.0147734,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168590104"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590104"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168590107",
+    "name": "아미초등학교",
+    "next": "광성사",
+    "latitude": 35.0988202,
+    "longitude": 129.0157726,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168590107",
+      "168490206"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590107",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490206"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168490201",
+    "name": "광성사",
+    "next": "아미초등학교",
+    "latitude": 35.0987784,
+    "longitude": 129.0163951,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168490201"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490201"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168590101",
+    "name": "광성사",
+    "next": "아미시장",
+    "latitude": 35.0986427,
+    "longitude": 129.0163449,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168590101"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590101"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168490207",
+    "name": "한샘슈퍼",
+    "next": "아미동감천삼거리",
+    "latitude": 35.0986386,
+    "longitude": 129.0120141,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168490207"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490207"
+    ],
+    "checkedAt": "2026-10-24"
   },
   {
     "id": "busan-BSB502390000",
@@ -247,46 +517,318 @@
     "next": "감천문화마을·부산교육역사관",
     "latitude": 35.0985189,
     "longitude": 129.0115276,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB502390000",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
     "routes": [
       "사하구1"
-    ]
+    ],
+    "stopIds": [
+      "502390000"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB502390000"
+    ],
+    "checkedAt": "2026-10-24"
   },
   {
-    "id": "busan-BSB168590201",
+    "id": "busan-BSB517590000",
+    "name": "대성사",
+    "next": "까치새길입구",
+    "latitude": 35.0984423,
+    "longitude": 129.0115402,
+    "routes": [
+      "61"
+    ],
+    "stopIds": [
+      "517590000"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB517590000"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB214130101",
+    "name": "대성사",
+    "next": "감천문화마을·부산교육역사관",
+    "latitude": 35.0984326,
+    "longitude": 129.0112805,
+    "routes": [
+      "서구2-2",
+      "61"
+    ],
+    "stopIds": [
+      "214130101",
+      "517600000"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB214130101",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB517600000"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "osm-node-9657838805",
+    "name": "대진슈퍼",
+    "next": "아미청년회",
+    "latitude": 35.0983199,
+    "longitude": 129.0119922,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168590102"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590102"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168590203",
+    "name": "아미동감천삼거리",
+    "next": "감천문화마을·부산교육역사관",
+    "latitude": 35.0980416,
+    "longitude": 129.0113878,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168590203"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590203"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB177890203",
+    "name": "한샘슈퍼",
+    "next": "대진슈퍼",
+    "latitude": 35.0978101,
+    "longitude": 129.0114563,
+    "routes": [
+      "사하구1-1",
+      "서구2",
+      "서구2-2"
+    ],
+    "stopIds": [
+      "177890203"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890203"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168480201",
+    "name": "아미초등학교",
+    "next": "아미파출소",
+    "latitude": 35.0978095,
+    "longitude": 129.0172983,
+    "routes": [
+      "134",
+      "190"
+    ],
+    "stopIds": [
+      "168480201"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168480201"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168490101",
+    "name": "아미초등학교",
+    "next": "하동상회",
+    "latitude": 35.0976906,
+    "longitude": 129.0170938,
+    "routes": [
+      "134",
+      "190"
+    ],
+    "stopIds": [
+      "168490101"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490101"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "osm-node-3859163058",
+    "name": "감천문화마을·부산교육역사관",
+    "next": "아미산 대성사",
+    "latitude": 35.0973041,
+    "longitude": 129.0106455,
+    "positionSource": "OpenStreetMap 기존 등록 위치 유지",
+    "routes": [
+      "사하구1",
+      "사하구1-1",
+      "서구2",
+      "서구2-2",
+      "61"
+    ],
+    "stopIds": [
+      "177890201",
+      "517490000"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890201",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB517490000"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "osm-node-3859163057",
     "name": "감천문화마을·부산교육역사관",
     "next": "구감",
     "latitude": 35.0972086,
     "longitude": 129.0101505,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590201",
-    "checkedAt": "2026-10-19",
-    "replaces": "osm-node-3859163057",
     "positionSource": "OpenStreetMap 기존 등록 위치 유지",
     "routes": [
       "사하구1",
       "사하구1-1",
       "서구2",
-      "서구2-2"
-    ]
+      "서구2-2",
+      "61"
+    ],
+    "stopIds": [
+      "168590201",
+      "517500000"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590201",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB517500000"
+    ],
+    "checkedAt": "2026-10-24"
   },
   {
-    "id": "busan-BSB177890201",
-    "name": "감천문화마을·부산교육역사관",
-    "next": "한샘슈퍼",
-    "latitude": 35.0973041,
-    "longitude": 129.0106455,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890201",
-    "checkedAt": "2026-10-19",
-    "replaces": "osm-node-3859163058",
-    "positionSource": "OpenStreetMap 기존 등록 위치 유지",
+    "id": "busan-BSB177890202",
+    "name": "구감",
+    "next": "감천문화마을·부산교육역사관",
+    "latitude": 35.0956798,
+    "longitude": 129.0105951,
     "routes": [
       "사하구1",
       "사하구1-1",
-      "서구2",
+      "서구2-2",
+      "61"
+    ],
+    "stopIds": [
+      "177890202",
+      "519040000"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890202",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB519040000"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB168590202",
+    "name": "구감",
+    "next": "감천2동행정복지센터",
+    "latitude": 35.09559,
+    "longitude": 129.0103809,
+    "routes": [
+      "사하구1",
+      "사하구1-1",
+      "서구2-2",
+      "61"
+    ],
+    "stopIds": [
+      "168590202",
+      "519030000"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590202",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB519030000"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB177890303",
+    "name": "감천2동행정복지센터",
+    "next": "감천2동삼거리",
+    "latitude": 35.0944935,
+    "longitude": 129.0100766,
+    "routes": [
+      "사하구1",
+      "사하구1-1",
       "서구2-2"
-    ]
+    ],
+    "stopIds": [
+      "177890303"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890303"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB215880203",
+    "name": "감천2동행정복지센터",
+    "next": "구감",
+    "latitude": 35.0942518,
+    "longitude": 129.0101845,
+    "routes": [
+      "사하구1",
+      "사하구1-1",
+      "서구2-2"
+    ],
+    "stopIds": [
+      "215880203"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB215880203"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB177890301",
+    "name": "감천2동삼거리",
+    "next": "감천2동새마을금고",
+    "latitude": 35.0928666,
+    "longitude": 129.008809,
+    "routes": [
+      "사하구1",
+      "사하구1-1",
+      "서구2-2",
+      "61"
+    ],
+    "stopIds": [
+      "177890301",
+      "517440000"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890301",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB517440000"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB215880201",
+    "name": "감천2동삼거리",
+    "next": "감천2동행정복지센터",
+    "latitude": 35.0928287,
+    "longitude": 129.0090255,
+    "routes": [
+      "사하구1",
+      "사하구1-1",
+      "서구2-2",
+      "61"
+    ],
+    "stopIds": [
+      "215880201",
+      "517430000"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB215880201",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB517430000"
+    ],
+    "checkedAt": "2026-10-24"
   },
   {
     "id": "busan-BSB177890302",
@@ -294,14 +836,18 @@
     "next": "감천2동",
     "latitude": 35.0924059,
     "longitude": 129.00846,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890302",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
     "routes": [
       "사하구1",
       "사하구1-1",
       "서구2-2"
-    ]
+    ],
+    "stopIds": [
+      "177890302"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890302"
+    ],
+    "checkedAt": "2026-10-24"
   },
   {
     "id": "busan-BSB215880202",
@@ -309,13 +855,283 @@
     "next": "감천2동삼거리",
     "latitude": 35.0918924,
     "longitude": 129.0083461,
-    "source": "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB215880202",
-    "checkedAt": "2026-10-19",
-    "replaces": null,
     "routes": [
       "사하구1",
       "사하구1-1",
       "서구2-2"
-    ]
+    ],
+    "stopIds": [
+      "215880202"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB215880202"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB188130504",
+    "name": "감천2동",
+    "next": "감천2동새마을금고",
+    "latitude": 35.0908549,
+    "longitude": 129.0069303,
+    "routes": [
+      "사하구1",
+      "사하구1-1",
+      "서구2-2",
+      "61"
+    ],
+    "stopIds": [
+      "188130504",
+      "188130103"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB188130504",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB188130103"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB215880103",
+    "name": "감천2동",
+    "next": "수협",
+    "latitude": 35.0908359,
+    "longitude": 129.0066065,
+    "routes": [
+      "사하구1",
+      "사하구1-1",
+      "서구2-2",
+      "61"
+    ],
+    "stopIds": [
+      "215880103",
+      "177890101"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB215880103",
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890101"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB188120203",
+    "name": "부일고등학교",
+    "next": "삼성여고",
+    "latitude": 35.089639,
+    "longitude": 129.0000974,
+    "routes": [
+      "사하구1",
+      "사하구1-1"
+    ],
+    "stopIds": [
+      "188120203"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB188120203"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB188130101",
+    "name": "수협",
+    "next": "감천2동",
+    "latitude": 35.0893096,
+    "longitude": 129.0056767,
+    "routes": [
+      "61"
+    ],
+    "stopIds": [
+      "188130101"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB188130101"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB215880105",
+    "name": "수협",
+    "next": "감천1동주민센터",
+    "latitude": 35.0891732,
+    "longitude": 129.0053923,
+    "routes": [
+      "사하구1",
+      "사하구1-1",
+      "서구2-2"
+    ],
+    "stopIds": [
+      "215880105"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB215880105"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB177890102",
+    "name": "수협",
+    "next": "감천사거리",
+    "latitude": 35.088916,
+    "longitude": 129.0053075,
+    "routes": [
+      "61"
+    ],
+    "stopIds": [
+      "177890102"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB177890102"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB178160103",
+    "name": "부일고등학교",
+    "next": "감천사거리",
+    "latitude": 35.0888354,
+    "longitude": 129.0006881,
+    "routes": [
+      "사하구1",
+      "사하구1-1"
+    ],
+    "stopIds": [
+      "178160103"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB178160103"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB188130506",
+    "name": "수협",
+    "next": "감천2동",
+    "latitude": 35.0888051,
+    "longitude": 129.0055063,
+    "routes": [
+      "사하구1",
+      "사하구1-1",
+      "서구2-2"
+    ],
+    "stopIds": [
+      "188130506"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB188130506"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB178160101",
+    "name": "부일전자디자인고교",
+    "next": "감천사거리",
+    "latitude": 35.0887361,
+    "longitude": 129.000829,
+    "routes": [
+      "16",
+      "171",
+      "172",
+      "6",
+      "96-1"
+    ],
+    "stopIds": [
+      "178160101"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB178160101"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB188120201",
+    "name": "부산천연가스발전소",
+    "next": "부일전자디자인고교",
+    "latitude": 35.088261,
+    "longitude": 129.0027885,
+    "routes": [
+      "16",
+      "171",
+      "172",
+      "3006",
+      "6",
+      "96-1"
+    ],
+    "stopIds": [
+      "188120201"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB188120201"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB215880104",
+    "name": "감천사거리",
+    "next": "감천119안전센터",
+    "latitude": 35.0880864,
+    "longitude": 129.005094,
+    "routes": [
+      "서구2-2"
+    ],
+    "stopIds": [
+      "215880104"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB215880104"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB188120202",
+    "name": "감천1동주민센터",
+    "next": "부일고등학교",
+    "latitude": 35.087875,
+    "longitude": 129.0042867,
+    "routes": [
+      "사하구1",
+      "사하구1-1"
+    ],
+    "stopIds": [
+      "188120202"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB188120202"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB188130505",
+    "name": "감천사거리",
+    "next": "수협",
+    "latitude": 35.0878376,
+    "longitude": 129.0052228,
+    "routes": [
+      "사하구1",
+      "사하구1-1",
+      "서구2-2"
+    ],
+    "stopIds": [
+      "188130505"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB188130505"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
+    "id": "busan-BSB188130102",
+    "name": "감천우체국",
+    "next": "수협",
+    "latitude": 35.0877835,
+    "longitude": 129.0052637,
+    "routes": [
+      "61"
+    ],
+    "stopIds": [
+      "188130102"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB188130102"
+    ],
+    "checkedAt": "2026-10-24"
   }
 ]

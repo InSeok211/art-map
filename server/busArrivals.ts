@@ -1,4 +1,4 @@
-import { busStopIdFor } from '../src/data/busStopLinks'
+import { busStopIdsFor } from '../src/data/busStopLinks'
 import type { MapEnv } from './env'
 import { error, json } from './http'
 const cache = new Map<string, { until: number; value: unknown }>()
@@ -22,16 +22,14 @@ export function parseBusArrivals(xml: string) {
   })).filter(item => item.route)
 }
 
-export async function busArrivals(env: MapEnv, url: URL) {
-  const placeId = url.searchParams.get('placeId') ?? ''
-  const stopId = busStopIdFor(placeId)
-  if (!stopId) return error('이 정류장은 도착정보 연결을 준비 중입니다.', 404)
-  if (!env.busanBusApiKey) return error('버스 도착정보 서비스 연결을 준비 중입니다.', 503)
+type StopArrivals = { stopId: string; arrivals: ReturnType<typeof parseBusArrivals>; updatedAt: string }
+
+// 정류소 번호 하나의 도착정보(30초 동안 다시 씀, 같은 번호를 동시에 여러 번 묻지 않음)
+async function stopArrivals(key: string, stopId: string): Promise<StopArrivals> {
   const saved = cache.get(stopId)
-  if (saved && saved.until > Date.now()) return json(saved.value)
-  let job = pending.get(stopId)
+  if (saved && saved.until > Date.now()) return saved.value as StopArrivals
+  let job = pending.get(stopId) as Promise<StopArrivals> | undefined
   if (!job) {
-    const key = env.busanBusApiKey
     job = (async () => {
       let decodedKey = key
       try { decodedKey = decodeURIComponent(key) } catch { /* An unencoded key is also accepted. */ }
@@ -47,8 +45,26 @@ export async function busArrivals(env: MapEnv, url: URL) {
       return value
     })()
     pending.set(stopId, job)
+    const settled = job
+    settled.catch(() => undefined).finally(() => { if (pending.get(stopId) === settled) pending.delete(stopId) })
   }
-  try { return json(await job) }
-  catch { return error('도착정보를 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.', 502) }
-  finally { if (pending.get(stopId) === job) pending.delete(stopId) }
+  return job
+}
+
+// 한 표식에 묶인 정류소 번호(마을버스·시내버스)를 모두 조회해 노선을 합칩니다. 일부만 실패하면 받은 것만 보여 줍니다.
+export async function busArrivals(env: MapEnv, url: URL) {
+  const placeId = url.searchParams.get('placeId') ?? ''
+  const stopIds = busStopIdsFor(placeId)
+  if (!stopIds?.length) return error('이 정류장은 도착정보 연결을 준비 중입니다.', 404)
+  if (!env.busanBusApiKey) return error('버스 도착정보 서비스 연결을 준비 중입니다.', 503)
+  const key = env.busanBusApiKey
+  const results = await Promise.allSettled(stopIds.map((stopId) => stopArrivals(key, stopId)))
+  const ok = results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : [])
+  if (!ok.length) return error('도착정보를 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.', 502)
+  const soon = (item: StopArrivals['arrivals'][number]) => item.first?.minutes ?? Number.POSITIVE_INFINITY
+  return json({
+    stopIds: ok.map((item) => item.stopId),
+    arrivals: ok.flatMap((item) => item.arrivals).sort((a, b) => soon(a) - soon(b)),
+    updatedAt: ok.map((item) => item.updatedAt).sort()[0],
+  })
 }
