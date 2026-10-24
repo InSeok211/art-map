@@ -1,6 +1,7 @@
 import { PLACE_CATEGORY_ICONS, PLACE_CATEGORY_LABELS } from '../types'
 import type { CategoryFilter, Place } from '../types'
 import { BusArrivals } from './BusArrivals'
+import { useEffect, useRef } from 'react'
 
 export interface PlaceDraft {
   id?: string
@@ -33,12 +34,24 @@ interface PlaceBrowserProps {
   onAdd: () => void
   onEditSelected?: () => void
   showArrivals?: boolean
+  desktopGroup?: 'all' | 'art' | 'amenities'
+  onDesktopGroupChange?: (group: 'all' | 'art' | 'amenities') => void
 }
 
 // 장소 탭의 검색·분류·목록입니다.
 export function PlaceBrowser({
-  query, onQueryChange, category, onCategoryChange, places, hasAnyPlace, selectedId, onSelect, editable, onAdd, onEditSelected, showArrivals = true,
+  query, onQueryChange, category, onCategoryChange, places, hasAnyPlace, selectedId, onSelect, editable, onAdd, onEditSelected, showArrivals = true, desktopGroup, onDesktopGroupChange,
 }: PlaceBrowserProps) {
+  const results = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const list = results.current
+    const selected = list && Array.from(list.querySelectorAll<HTMLElement>('[data-place-id]')).find(element => element.dataset.placeId === selectedId)
+    if (!list || !selected || list.clientHeight === 0) return
+    const item = selected.getBoundingClientRect()
+    const box = list.getBoundingClientRect()
+    if (item.top < box.top) list.scrollTop += item.top - box.top
+    else if (item.bottom > box.bottom) list.scrollTop += item.bottom - box.bottom
+  }, [selectedId, places])
   return <>
     <div className="gamcheon-map__search-wrap">
       <svg className="gamcheon-map__search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -48,15 +61,19 @@ export function PlaceBrowser({
       <input
         aria-label="장소 검색"
         type="search"
-        placeholder="장소 이름이나 주소 검색"
+        placeholder="작가·공방·장소 검색"
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
       />
       <span className="gamcheon-map__search-shortcut">⌕</span>
+      {query && <button type="button" className="gm-search-clear" aria-label="검색어 지우기" onClick={() => onQueryChange('')}>×</button>}
     </div>
+    {desktopGroup !== undefined && <div className="gm-explore-groups" role="group" aria-label="탐색 목적">
+      {([['all', '전체'], ['art', '작가·공방'], ['amenities', '편의시설']] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={desktopGroup === value} onClick={() => onDesktopGroupChange?.(value)}>{label}</button>)}
+    </div>}
 
     <div className="gamcheon-map__categories" role="group" aria-label="장소 분류">
-      {categories.map((item) => (
+      {categories.filter(item => desktopGroup === undefined || desktopGroup === 'all' || item.value === 'all' || (desktopGroup === 'art' ? ['attraction', 'shop'].includes(item.value) : ['toilets', 'bus_stop'].includes(item.value))).map((item) => (
         <button
           key={item.value}
           type="button"
@@ -77,7 +94,7 @@ export function PlaceBrowser({
       <strong>{places.length}곳</strong>
     </div>
 
-    <div className="gamcheon-map__results" aria-live="polite">
+    <div ref={results} className="gamcheon-map__results" aria-live="polite">
       {places.length > 0 ? (
         places.map((place, index) => (
           <button
@@ -85,10 +102,11 @@ export function PlaceBrowser({
             type="button"
             className={selectedId === place.id ? 'gamcheon-map__place is-selected' : 'gamcheon-map__place'}
             data-place-id={place.id}
+            aria-pressed={selectedId === place.id}
             onClick={() => onSelect(place)}
           >
             <span className={`gamcheon-map__place-icon gamcheon-map__place-icon--${place.category}`} aria-hidden="true">
-              {PLACE_CATEGORY_ICONS[place.category]}
+              {place.photo ? <img className="gm-place-thumbnail" src={place.photo} alt="" loading="lazy" /> : PLACE_CATEGORY_ICONS[place.category]}
             </span>
             <span className="gamcheon-map__place-body">
               <span className="gamcheon-map__place-meta">{PLACE_CATEGORY_LABELS[place.category]} <span>·</span> {String(index + 1).padStart(2, '0')}</span>
@@ -104,7 +122,8 @@ export function PlaceBrowser({
         <div className="gamcheon-map__empty">
           <span className="gamcheon-map__empty-icon" aria-hidden="true">⌕</span>
           <strong>{hasAnyPlace ? '검색 결과가 없어요' : '아직 등록된 장소가 없어요'}</strong>
-          <span>{hasAnyPlace ? '다른 검색어나 분류를 선택해 보세요.' : '장소를 추가해 보세요.'}</span>
+          <span>{hasAnyPlace ? '다른 검색어나 분류를 선택해 보세요.' : '아직 표시할 장소가 없습니다.'}</span>
+          {hasAnyPlace && <button type="button" onClick={() => { onQueryChange(''); onCategoryChange('all'); onDesktopGroupChange?.('all') }}>검색·분류 초기화</button>}
         </div>
       )}
     </div>

@@ -133,6 +133,14 @@ export function GamcheonMap({
   const onPlaceSelectRef = useRef(onPlaceSelect)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<CategoryFilter>('all')
+  const [desktopGroup, setDesktopGroup] = useState<'all' | 'art' | 'amenities'>('all')
+  const [desktopCollapsed, setDesktopCollapsed] = useState(false)
+  const [desktopViewport, setDesktopViewport] = useState(() => typeof window !== 'undefined' && window.innerWidth > 720)
+  useEffect(() => {
+    const resize = () => setDesktopViewport(window.innerWidth > 720)
+    window.addEventListener('resize', resize)
+    return () => window.removeEventListener('resize', resize)
+  }, [])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [localPlaces, setLocalPlaces] = useState<Place[]>(places)
   const scenePlacesRef = useRef(localPlaces)
@@ -255,9 +263,9 @@ export function GamcheonMap({
   const selectedPlace = localPlaces.find((place) => place.id === selectedId && isInsideGamcheonMap(place.longitude, place.latitude))
 
   const visiblePlaces = useMemo(
-    () => filterPlaces(localPlaces.filter((place) => isInsideGamcheonMap(place.longitude, place.latitude)), { query, category })
+    () => filterPlaces(localPlaces.filter((place) => isInsideGamcheonMap(place.longitude, place.latitude) && (editable || !desktopViewport || desktopGroup === 'all' || (desktopGroup === 'amenities' ? ['toilets', 'bus_stop'].includes(place.category) : ['attraction', 'shop'].includes(place.category)))), { query, category })
       .sort((a, b) => Number(b.id === ARTIST_WORKSHOP_PLACE.id) - Number(a.id === ARTIST_WORKSHOP_PLACE.id)),
-    [localPlaces, query, category],
+    [localPlaces, query, category, desktopGroup, desktopViewport, editable],
   )
   const shownSelectedPlace = selectedPlace && visiblePlaces.some((place) => place.id === selectedPlace.id) ? selectedPlace : null
 
@@ -544,6 +552,7 @@ export function GamcheonMap({
   }, [visiblePlaces, selectedId])
 
   function switchMode(next: EditMode) {
+    setDesktopCollapsed(false)
     setMode(next)
     setSheetOpen(true)
     setEditor(null)
@@ -560,12 +569,15 @@ export function GamcheonMap({
     setSelectedId(place.id)
     if (Number.isFinite(place.latitude) && Number.isFinite(place.longitude)) {
       const map = mapRef.current
+      const padding = !editable && map && map.getContainer().clientWidth > 800
+        ? { top: 85, bottom: 40, left: desktopCollapsed ? 100 : 440, right: 370 }
+        : undefined
       if (place.id === ARTIST_WORKSHOP_PLACE.id) {
-        map?.flyTo({ center: [place.longitude, place.latitude], zoom: 19, pitch: 63, bearing: 35 })
+        map?.flyTo({ center: [place.longitude, place.latitude], zoom: 19, pitch: 63, bearing: 35, padding })
       } else if (place.id === 'osm-node-3859163057') {
-        map?.flyTo({ center: [place.longitude, place.latitude], zoom: 19.5, pitch: 62, bearing: 85 })
+        map?.flyTo({ center: [place.longitude, place.latitude], zoom: 19.5, pitch: 62, bearing: 85, padding })
       } else {
-        map?.flyTo({ center: [place.longitude, place.latitude], zoom: Math.max(map.getZoom(), 17) })
+        map?.flyTo({ center: [place.longitude, place.latitude], zoom: Math.max(map.getZoom(), 17), padding })
       }
     }
     onPlaceSelectRef.current?.(place)
@@ -635,7 +647,7 @@ export function GamcheonMap({
   }
 
   return (
-    <section className={`gamcheon-map ${editor || alley.drawing ? 'is-editing' : ''} ${sheetOpen ? 'is-sheet-open' : ''} ${immersive ? 'is-immersive' : ''} ${className}`.trim()} style={style} aria-label="감천2동 지도">
+    <section className={`gamcheon-map ${desktopCollapsed ? 'is-desktop-collapsed' : ''} ${editor || alley.drawing ? 'is-editing' : ''} ${sheetOpen ? 'is-sheet-open' : ''} ${immersive ? 'is-immersive' : ''} ${className}`.trim()} style={style} aria-label="감천2동 지도">
       <div ref={mapElementRef} className="gamcheon-map__canvas" aria-label="OpenStreetMap 지도" />
       {locationNotice && <p className="gamcheon-map__scene-status gamcheon-map__location-notice" role="status">{locationNotice}</p>}
       {/* 휴대폰: 시트 바로 위 오른쪽의 둥근 '내 위치' 버튼(넓은 화면에서는 도구 줄의 버튼을 씁니다) */}
@@ -732,6 +744,8 @@ export function GamcheonMap({
           onSelect={selectPlace}
           editable={canEditPlaces}
           showArrivals={editable}
+          desktopGroup={!editable ? desktopGroup : undefined}
+          onDesktopGroupChange={(group) => { setDesktopGroup(group); setCategory('all') }}
           onAdd={() => startEditingPlace()}
           onEditSelected={selectedPlace && (() => startEditingPlace(selectedPlace))}
         />}
@@ -741,6 +755,7 @@ export function GamcheonMap({
           <span>감천2동을 천천히, 더 자세히.</span>
         </div>}
       </aside>
+      {!editable && <button type="button" className="gm-panel-collapse" aria-label={desktopCollapsed ? '장소 패널 펼치기' : '장소 패널 접기'} aria-expanded={!desktopCollapsed} onClick={() => setDesktopCollapsed(!desktopCollapsed)}>{desktopCollapsed ? '›' : '‹'}</button>}
 
       {/* GPS 기록 중에는 어느 탭에 있든 지도 위에 기록 상태와 끝내기 버튼을 띄웁니다(휴대폰에서 시트를 접어도 보임). */}
 

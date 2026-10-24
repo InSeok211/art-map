@@ -1127,6 +1127,8 @@
   .gamcheon-map.is-compact-app .gm-mobile__actions button:first-child { background:#fff; color:var(--m-blue); }
   .gamcheon-map.is-immersive.is-compact-app .gamcheon-map__map-tools { top:118px; }
   .gamcheon-map.is-immersive.is-compact-app .gamcheon-map__more-menu { top:118px; }
+  /* '3D 거리를 불러오는 중' 안내도 분류 버튼 줄 아래에 둡니다(줄 뒤에 가려지지 않게). */
+  .gamcheon-map.is-compact-app .gamcheon-map__scene-status { top:122px; }
   .gm-mobile__clear { flex:none; width:40px; height:40px; border:0; background:none; color:inherit; font-size:22px; }
   .gm-mobile__list-controls { display:flex!important; flex:none; gap:6px!important; }
   .gm-mobile__list-controls button,.gm-mobile__detail-toggle { min-height:44px; padding:8px; border:0; background:none; color:var(--m-blue); font:inherit; font-size:12px; cursor:pointer; }

@@ -126,7 +126,7 @@ export function MobileMapUI({
         </div>
         {selected.address && <p className="gm-mobile__address">⌖ {selected.address}</p>}
         {(selected.photo || selected.description) && <>
-          <button type="button" className="gm-mobile__detail-toggle" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? '장소 안내 접기 ⌃' : '사진·장소 안내 보기 ⌄'}</button>
+          <button type="button" className="gm-mobile__detail-toggle" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? '장소 안내 접기 ⌃' : selected.photo ? '사진·장소 안내 보기 ⌄' : selected.category === 'bus_stop' ? '정류장 안내 보기 ⌄' : '장소 안내 보기 ⌄'}</button>
           {expanded && <div className="gm-mobile__detail-content">
             {selected.photo && <img className="gm-mobile__photo" src={selected.photo} alt={`${selected.name} 사진`} loading="lazy" />}
             {selected.description && <p className="gm-mobile__description">{selected.description}</p>}
