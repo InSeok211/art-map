@@ -258,6 +258,24 @@
     "checkedAt": "2026-10-24"
   },
   {
+    "id": "busan-BSB168490202",
+    "name": "산상교회·비석문화마을",
+    "next": "아미청년회",
+    "latitude": 35.0998039,
+    "longitude": 129.0120733,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168490202"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490202"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
     "id": "busan-BSB168590103",
     "name": "산상교회·비석문화마을",
     "next": "아미동공영주차장",
@@ -268,12 +286,10 @@
       "서구2"
     ],
     "stopIds": [
-      "168590103",
-      "168490202"
+      "168590103"
     ],
     "source": [
-      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590103",
-      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490202"
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590103"
     ],
     "checkedAt": "2026-10-24"
   },
@@ -420,6 +436,24 @@
     "checkedAt": "2026-10-24"
   },
   {
+    "id": "busan-BSB168490206",
+    "name": "아미초등학교",
+    "next": "세화어린이집",
+    "latitude": 35.0989047,
+    "longitude": 129.0158053,
+    "routes": [
+      "사하구1-1",
+      "서구2"
+    ],
+    "stopIds": [
+      "168490206"
+    ],
+    "source": [
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490206"
+    ],
+    "checkedAt": "2026-10-24"
+  },
+  {
     "id": "busan-BSB168590104",
     "name": "세화어린이집",
     "next": "아미초등학교",
@@ -448,12 +482,10 @@
       "서구2"
     ],
     "stopIds": [
-      "168590107",
-      "168490206"
+      "168590107"
     ],
     "source": [
-      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590107",
-      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168490206"
+      "https://trans.minmins.kr/bus-stop.php?city=21&id=BSB168590107"
     ],
     "checkedAt": "2026-10-24"
   },
