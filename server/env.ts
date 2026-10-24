@@ -4,6 +4,7 @@
 //  - MODELS: 관리자가 올린 3D 모델(GLB) 파일(홈페이지 R2, map-models/ 아래)
 //  - isAdmin: 이 요청이 홈페이지 운영자로 로그인한 사람의 것인지
 export interface MapEnv {
+  busanBusApiKey?: string
   DB: D1Database
   MODELS: R2Bucket
   isAdmin: (request: Request) => Promise<boolean>

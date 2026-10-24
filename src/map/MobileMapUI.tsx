@@ -1,3 +1,4 @@
+import { BusArrivals } from '../places/BusArrivals'
 import type { ReactNode } from 'react'
 import { PLACE_CATEGORY_ICONS, PLACE_CATEGORY_LABELS } from '../types'
 import type { CategoryFilter, Place } from '../types'
@@ -94,6 +95,7 @@ export function MobileMapUI({
         {selected.photo && <img className="gm-mobile__photo" src={selected.photo} alt={`${selected.name} 사진`} loading="lazy" />}
         {selected.description && <p className="gm-mobile__description">{selected.description}</p>}
         {selected.address && <p className="gm-mobile__address">⌖ {selected.address}</p>}
+        <BusArrivals key={selected.id} place={selected} />
         <div className="gm-mobile__actions">
           <button type="button" onClick={() => onView('list')}>주변 장소 {places.length}곳</button>
           <button type="button" onClick={() => onRouteTo(selected)}>길찾기</button>

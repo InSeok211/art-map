@@ -6,6 +6,7 @@ import { deleteModel, getModel, listModels, uploadModel } from './models'
 import { getPhoto, uploadPhoto } from './images'
 import { ensureMapTables } from './schema'
 import { readPlaces, savePlaces } from './places'
+import { busArrivals } from './busArrivals'
 
 export type { MapEnv } from './env'
 
@@ -15,6 +16,7 @@ export type { MapEnv } from './env'
 type Handler = (request: Request, env: MapEnv, url: URL, params: string[]) => Promise<Response> | Response
 
 const routes: [method: string, pattern: RegExp, admin: boolean, handler: Handler][] = [
+  ['GET', /^\/api\/map-bus-arrivals$/, false, (_request, env, url) => busArrivals(env, url)],
   ['GET', /^\/api\/map-places$/, false, (_request, env) => readPlaces(env)],
   ['GET', /^\/api\/admin\/map-places$/, true, (_request, env) => readPlaces(env)],
   ['PUT', /^\/api\/admin\/map-places$/, true, (request, env) => savePlaces(request, env)],

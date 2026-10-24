@@ -42,6 +42,7 @@ await cp(work, appTarget, { recursive: true })
 const apiTarget = path.join(site, 'app/map/generated')
 await mkdir(apiTarget, { recursive: true })
 for (const [route, source] of [
+  ['app/api/map-bus-arrivals', '../../map/map-api'],
   ['app/api/map-places', '../../map/map-api'],
   ['app/api/admin/map-places', '../../../map/map-api'],
 ]) {
@@ -61,6 +62,7 @@ await bundle({
 })
 await writeFile(path.join(apiTarget, 'map-api.d.ts'), `// 자동 생성 파일입니다(art-map 저장소의 server/env.ts, server/index.ts). Bundled from ${stamp}.
 export interface MapEnv {
+  busanBusApiKey?: string
   /** 홈페이지 D1 */
   DB: object
   /** 홈페이지 R2(3D 모델은 map-models/ 아래) */

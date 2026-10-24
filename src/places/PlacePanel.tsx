@@ -1,5 +1,6 @@
 import { PLACE_CATEGORY_ICONS, PLACE_CATEGORY_LABELS } from '../types'
 import type { CategoryFilter, Place } from '../types'
+import { BusArrivals } from './BusArrivals'
 
 export interface PlaceDraft {
   id?: string
@@ -67,6 +68,7 @@ export function PlaceBrowser({
       ))}
     </div>
 
+    {places.find(place => place.id === selectedId)?.category === 'bus_stop' && <BusArrivals key={selectedId} place={places.find(place => place.id === selectedId)!} />}
     <div className="gamcheon-map__results-head">
       <span>장소 목록</span>
       <strong>{places.length}곳</strong>
