@@ -68,7 +68,9 @@ export function PlaceBrowser({
       ))}
     </div>
 
-    {places.find(place => place.id === selectedId)?.category === 'bus_stop' && <BusArrivals key={selectedId} place={places.find(place => place.id === selectedId)!} />}
+    {places.find(place => place.id === selectedId)?.category === 'bus_stop' && <div className="gamcheon-map__bus-arrivals">
+      <BusArrivals key={selectedId} place={places.find(place => place.id === selectedId)!} />
+    </div>}
     <div className="gamcheon-map__results-head">
       <span>장소 목록</span>
       <strong>{places.length}곳</strong>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { busStopIdFor } from '../data/busStopLinks'
 import type { Place } from '../types'
 
 type Bus = { minutes: number | null; status: string | null; stopsAway: number | null }
@@ -18,7 +19,8 @@ export function BusArrivals({ place }: { place: Place }) {
     setData(null); setNotice(''); setBusy(false)
     return () => { request.current?.abort() }
   }, [place.id])
-  if (place.category !== 'bus_stop') return null
+  // 도착정보를 연결한 정류장에만 보여 줍니다(나머지는 눌러도 '준비 중'만 나오므로 숨김).
+  if (place.category !== 'bus_stop' || !busStopIdFor(place.id)) return null
   async function refresh() {
     request.current?.abort()
     const controller = new AbortController()

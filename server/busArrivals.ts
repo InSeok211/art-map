@@ -1,8 +1,6 @@
-import stops from '../src/data/gamcheon-bus-stops.json'
+import { busStopIdFor } from '../src/data/busStopLinks'
 import type { MapEnv } from './env'
 import { error, json } from './http'
-
-const stopIds = new Map(stops.map(stop => [stop.replaces ?? stop.id, stop.id.replace('busan-BSB', '')]))
 const cache = new Map<string, { until: number; value: unknown }>()
 const pending = new Map<string, Promise<unknown>>()
 const decode = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
@@ -26,7 +24,7 @@ export function parseBusArrivals(xml: string) {
 
 export async function busArrivals(env: MapEnv, url: URL) {
   const placeId = url.searchParams.get('placeId') ?? ''
-  const stopId = stopIds.get(placeId)
+  const stopId = busStopIdFor(placeId)
   if (!stopId) return error('이 정류장은 도착정보 연결을 준비 중입니다.', 404)
   if (!env.busanBusApiKey) return error('버스 도착정보 서비스 연결을 준비 중입니다.', 503)
   const saved = cache.get(stopId)

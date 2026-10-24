@@ -199,6 +199,8 @@
 }
 
 .gamcheon-map__categories { display: flex; flex-wrap: wrap; gap: 7px; padding: 17px 24px 20px; }
+/* 옆 패널에서 고른 정류장의 버스 도착정보(분류 버튼과 같은 좌우 여백) */
+.gamcheon-map__bus-arrivals { padding: 0 24px; }
 
 .gamcheon-map__category {
   min-width: 55px;
@@ -505,6 +507,7 @@
   .gamcheon-map__eyebrow { font-size: 8px; }
   .gamcheon-map__search-wrap { height: 39px; margin: 0 16px; }
   .gamcheon-map__categories { padding: 10px 16px 11px; }
+  .gamcheon-map__bus-arrivals { padding: 0 16px; }
   .gamcheon-map__category { padding: 6px 10px; }
   .gamcheon-map__results-head { padding: 10px 19px; }
   .gamcheon-map__results { padding: 0 8px 8px; }
@@ -840,6 +843,7 @@
   .gamcheon-map__search-wrap:focus-within { border-color: #6981ff; box-shadow: 0 0 0 3px rgba(105, 129, 255, .14); }
   .gamcheon-map__search-wrap input { color: #151515; font-size: 13px; }
   .gamcheon-map__categories { padding: 15px 20px 20px; }
+  .gamcheon-map__bus-arrivals { padding: 0 20px; }
   .gamcheon-map__category { border-color: var(--gm-line); border-radius: 999px; color: #3a414a; font-size: 12px; }
   .gamcheon-map__category:hover { border-color: #6981ff; }
   .gamcheon-map__category.is-active { border-color: #6981ff; background: #6981ff; color: #fff; }
