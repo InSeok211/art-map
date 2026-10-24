@@ -32,11 +32,12 @@ interface PlaceBrowserProps {
   editable: boolean
   onAdd: () => void
   onEditSelected?: () => void
+  showArrivals?: boolean
 }
 
 // 장소 탭의 검색·분류·목록입니다.
 export function PlaceBrowser({
-  query, onQueryChange, category, onCategoryChange, places, hasAnyPlace, selectedId, onSelect, editable, onAdd, onEditSelected,
+  query, onQueryChange, category, onCategoryChange, places, hasAnyPlace, selectedId, onSelect, editable, onAdd, onEditSelected, showArrivals = true,
 }: PlaceBrowserProps) {
   return <>
     <div className="gamcheon-map__search-wrap">
@@ -68,7 +69,7 @@ export function PlaceBrowser({
       ))}
     </div>
 
-    {places.find(place => place.id === selectedId)?.category === 'bus_stop' && <div className="gamcheon-map__bus-arrivals">
+    {showArrivals && places.find(place => place.id === selectedId)?.category === 'bus_stop' && <div className="gamcheon-map__bus-arrivals">
       <BusArrivals key={selectedId} place={places.find(place => place.id === selectedId)!} />
     </div>}
     <div className="gamcheon-map__results-head">

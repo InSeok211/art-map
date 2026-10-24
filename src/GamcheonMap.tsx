@@ -5,6 +5,7 @@ import type { MapMouseEvent, StyleSpecification } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './gamcheon-map.css'
+import './desktop-map.css'
 import { filterPlaces } from './places/filterPlaces'
 import { GAMCHEON_MAP_BOUNDS, isInsideGamcheonMap } from './map/gamcheonBoundary'
 import { BUILDING_EDIT_LAYER_IDS, BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle, DEM_SOURCE_ID, ROUTE_LAYER_IDS, TRAIL_LAYER_IDS } from './map/mapStyle'
@@ -30,6 +31,7 @@ import { useRouteFinder } from './route/useRouteFinder'
 import { useMyLocation } from './map/useMyLocation'
 import { useSheetDrag } from './map/useSheetDrag'
 import { PlaceBrowser, PlaceForm } from './places/PlacePanel'
+import { DesktopPlaceDetail } from './places/DesktopPlaceDetail'
 import type { PlaceDraft } from './places/PlacePanel'
 import { ARTIST_WORKSHOP_PLACE } from './places/artistWorkshop'
 import { newId } from './map/listUtils'
@@ -690,8 +692,8 @@ export function GamcheonMap({
           <h2>{mode === 'buildings' ? '건물 고치기' : '골목길 편집'}</h2>
         </div> : <div className="gamcheon-map__intro">
           <div className="gamcheon-map__eyebrow"><span className="gamcheon-map__eyebrow-dot" /> BUSAN · GAMCHEON 2-DONG</div>
-          <h1>감천 골목지도<span className="gamcheon-map__title-dot">.</span></h1>
-          <p>작가님 공방을 중심으로 골목의 가게와 명소를 찾아보세요.</p>
+          <h1>{editable ? '감천 골목지도' : '감천 아트맵'}<span className="gamcheon-map__title-dot">.</span></h1>
+          <p>{editable ? '작가님 공방을 중심으로 골목의 가게와 명소를 찾아보세요.' : '골목에서 만나는 작가와 이야기'}</p>
         </div>}
 
         {/* 길찾기는 보기 전용 지도에서도 쓰므로 탭을 늘 보이고, 편집 탭(골목길·건물)은 편집할 수 있을 때만 보입니다. */}
@@ -729,6 +731,7 @@ export function GamcheonMap({
           selectedId={selectedId}
           onSelect={selectPlace}
           editable={canEditPlaces}
+          showArrivals={editable}
           onAdd={() => startEditingPlace()}
           onEditSelected={selectedPlace && (() => startEditingPlace(selectedPlace))}
         />}
@@ -763,7 +766,8 @@ export function GamcheonMap({
         route={mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : null}
       />}
 
-      {shownSelectedPlace && mode === 'places' && !editor && <div className="gamcheon-map__desktop-selection" role="region" aria-label="선택한 장소">
+      {!editable && shownSelectedPlace && mode === 'places' && <DesktopPlaceDetail place={shownSelectedPlace} onClose={() => setSelectedId(null)} onRoute={() => { routeFinder.panelProps.onDestination({ kind: 'place', id: shownSelectedPlace.id }); switchMode('route') }} />}
+      {editable && shownSelectedPlace && mode === 'places' && !editor && <div className="gamcheon-map__desktop-selection" role="region" aria-label="선택한 장소">
         <span className="gamcheon-map__desktop-selection-icon" aria-hidden="true">{PLACE_CATEGORY_ICONS[shownSelectedPlace.category]}</span>
         <div className="gamcheon-map__desktop-selection-copy">
           <small>{PLACE_CATEGORY_LABELS[shownSelectedPlace.category]} · 선택한 장소</small>
