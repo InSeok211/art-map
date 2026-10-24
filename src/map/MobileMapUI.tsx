@@ -1,4 +1,5 @@
 import { BusArrivals } from '../places/BusArrivals'
+import { useLayoutEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { PLACE_CATEGORY_ICONS, PLACE_CATEGORY_LABELS } from '../types'
 import type { CategoryFilter, Place } from '../types'
@@ -28,13 +29,37 @@ interface MobileMapUIProps {
 }
 
 const CATEGORIES: [CategoryFilter, string][] = [['all', '전체'], ['attraction', '명소'], ['shop', '가게'], ['toilets', '화장실'], ['bus_stop', '버스 정류장']]
-const categoryLabel = (place: Place) => PLACE_CATEGORY_LABELS[place.category]
+// 카드 위에 쌓는 오른쪽 아래 버튼 묶음의 높이(지도 출처·나침반·내 위치)와, 오른쪽 위 버튼 묶음을 못 찾을 때 쓰는 그 아래 끝(px)
+const CORNER_BUTTONS_HEIGHT = 130
+const TOP_TOOLS_BOTTOM = 370
+const categoryLabel =(place: Place) => PLACE_CATEGORY_LABELS[place.category]
 const placeIcon = (place: Place) => PLACE_CATEGORY_ICONS[place.category]
 
 export function MobileMapUI({
   query, onQueryChange, category, onCategoryChange, counts, places, selected, view, onView,
   onSelect, onRouteTo, onLocate, located, headingUp, route,
 }: MobileMapUIProps) {
+  const card = useRef<HTMLElement>(null)
+  // 아래 카드가 지도 바닥에서 차지하는 높이를 지도에 알려 줍니다(--gm-card-space). 오른쪽 아래 버튼(내 위치·나침반·
+  // 지도 출처)이 카드 바로 위에 붙고, 카드가 커져(버스 도착정보 등) 오른쪽 위 버튼과 부딪힐 만하면 숨깁니다.
+  useLayoutEffect(() => {
+    const element = card.current
+    const host = element?.closest<HTMLElement>('.gamcheon-map')
+    if (!element || !host) return
+    const update = () => {
+      const space = Math.round(host.getBoundingClientRect().bottom - element.getBoundingClientRect().top)
+      const tools = host.querySelector('.gamcheon-map__map-tools')?.getBoundingClientRect()
+      const toolsBottom = tools?.height ? tools.bottom - host.getBoundingClientRect().top + 12 : TOP_TOOLS_BOTTOM
+      host.style.setProperty('--gm-card-space', `${space}px`)
+      host.classList.toggle('is-card-tall', host.clientHeight - space - CORNER_BUTTONS_HEIGHT < toolsBottom)
+    }
+    update()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(update)
+    observer.observe(element)
+    observer.observe(host)
+    return () => { observer.disconnect(); host.style.removeProperty('--gm-card-space'); host.classList.remove('is-card-tall') }
+  }, [])
   return <div className="gm-mobile" data-view={view}>
     <div className="gm-mobile__top">
       <div className="gm-mobile__brand">
@@ -65,7 +90,7 @@ export function MobileMapUI({
       </div>
     </div>
 
-    <section className={`gm-mobile__card${view === 'list' ? ' is-list' : ''}${view === 'route' ? ' is-route' : ''}`} aria-label={view === 'route' ? '길찾기' : view === 'list' ? '장소 목록' : '장소 정보'}>
+    <section ref={card} className={`gm-mobile__card${view === 'list' ? ' is-list' : ''}${view === 'route' ? ' is-route' : ''}`} aria-label={view === 'route' ? '길찾기' : view === 'list' ? '장소 목록' : '장소 정보'}>
       <button type="button" className="gm-mobile__handle" aria-label={view === 'map' ? '장소 목록 열기' : '지도로 돌아가기'} onClick={() => onView(view === 'map' ? 'list' : 'map')}><span /></button>
       {view === 'route' ? <div className="gm-mobile__route">
         <div className="gm-mobile__head"><div><small>걸어서 가는 길</small><strong>길찾기</strong></div><button type="button" onClick={() => onView('map')}>닫기</button></div>
