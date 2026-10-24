@@ -1107,3 +1107,30 @@
 /* 휴대폰 지도 카드에서는 목록을 조금 낮게 두고 안에서 넘겨 봅니다(카드가 오른쪽 위 버튼까지 올라가지 않게). */
 .gamcheon-map.is-compact-app .gm-mobile__card .map-bus-arrivals ul { max-height: 118px; }
 .map-bus-arrivals small { display: block; color: #697286; font-size: 10px; line-height: 1.5; }
+/* 모바일 탐색: 기존 색상을 그대로 쓰고 조작 영역과 정보 흐름만 조정합니다. */
+@media (max-width:720px) {
+  .gamcheon-map.is-compact-app .gm-mobile__chips { display:flex; padding:2px 0 6px; scrollbar-width:none; }
+  .gamcheon-map.is-compact-app .gm-mobile__chips button { min-height:40px; padding:8px 12px; }
+  .gamcheon-map.is-compact-app .gm-mobile__card { display:flex; flex-direction:column; max-height:calc(100% - 178px); overflow-y:auto; overscroll-behavior:contain; border-radius:18px; }
+  .gamcheon-map.is-compact-app .gm-mobile__card.is-list { height:min(48%,400px); overflow:hidden; }
+  .gamcheon-map.is-compact-app .gm-mobile__card.is-route { max-height:65%; }
+  .gamcheon-map.is-compact-app .gm-mobile__head { flex:none; align-items:flex-start; }
+  .gamcheon-map.is-compact-app .gm-mobile__head strong { white-space:normal; overflow-wrap:anywhere; line-height:1.4; font-size:17px; }
+  .gamcheon-map.is-compact-app .gm-mobile__address { margin-top:8px; line-height:1.5; }
+  .gamcheon-map.is-compact-app .gm-mobile__handle { min-height:28px; flex:none; }
+  .gamcheon-map.is-compact-app .gm-mobile__list button { min-height:64px; padding:12px 4px; }
+  .gamcheon-map.is-compact-app .gm-mobile__list-body strong { white-space:normal; line-height:1.4; }
+  .gamcheon-map.is-compact-app .gm-mobile__detail-content .gm-mobile__photo,
+  .gamcheon-map.is-compact-app .gm-mobile__detail-content .gm-mobile__description { display:block; }
+  .gamcheon-map.is-compact-app .gm-mobile__actions { position:sticky; bottom:-12px; padding:10px 0 0; background:#fff; flex:none; }
+  .gamcheon-map.is-compact-app .gm-mobile__actions button:last-child { background:var(--m-blue); color:#fff; flex:1; }
+  .gamcheon-map.is-compact-app .gm-mobile__actions button:first-child { background:#fff; color:var(--m-blue); }
+  .gamcheon-map.is-immersive.is-compact-app .gamcheon-map__map-tools { top:118px; }
+  .gamcheon-map.is-immersive.is-compact-app .gamcheon-map__more-menu { top:118px; }
+  .gm-mobile__clear { flex:none; width:40px; height:40px; border:0; background:none; color:inherit; font-size:22px; }
+  .gm-mobile__list-controls { display:flex!important; flex:none; gap:6px!important; }
+  .gm-mobile__list-controls button,.gm-mobile__detail-toggle { min-height:44px; padding:8px; border:0; background:none; color:var(--m-blue); font:inherit; font-size:12px; cursor:pointer; }
+  .gm-mobile__detail-toggle { text-align:left; flex:none; }
+  .gm-mobile__detail-content { flex:none; }
+  .gm-mobile__list { overscroll-behavior:contain; }
+}

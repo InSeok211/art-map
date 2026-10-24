@@ -1,5 +1,5 @@
 import { BusArrivals } from '../places/BusArrivals'
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { PLACE_CATEGORY_ICONS, PLACE_CATEGORY_LABELS } from '../types'
 import type { CategoryFilter, Place } from '../types'
@@ -40,6 +40,9 @@ export function MobileMapUI({
   onSelect, onRouteTo, onLocate, located, headingUp, route,
 }: MobileMapUIProps) {
   const card = useRef<HTMLElement>(null)
+  const search = useRef<HTMLInputElement>(null)
+  const [expanded, setExpanded] = useState(false)
+  useEffect(() => { setExpanded(false) }, [selected?.id])
   // 아래 카드가 지도 바닥에서 차지하는 높이를 지도에 알려 줍니다(--gm-card-space). 오른쪽 아래 버튼(내 위치·나침반·
   // 지도 출처)이 카드 바로 위에 붙고, 카드가 커져(버스 도착정보 등) 오른쪽 위 버튼과 부딪힐 만하면 숨깁니다.
   useLayoutEffect(() => {
@@ -73,12 +76,16 @@ export function MobileMapUI({
           <path d="m16 16 4.2 4.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
         <input
+          ref={search}
           type="search"
+          enterKeyHint="search"
           aria-label="장소 검색"
           placeholder="공방·가게·명소·화장실·정류장 검색"
           value={query}
           onChange={(event) => { onQueryChange(event.target.value); if (view !== 'list') onView('list') }}
+          onKeyDown={(event) => { if (event.key === 'Enter') { search.current?.blur(); onView('list') } }}
         />
+        {query && <button type="button" className="gm-mobile__clear" aria-label="검색어 지우기" onClick={() => { onQueryChange(''); search.current?.focus() }}>×</button>}
       </label>
       <div className="gm-mobile__chips" role="group" aria-label="장소 분류">
         {CATEGORIES.map(([value, label]) => <button
@@ -98,28 +105,33 @@ export function MobileMapUI({
       </div> : view === 'list' ? <>
         <div className="gm-mobile__head">
           <div><small>지도에 표시된 장소</small><strong>{query.trim() ? `“${query.trim()}” 검색 결과` : `${CATEGORIES.find(([value]) => value === category)?.[1]} ${places.length}곳`}</strong></div>
-          <button type="button" onClick={() => { onQueryChange(''); onCategoryChange('all') }}>초기화</button>
+          <div className="gm-mobile__list-controls"><button type="button" onClick={() => { onQueryChange(''); onCategoryChange('all') }}>초기화</button><button type="button" onClick={() => { search.current?.blur(); onView('map') }}>지도 보기</button></div>
         </div>
         <div className="gm-mobile__list">
           {places.length ? places.map((place) => <button
             key={place.id}
             type="button"
             className={selected?.id === place.id ? 'is-active' : ''}
-            onClick={() => { onSelect(place); onView('map') }}
+            onClick={() => { search.current?.blur(); onSelect(place); onView('map') }}
           >
             <span className={`gm-mobile__icon gm-mobile__icon--${place.category}`} aria-hidden="true">{placeIcon(place)}</span>
             <span className="gm-mobile__list-body"><strong>{place.name}</strong><small>{categoryLabel(place)}{place.address ? ` · ${place.address}` : ''}</small></span>
             <span aria-hidden="true">↗</span>
-          </button>) : <p className="gm-mobile__empty">검색 결과가 없습니다.</p>}
+          </button>) : <p className="gm-mobile__empty">검색 결과가 없습니다. 검색어를 줄이거나 다른 분류를 선택해 보세요.</p>}
         </div>
       </> : selected ? <>
         <div className="gm-mobile__head">
           <div><small>{categoryLabel(selected)}</small><strong>{selected.name}</strong></div>
           <span className={`gm-mobile__icon gm-mobile__icon--${selected.category}`} aria-hidden="true">{placeIcon(selected)}</span>
         </div>
-        {selected.photo && <img className="gm-mobile__photo" src={selected.photo} alt={`${selected.name} 사진`} loading="lazy" />}
-        {selected.description && <p className="gm-mobile__description">{selected.description}</p>}
         {selected.address && <p className="gm-mobile__address">⌖ {selected.address}</p>}
+        {(selected.photo || selected.description) && <>
+          <button type="button" className="gm-mobile__detail-toggle" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? '장소 안내 접기 ⌃' : '사진·장소 안내 보기 ⌄'}</button>
+          {expanded && <div className="gm-mobile__detail-content">
+            {selected.photo && <img className="gm-mobile__photo" src={selected.photo} alt={`${selected.name} 사진`} loading="lazy" />}
+            {selected.description && <p className="gm-mobile__description">{selected.description}</p>}
+          </div>}
+        </>}
         <BusArrivals key={selected.id} place={selected} />
         <div className="gm-mobile__actions">
           <button type="button" onClick={() => onView('list')}>주변 장소 {places.length}곳</button>
