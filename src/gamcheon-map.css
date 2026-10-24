@@ -1100,4 +1100,6 @@
 .map-bus-arrivals button:disabled { opacity: .6; cursor: wait; }
 .map-bus-arrivals ul { display: grid; gap: 8px; max-height: 170px; overflow: auto; list-style: none; padding: 0; margin: 10px 0; }
 .map-bus-arrivals li { display: grid; gap: 3px; padding: 7px 9px; background: #f5f7fc; border-radius: 8px; }
+/* 휴대폰 지도 카드에서는 목록을 조금 낮게 두고 안에서 넘겨 봅니다(카드가 오른쪽 위 버튼까지 올라가지 않게). */
+.gamcheon-map.is-compact-app .gm-mobile__card .map-bus-arrivals ul { max-height: 118px; }
 .map-bus-arrivals small { display: block; color: #697286; font-size: 10px; line-height: 1.5; }
