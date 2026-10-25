@@ -295,9 +295,9 @@ describe('GamcheonMap', () => {
     const mobile = within(container.querySelector('.gm-mobile') as HTMLElement)
     // 처음에는 작가님 공방 카드가 보입니다.
     expect(mobile.getByRole('region', { name: '장소 정보' }).textContent).toContain(ARTIST_WORKSHOP_PLACE.name)
-    expect(mobile.getByRole('button', { name: '가게 1' })).toBeTruthy()
+    expect(mobile.getByRole('button', { name: '가게 1곳' })).toBeTruthy()
     // 주변 장소 → 목록, 검색하면 목록이 좁혀집니다.
-    fireEvent.click(mobile.getByRole('button', { name: /주변 장소/ }))
+    fireEvent.click(mobile.getByRole('button', { name: /장소 목록 ·/ }))
     expect(mobile.getByRole('region', { name: '장소 목록' })).toBeTruthy()
     fireEvent.change(mobile.getByRole('searchbox', { name: '장소 검색' }), { target: { value: '카페' } })
     expect(mobile.getByRole('button', { name: /테스트 카페/ })).toBeTruthy()

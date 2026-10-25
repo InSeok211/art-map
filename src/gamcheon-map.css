@@ -1136,3 +1136,73 @@
   .gm-mobile__detail-content { flex:none; }
   .gm-mobile__list { overscroll-behavior:contain; }
 }
+/* 하단 패널 손잡이: 내부 스크롤과 지도 터치를 분리합니다. */
+@media(max-width:720px) {
+ .gamcheon-map .gm-mobile__card { transition:height .2s ease,max-height .2s ease; }
+ .gamcheon-map .gm-mobile__handle { touch-action:none; user-select:none; -webkit-user-select:none; cursor:grab; flex:none; height:38px; min-height:38px; position:sticky; top:0; z-index:2; background:#fff; align-content:center; gap:4px; }
+ .gm-mobile__handle:active { cursor:grabbing; }
+ .gm-mobile__handle small { font-size:10px; color:var(--m-ink); opacity:.55; }
+ .gamcheon-map .gm-mobile__card[data-position=peek] { height:92px; max-height:92px; overflow:hidden; }
+ .gamcheon-map .gm-mobile__card[data-position=peek] .gm-mobile__head strong { white-space:nowrap; text-overflow:ellipsis; }
+ .gamcheon-map .gm-mobile__card[data-position=peek] .gm-mobile__actions { position:static; }
+ .gamcheon-map .gm-mobile__card[data-position=open] { height:min(560px,calc(100% - 150px)); max-height:min(560px,calc(100% - 150px)); }
+ .gamcheon-map .gm-mobile__card.is-dragging { height:var(--gm-drag-height)!important; max-height:var(--gm-drag-height)!important; transition:none; overflow:hidden; }
+ .gamcheon-map .gm-mobile__card[data-position=peek] .gm-mobile__head button,
+ .gamcheon-map .gm-mobile__card[data-position=peek] .gm-mobile__list-controls { visibility:hidden; }
+ .gamcheon-map .gm-mobile__card[data-position=peek] > :not(.gm-mobile__handle):not(.gm-mobile__head):not(.gm-mobile__route),
+ .gamcheon-map .gm-mobile__card[data-position=peek] .gm-mobile__route > :not(.gm-mobile__head) { visibility:hidden; }
+}
+@media(prefers-reduced-motion:reduce) { .gamcheon-map .gm-mobile__card { transition:none; } }
+@media(max-width:720px) {
+ .gamcheon-map .gm-mobile__card[data-position=open]:not(.is-list):not(.is-route) .gm-mobile__actions { margin-top:auto; padding-top:12px; }
+}
+/* 모바일 최적화: 내용을 담는 만큼 펼치고, 안내만 스크롤하며 주요 행동은 고정합니다. */
+@media(max-width:720px) {
+ .gamcheon-map.is-immersive.is-compact-app .gm-mobile__top { left:12px; right:12px; gap:7px; }
+ .gamcheon-map.is-compact-app .gm-mobile__chips { gap:5px; padding-bottom:3px; }
+ .gamcheon-map.is-compact-app .gm-mobile__chips button { min-height:44px; padding:8px 10px; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,.08); }
+ .gm-mobile__chips small { display:inline-block; margin-left:5px; font-size:10px; opacity:.85; }
+ .gamcheon-map .gm-mobile__handle { height:38px; min-height:38px; }
+ .gamcheon-map.is-compact-app .gm-mobile__card { left:12px; right:12px; bottom:10px; padding:0 14px 12px; max-height:min(62%,460px); overflow:hidden; }
+ .gamcheon-map .gm-mobile__card[data-position=open]:not(.is-list):not(.is-route) { height:auto; max-height:min(72%,520px); }
+ .gamcheon-map .gm-mobile__card[data-position=peek] { height:92px; max-height:92px; }
+ .gamcheon-map .gm-mobile__card.is-list[data-position=auto] { height:min(52%,410px); }
+ .gamcheon-map .gm-mobile__card.is-list[data-position=open],
+ .gamcheon-map .gm-mobile__card.is-route[data-position=open] { height:min(560px,calc(100% - 150px)); max-height:min(560px,calc(100% - 150px)); }
+ .gamcheon-map .gm-mobile__head { flex-shrink:0; }
+ .gamcheon-map .gm-mobile__head strong { font-size:16px; line-height:1.45; word-break:keep-all; overflow-wrap:anywhere; }
+ .gm-mobile__place-scroll { flex:0 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
+ .gamcheon-map.is-compact-app .gm-mobile__actions,
+ .gamcheon-map .gm-mobile__card[data-position=open]:not(.is-list):not(.is-route) .gm-mobile__actions { position:static; flex:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--m-line); }
+ .gamcheon-map .gm-mobile__actions button { min-height:46px; }
+ .gamcheon-map.is-compact-app .gm-mobile__card .map-bus-arrivals ul { max-height:none; overflow:visible; }
+ .gm-mobile__place-scroll .map-bus-arrivals button { min-height:44px; }
+ .gm-mobile__place-scroll .map-bus-arrivals { margin-top:10px; }
+ .gm-mobile__place-scroll .map-bus-arrivals small { font-size:11px; }
+ .gamcheon-map .gm-mobile__detail-toggle { width:100%; min-height:44px; }
+ .gamcheon-map .gm-mobile__list-controls { gap:2px!important; }
+ .gm-mobile__list-controls button { min-height:44px; white-space:nowrap; font-size:11px; }
+ .gm-mobile__empty p { margin:5px 0; }
+ .gm-mobile__empty button { min-height:44px; border:1px solid var(--m-line); border-radius:9px; background:#fff; color:var(--m-blue); font:inherit; margin-top:8px; padding:8px 12px; }
+ .gamcheon-map.is-immersive .gamcheon-map__map-tools > .gm-mobile-secondary { display:none; }
+ .gamcheon-map.is-immersive.is-compact-app .gamcheon-map__map-tools { top:116px; }
+ .gamcheon-map.is-immersive .gamcheon-map__map-tools .gamcheon-map__terrain-switch { flex-direction:row; width:auto; border-radius:13px; }
+ .gamcheon-map.is-immersive .gamcheon-map__map-tools .gamcheon-map__terrain-switch button { min-width:40px; height:38px; }
+ .gamcheon-map.is-immersive .gamcheon-map__more-menu { max-height:calc(100% - 140px); overflow:auto; overscroll-behavior:contain; }
+ .gamcheon-map.is-immersive .gamcheon-map__more-menu button { min-height:44px; }
+ .gamcheon-map.is-immersive.is-card-tall .gamcheon-map__map-tools { visibility:hidden; }
+ .gamcheon-map .gm-mobile__card[data-position=peek] .gm-mobile__place-scroll { visibility:hidden; }
+}
+@media(max-width:360px) {
+ .gamcheon-map.is-compact-app .gm-mobile__chips button { padding:8px; font-size:11px; }
+ .gamcheon-map .gm-mobile__card.is-list .gm-mobile__head { flex-wrap:wrap; }
+ .gamcheon-map .gm-mobile__card.is-list .gm-mobile__list-controls { margin-left:auto; }
+}
+@media(max-height:520px) and (max-width:720px) {
+ .gamcheon-map.is-compact-app .gm-mobile__card { max-height:calc(100% - 120px); }
+ .gamcheon-map.is-compact-app .gm-mobile__card[data-position=open] { max-height:calc(100% - 120px); }
+}
+@media(max-width:720px) {
+ .gm-mobile__search input::-webkit-search-cancel-button { -webkit-appearance:none; appearance:none; }
+ .gamcheon-map.is-immersive .gm-mobile { font-family:inherit; }
+}

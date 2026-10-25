@@ -665,6 +665,8 @@ export function GamcheonMap({
             ['시안 건물 보기', showConceptBuildings],
             ['촬영 거리 중심으로', resetMap],
             [showBuildings ? '실제 건물 윤곽 숨기기' : '실제 건물 윤곽 보기', () => setShowBuildings((current) => !current)],
+            [modelsSeeThrough ? '건물 반투명 끄기' : '건물 반투명 보기', () => setTranslucentModels((current) => !current)],
+            [workshopOnly ? '다른 건물 다시 보기' : '작가님 공방만 보기', () => setWorkshopOnly((current) => !current)],
           ].map(([label, action]) => <button key={label as string} type="button" role="menuitem" onClick={() => { (action as () => void)(); setMoreOpen(false) }}>{label as string}</button>)}
         </div>
       </>}
@@ -805,7 +807,7 @@ export function GamcheonMap({
         <button type="button" className="gamcheon-map__street-focus is-secondary" onClick={showConceptBuildings} title="시안 건물 보기">시안 건물 보기</button>
         <button
           type="button"
-          className={modelsSeeThrough ? 'is-active' : ''}
+          className={`gm-mobile-secondary${modelsSeeThrough ? ' is-active' : ''}`}
           onClick={() => setTranslucentModels((current) => !current)}
           disabled={mode === 'alleys'}
           aria-pressed={modelsSeeThrough}
@@ -831,7 +833,7 @@ export function GamcheonMap({
         </button>
         <button
           type="button"
-          className={workshopOnly ? 'is-active' : ''}
+          className={`gm-mobile-secondary${workshopOnly ? ' is-active' : ''}`}
           onClick={() => setWorkshopOnly((current) => !current)}
           aria-pressed={workshopOnly}
           aria-label={workshopOnly ? '다른 건물 다시 보기' : '작가님 공방만 보기'}
