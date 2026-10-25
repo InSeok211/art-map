@@ -150,6 +150,23 @@ const DISTRICT_FLOOR_HEIGHT = 2.65
 const FADE_TEXTURE_SIZE = 64
 // 지도(그래픽 연결)마다 하나씩 두고 함께 쓰는 렌더러. 다음 3D 거리를 미리 준비할 때 지도 캔버스로도 찾습니다.
 const sharedRenderers = new WeakMap<WebGL2RenderingContext, THREE.WebGLRenderer>()
+
+// Three는 그림자 지도(깊이 비교 텍스처) 등을 텍스처 칸에 묶어 둔 채 끝납니다. 같은 그래픽 연결을 쓰는 MapLibre
+// 셰이더가 그 칸을 일반 텍스처로 읽으면 'Mismatch between texture format and sampler type' 경고가 쏟아지므로,
+// 거리를 그린 뒤 텍스처 칸을 비웁니다. Three는 다음 프레임 시작 때 resetState()로 다시 묶습니다.
+const textureUnitCounts = new WeakMap<WebGL2RenderingContext, number>()
+function releaseTextureUnits(gl: WebGL2RenderingContext) {
+  let count = textureUnitCounts.get(gl)
+  if (count === undefined) {
+    count = Math.min(16, gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS) as number)
+    textureUnitCounts.set(gl, count)
+  }
+  for (let unit = 0; unit < count; unit++) {
+    gl.activeTexture(gl.TEXTURE0 + unit)
+    gl.bindTexture(gl.TEXTURE_2D, null)
+  }
+  gl.activeTexture(gl.TEXTURE0)
+}
 const renderersByCanvas = new WeakMap<HTMLCanvasElement, THREE.WebGLRenderer>()
 // 먼 동네를 나눠 만들 때 이만큼 모이면 메시로 합쳐 보여 줍니다
 const DISTRICT_FLUSH_BUILDINGS = 150
@@ -2559,6 +2576,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     // 경로 띠는 화면 기준 굵기를 지키도록, 줌이 꽤 바뀌면 그 굵기로 다시 만듭니다.
     if (this.routeLine && Math.abs(this.map.getZoom() - this.routeZoom) > 0.35) this.buildRouteLine()
     this.renderer.render(this.scene, this.camera)
+    releaseTextureUnits(_gl)
   }
 
   // 3D 지형에서 길찾기 경로(경도·위도 선)를 땅 높이를 따라 그립니다. 바탕 지도의 경로 선은 지형 면에 붙어 거리
