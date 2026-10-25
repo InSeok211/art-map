@@ -39,7 +39,7 @@ import type { Occluder } from './streetOcclusion'
 import { buildArtistWorkshopModel } from './artistWorkshopModel'
 import type { WorkshopFinish } from './artistWorkshopModel'
 import type { ConceptSurface } from './streetTextures'
-import { addSceneLights, bakeShadowMap, configureRenderer, createShadowCatcher, fitShadowCatcher } from './threeShadows'
+import { addSceneLights, bakeShadowMap, configureRenderer, createShadowCatcher, fitShadowCatcher, prepareShadowMaps } from './threeShadows'
 import { distanceToSegment, facingRotation, outlineCenter, polygonArea } from './planGeometry'
 import buildingFootprints from '../data/gamcheon-buildings.json'
 
@@ -2539,6 +2539,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
 
   private shadersReady = false
   private shadowBakeAt = 0
+  private shadowMapsPrepared = false
 
   pickBuildingAt(point: { x: number; y: number }): BuildingSelection | null {
     if (!this.picking || !this.map || !this.shadersReady) return null
@@ -2561,6 +2562,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
     // 그림자 지도를 처음 구울 때 그림자용 셰이더 컴파일로 1초 가까이 멈춥니다. 건물이 먼저 보이도록 그림자 없이 한 번
     // 그린 뒤, 조금 있다가 굽습니다(장면이 바뀌어 다시 구울 때도 같음).
     if (!this.shadowsBaked) {
+      // 굽기 전 프레임에도 그림자 셰이더에 맞는 깊이 텍스처가 묶이도록 합니다(threeShadows.prepareShadowMaps).
+      if (!this.shadowMapsPrepared) {
+        prepareShadowMaps(this.renderer, this.scene)
+        this.shadowMapsPrepared = true
+      }
       const now = performance.now()
       if (!this.shadowBakeAt) {
         this.shadowBakeAt = now + SHADOW_BAKE_DELAY_MS

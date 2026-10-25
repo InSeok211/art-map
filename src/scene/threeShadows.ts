@@ -59,6 +59,36 @@ export function fitShadowCatcher(mesh: THREE.Mesh, minX: number, maxX: number, m
   mesh.position.set((minX + maxX) / 2, y, (minZ + maxZ) / 2)
 }
 
+// 그림자 지도를 굽기 전(첫 화면은 그림자 없이 먼저 그림)에도 그림자 셰이더가 읽을 수 있는 깊이 텍스처를 미리 둡니다.
+// 그림자 지도가 없으면 Three(0.186)는 빈 그림자 텍스처를 쓰려 하지만, 그 텍스처는 올라가지 않아 일반(RGBA) 빈
+// 텍스처가 대신 묶입니다. sampler2DShadow에 일반 텍스처가 묶이면 WebGL이 'Mismatch between texture format and
+// sampler type' 오류를 내고 그 그리기를 건너뜁니다. 그래서 Three가 PCF 그림자에 만드는 것과 같은 형식의 깊이 텍스처를
+// 만들어 '그림자 없음'(가장 먼 깊이)으로 채워 둡니다. 실제로 구울 때 Three는 이 지도를 그대로 이어 씁니다.
+export function prepareShadowMaps(renderer: THREE.WebGLRenderer, scene: THREE.Scene) {
+  const lights: THREE.DirectionalLight[] = []
+  scene.traverse((object) => {
+    const light = object as THREE.DirectionalLight
+    if (light.isDirectionalLight && light.castShadow && !light.shadow.map) lights.push(light)
+  })
+  if (!lights.length) return
+  const previous = renderer.getRenderTarget()
+  for (const light of lights) {
+    const { x, y } = light.shadow.mapSize
+    const map = new THREE.WebGLRenderTarget(x, y)
+    const depth = new THREE.DepthTexture(x, y, THREE.UnsignedIntType)
+    depth.name = `${light.name}.shadowMap`
+    depth.format = THREE.DepthFormat
+    depth.compareFunction = THREE.LessEqualCompare
+    depth.minFilter = THREE.LinearFilter
+    depth.magFilter = THREE.LinearFilter
+    map.depthTexture = depth
+    light.shadow.map = map
+    renderer.setRenderTarget(map)
+    renderer.clear(false, true, false)
+  }
+  renderer.setRenderTarget(previous)
+}
+
 // MapLibre는 레이어마다 gl.depthRange를 좁혀 두는데, Three의 그림자 지도는 0~1 전체 깊이를 전제로
 // 깊이를 비교합니다. 깊이 범위를 되돌린 채 1×1 임시 대상에 한 번 그려 그림자 지도만 새로 만듭니다.
 export function bakeShadowMap(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, gl: WebGL2RenderingContext) {
