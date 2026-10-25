@@ -5,16 +5,28 @@ import type { PointerEvent } from 'react'
 import { mobilePanelOpenHeight, useMobilePanelDrag } from './useMobilePanelDrag'
 
 afterEach(() => { cleanup(); document.body.innerHTML = '' })
-function setup(width = 390) {
+function setup(width = 390, contentHeight = 600) {
   const host = document.createElement('div'); host.className = 'gamcheon-map'
   Object.defineProperties(host, { clientWidth: { value: width }, clientHeight: { value: 700 } })
   const card = document.createElement('section'); host.append(card); document.body.append(host)
   card.getBoundingClientRect = () => ({ height: 240 }) as DOMRect
+  const content = document.createElement('div'); card.append(content)
+  content.getBoundingClientRect = () => ({ height: contentHeight }) as DOMRect
+  Object.defineProperty(content, 'scrollHeight', { value: contentHeight })
   const hook = renderHook(({ resetKey }) => useMobilePanelDrag({ current: card }, resetKey), { initialProps: { resetKey: 'map:a' } })
   const pointer = (y: number, time: number) => ({ button: 0, pointerId: 1, clientY: y, timeStamp: time, currentTarget: card }) as PointerEvent<HTMLElement>
   return { ...hook, card, pointer }
 }
 describe('모바일 패널 드래그', () => {
+  it('안내가 짧으면 드래그를 계속해도 내용보다 높은 빈 패널을 만들지 않는다', () => {
+    const { result, card, pointer } = setup(390, 240)
+    act(() => result.current.handleProps.onPointerDown(pointer(500, 0)))
+    act(() => result.current.handleProps.onPointerMove(pointer(0, 300)))
+    expect(card.style.getPropertyValue('--gm-drag-height')).toBe('240px')
+    act(() => result.current.handleProps.onPointerUp(pointer(0, 310)))
+    expect(result.current.position).toBe('open')
+    expect(card.style.getPropertyValue('--gm-drag-height')).toBe('')
+  })
   it('위로 끌어 펼치고, 드래그 뒤 발생하는 클릭은 무시한다', () => {
     const { result, card, pointer } = setup()
     act(() => result.current.handleProps.onPointerDown(pointer(500, 0)))

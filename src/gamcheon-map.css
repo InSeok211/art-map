@@ -1206,3 +1206,10 @@
  .gm-mobile__search input::-webkit-search-cancel-button { -webkit-appearance:none; appearance:none; }
  .gamcheon-map.is-immersive .gm-mobile { font-family:inherit; }
 }
+/* 짧은 목록·경로도 내용 높이만큼만 펼칩니다. 드래그 중에는 훅이 같은 제한을 적용합니다. */
+@media(max-width:720px) {
+ .gamcheon-map .gm-mobile__card.is-list[data-position=open],
+ .gamcheon-map .gm-mobile__card.is-route[data-position=open] { height:auto; max-height:min(560px,calc(100% - 150px)); }
+ .gamcheon-map .gm-mobile__card.is-list[data-position=open] .gm-mobile__list { flex:0 1 auto; }
+ .gamcheon-map .gm-mobile__card.is-route[data-position=open] .gm-mobile__route { flex:0 1 auto; }
+}

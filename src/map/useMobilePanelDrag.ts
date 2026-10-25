@@ -8,6 +8,21 @@ export function mobilePanelOpenHeight(hostHeight: number) {
   return Math.max(MOBILE_PANEL_PEEK, Math.min(560, hostHeight - 150))
 }
 
+// 화면 높이뿐 아니라 실제 내용 높이로 제한해야 드래그 중 빈 패널이 늘어나지 않습니다.
+export function mobilePanelContentHeight(panel: HTMLElement) {
+  const style = getComputedStyle(panel)
+  const number = (value: string) => Number.parseFloat(value) || 0
+  const content = Array.from(panel.children).reduce((height, child) => {
+    const element = child as HTMLElement
+    const childStyle = getComputedStyle(element)
+    if (childStyle.display === 'none') return height
+    return height + Math.max(element.getBoundingClientRect().height, element.scrollHeight)
+      + number(childStyle.marginTop) + number(childStyle.marginBottom)
+  }, 0)
+  return Math.max(MOBILE_PANEL_PEEK, content + number(style.paddingTop) + number(style.paddingBottom)
+    + number(style.borderTopWidth) + number(style.borderBottomWidth))
+}
+
 export function useMobilePanelDrag(card: RefObject<HTMLElement | null>, resetKey: string) {
   const [position, setPosition] = useState<'auto' | 'open' | 'peek'>('auto')
   const suppressClick = useRef(false)
@@ -27,7 +42,8 @@ export function useMobilePanelDrag(card: RefObject<HTMLElement | null>, resetKey
       if (!cancel) {
         // 멈춰 기다린 뒤 놓으면 오래된 속도 대신 현재 위치로 판단합니다.
         const speed = event.timeStamp - current.time > 120 ? 0 : current.speed
-        setPosition(sheetSnapOpen(current.current, speed, mobilePanelOpenHeight(host.clientHeight), MOBILE_PANEL_PEEK) ? 'open' : 'peek')
+        const maximum = Math.min(mobilePanelOpenHeight(host.clientHeight), mobilePanelContentHeight(card.current!))
+        setPosition(sheetSnapOpen(current.current, speed, maximum, MOBILE_PANEL_PEEK) ? 'open' : 'peek')
       }
     }
     restore()
@@ -58,7 +74,8 @@ export function useMobilePanelDrag(card: RefObject<HTMLElement | null>, resetKey
         const elapsed = event.timeStamp - current.time
         if (elapsed > 0) current.speed = (event.clientY - current.y) / elapsed
         current.y = event.clientY; current.time = event.timeStamp
-        current.current = Math.max(MOBILE_PANEL_PEEK, Math.min(mobilePanelOpenHeight(host.clientHeight), current.height - dy))
+        const maximum = Math.min(mobilePanelOpenHeight(host.clientHeight), mobilePanelContentHeight(element))
+        current.current = Math.max(MOBILE_PANEL_PEEK, Math.min(maximum, current.height - dy))
         element.classList.add('is-dragging')
         element.style.setProperty('--gm-drag-height', `${current.current}px`)
       },
