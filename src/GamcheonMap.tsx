@@ -50,7 +50,9 @@ const ALL_EDIT_TOOLS: EditTool[] = ['places', 'alleys', 'buildings']
 const MAP_STYLE = createMinimalStyle(baseStyle) as unknown as StyleSpecification
 // 지도 위 출처 표시에 덧붙이는 항목. 타일·스타일(OpenFreeMap, OpenMapTiles, OpenStreetMap)은 스타일 소스가 자동으로 채웁니다.
 // 전체 고지는 홈페이지의 /third-party-notices.txt 에 있습니다.
+// customAttribution을 지정하면 MapLibre 기본 링크가 빠지므로 맨 앞에 다시 넣습니다.
 const MAP_DATA_ATTRIBUTION = [
+  '<a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre</a>',
   '지형 <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Mapzen Terrain Tiles</a> (USGS·NOAA)',
   '버스 <a href="https://www.data.go.kr/" target="_blank" rel="noopener">부산광역시 BIMS · 공공데이터포털</a>',
 ]
