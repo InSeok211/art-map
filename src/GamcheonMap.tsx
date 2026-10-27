@@ -48,6 +48,12 @@ const EMPTY_ALLEYS: Alley[] = []
 export type EditTool = 'places' | 'alleys' | 'buildings'
 const ALL_EDIT_TOOLS: EditTool[] = ['places', 'alleys', 'buildings']
 const MAP_STYLE = createMinimalStyle(baseStyle) as unknown as StyleSpecification
+// 지도 위 출처 표시에 덧붙이는 항목. 타일·스타일(OpenFreeMap, OpenMapTiles, OpenStreetMap)은 스타일 소스가 자동으로 채웁니다.
+// 전체 고지는 홈페이지의 /third-party-notices.txt 에 있습니다.
+const MAP_DATA_ATTRIBUTION = [
+  '지형 <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Mapzen Terrain Tiles</a> (USGS·NOAA)',
+  '버스 <a href="https://www.data.go.kr/" target="_blank" rel="noopener">부산광역시 BIMS · 공공데이터포털</a>',
+]
 const TERRAIN_MODE_KEY = 'gamcheon-map-terrain-v1'
 function loadTerrainMode() {
   try { return localStorage.getItem(TERRAIN_MODE_KEY) === '1' } catch { return false }
@@ -331,11 +337,11 @@ export function GamcheonMap({
       canvasContextAttributes: { antialias: (window.devicePixelRatio || 1) < MAX_PIXEL_RATIO },
       // 화면 밀도가 3인 휴대폰은 픽셀 수가 9배라 3D 장면이 크게 느려집니다. 2배까지만 그려도 선명합니다.
       pixelRatio: Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO),
+      // 출처 표시는 화면 크기와 관계없이 항상 펼쳐 둡니다. OpenStreetMap 데이터(ODbL)는 지도 위에 출처가 보여야 하고,
+      // (i) 버튼 뒤에 접어 두는 방식은 OSM 재단 출처 표시 지침에 맞지 않습니다. 타일·스타일 출처는 MAP_STYLE의 소스가 채우고,
+      // 지형 고도와 버스 정보 출처만 여기서 덧붙입니다.
+      attributionControl: { compact: false, customAttribution: MAP_DATA_ATTRIBUTION },
     })
-
-    // 좁은 화면에서 MapLibre는 출처 표시를 (i) 버튼으로 바꾸지만 처음엔 펼쳐 두고 지도를 끌어야 접습니다.
-    // 휴대폰에서는 출처가 채워진 뒤(첫 idle) 바로 접어 둡니다. (i)를 누르면 다시 펼쳐집니다.
-    if (isPhoneLayout()) map.once('idle', () => element.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'))
 
     // 개발 서버에서만: 성능 측정 스크립트가 지도를 찾을 수 있게 둡니다.
     if (import.meta.env.DEV) (window as unknown as { __gamcheonMap?: Map }).__gamcheonMap = map

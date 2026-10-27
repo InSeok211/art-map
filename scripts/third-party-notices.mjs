@@ -21,6 +21,8 @@ export const DATA_NOTICE = `지도 데이터와 3D 에셋 출처
 - 지형 고도('3D 지형'): Terrain Tiles (Mapzen/Tilezen, https://registry.opendata.aws/terrain-tiles/).
   SRTM·GMTED2010 data courtesy of the U.S. Geological Survey, ETOPO1 — NOAA National Centers for Environmental Information.
   이 타일에서 뽑은 높이 표(terrain.json)를 함께 씁니다.
+- 버스 정류장 위치와 실시간 도착정보: 부산광역시 버스정보관리시스템(BIMS) 공공데이터. 공공데이터포털(https://www.data.go.kr/)의
+  이용조건에 따라 출처를 표시하며, 도착정보는 서버가 요청할 때마다 공공데이터포털 API에서 받아옵니다.
 - 3D 건물 모델, 공방·그린하우스·아름다운한글 시안 GLB, 외벽 질감은 모두 직접 만든 절차적(코드로 생성한) 모델입니다. 외부 제작 3D 에셋은 쓰지 않으며,
   벽화·그림·서예 작품·로고 자리는 사진을 넣지 않고 단색 면으로만 표시합니다.
 `
