@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { busArrivals, parseBusArrivals } from './busArrivals'
+import { busArrivals, parseBusArrivals, resetBusArrivalsCache } from './busArrivals'
 import type { MapEnv } from './env'
 
 const xml = '<response><header><resultCode>00</resultCode></header><items><item><lineno>사하구1-1</lineno><min1>2</min1><station1>2</station1><min2>운행대기</min2></item><item><lineno>서구2-2</lineno></item></items></response>'
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => { vi.unstubAllGlobals(); resetBusArrivalsCache() })
 describe('bus arrivals', () => {
   it('keeps missing buses distinct from zero minutes and waiting', () => {
     const rows = parseBusArrivals(xml)
@@ -41,5 +41,15 @@ describe('bus arrivals', () => {
     const body = await response.json() as { stopIds: string[]; arrivals: { route: string }[] }
     expect(body.stopIds).toEqual(['168590202'])
     expect(body.arrivals.map((item) => item.route)).toEqual(['사하구1-1', '서구2-2'])
+  })
+
+  it('does not retry a failed stop for 30 seconds', async () => {
+    const fetch = vi.fn(async () => new Response('error', { status: 500 })); vi.stubGlobal('fetch', fetch)
+    const env = { busanBusApiKey: 'k' } as MapEnv
+    const url = new URL('https://map.test/api/map-bus-arrivals?placeId=busan-BSB215880201')
+    expect((await busArrivals(env, url)).status).toBe(502)
+    expect((await busArrivals(env, url)).status).toBe(502)
+    // 정류소 번호 두 개를 한 번씩만 물었고, 두 번째 요청은 실패 캐시로 바로 거절됩니다.
+    expect(fetch).toHaveBeenCalledTimes(2)
   })
 })

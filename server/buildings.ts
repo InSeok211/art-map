@@ -2,6 +2,12 @@ import type { MapEnv } from './env'
 import { error, json, readJson } from './http'
 import { EMPTY_BUILDING_EDITS, sanitizeBuildingEdits } from '../src/buildings/buildingEdits'
 import type { BuildingEdits } from '../src/buildings/buildingEdits'
+import { deleteUnusedPhotos } from './images'
+
+// 초안·공개본이 바뀐 뒤 쓰지 않게 된 공방 사진을 정리합니다. 정리가 실패해도 저장은 그대로 성공입니다.
+async function cleanupPhotos(env: MapEnv) {
+  try { await deleteUnusedPhotos(env) } catch (cause) { console.error('unused photo cleanup failed', cause) }
+}
 
 // 편집 앱 '건물' 탭에서 고친 지도 건물입니다. 초안(draft, 편집 앱에서만 보임)과 공개본(published, 공개 지도) 두 벌을
 // 두고, '공개하기'로 초안을 공개본에 옮깁니다. 받은 값은 편집 앱과 같은 규칙(buildingEdits.ts)으로 정리해 저장합니다.
@@ -51,17 +57,20 @@ export async function saveDraft(request: Request, env: MapEnv) {
   // 개발 미리보기용 사진(data 주소)은 서버에 저장하지 않습니다(사진은 /api/admin/map-images로 올린 번호만).
   if (draft.workshop?.photo?.startsWith('data:')) return error('공방 사진은 서버에 올린 뒤 저장해 주세요. 기존 초안은 유지됩니다.', 400)
   await write(env, 'draft', draft)
+  await cleanupPhotos(env)
   return json({ draft })
 }
 
 export async function publish(env: MapEnv) {
   const { draft } = await readBothVersions(env)
   await write(env, 'published', draft)
+  await cleanupPhotos(env)
   return json({ published: draft })
 }
 
 export async function discard(env: MapEnv) {
   const published = await readPublished(env)
   await write(env, 'draft', published)
+  await cleanupPhotos(env)
   return json({ draft: published })
 }

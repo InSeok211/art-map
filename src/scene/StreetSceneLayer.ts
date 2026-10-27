@@ -31,9 +31,6 @@ import { routeLineMeshes } from './routeLine'
 import { createRoadviewBusShelter } from './roadviewBusShelter'
 import type { Place } from '../types'
 import type { RoadGround } from './roadGround'
-// 길을 가리는 건물 반투명(findRoadOccluders)은 2026-10-09 주석 처리했습니다. 되살릴 때 아래 두 줄의 주석을 풉니다.
-// import { buildRoadRuns } from './roadGround'
-// import { findRoadOccluders, RoadIndex } from './streetOcclusion'
 import { findPointOccluders } from './streetOcclusion'
 import type { Occluder } from './streetOcclusion'
 import { buildArtistWorkshopModel } from './artistWorkshopModel'
@@ -241,7 +238,6 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private readonly fadeData = new Uint8Array(FADE_TEXTURE_SIZE * FADE_TEXTURE_SIZE * 4).fill(255)
   private readonly fadeTexture = new THREE.DataTexture(this.fadeData, FADE_TEXTURE_SIZE, FADE_TEXTURE_SIZE, THREE.RGBAFormat)
   private readonly fadeUniform = { value: this.fadeTexture }
-  // private roadIndex: RoadIndex | null = null
   // 내 위치(GPS, 장면 미터). 이 위치를 가리는 근처 건물을 반투명하게 합니다.
   private myPosition: [number, number] | null = null
   private autoSeeThrough = true
@@ -640,18 +636,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
     if (!map) return
     // 모두 반투명하게 했거나 자동 반투명을 끈 경우에는 건물별로 고르지 않습니다.
     let next = new Set<number>()
-    // 길을 가리는 건물 반투명(주석 처리, 2026-10-09):
-    // if (this.autoSeeThrough && this.buildingOpacity >= 1) {
-    //   this.roadIndex ??= new RoadIndex(buildRoadRuns(getStreetSceneBounds()).roadRuns)
-    //   // 화면 긴 변만큼의 땅(지도 중심 기준 반경)에 있는 건물만 봅니다. 기울이면 위쪽이 더 멀리 보이므로 넉넉히 잡습니다.
-    //   const center = map.getCenter()
-    //   const metersPerPixel = 40075016.686 * Math.cos(center.lat * Math.PI / 180) / (512 * 2 ** map.getZoom())
-    //   const canvas = map.getCanvas()
-    //   const [x, z] = streetMeters([center.lng, center.lat])
-    //   const radius = Math.max(canvas.clientWidth, canvas.clientHeight) * metersPerPixel * (1 + map.getPitch() / 60)
-    //   next = findRoadOccluders(this.occluders, this.roadIndex, map.getBearing(), map.getPitch(), { x, z, radius })
-    // }
-    // 지금은 내 위치(GPS)를 가리는 근처 건물만 반투명하게 합니다. 위치를 모르면 아무 건물도 비치지 않습니다.
+    // 내 위치(GPS)를 가리는 근처 건물만 반투명하게 합니다. 위치를 모르면 아무 건물도 비치지 않습니다.
+    // (길을 가리는 건물을 모두 비치게 하던 방식은 2026-10-09에 뺐고, 그 코드는 2026-10-27에 지웠습니다.)
     if (this.autoSeeThrough && this.buildingOpacity >= 1 && this.myPosition) {
       // 지형에서는 건물 높이를 내 위치 땅 높이 기준으로 바꿔 셉니다(아래쪽 비탈의 건물은 나를 가리지 않음).
       const terrain = this.terrain, position = this.myPosition

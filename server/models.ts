@@ -60,7 +60,7 @@ export async function getModel(id: string, request: Request, env: MapEnv) {
   return new Response(object.body, {
     headers: {
       'content-type': 'model/gltf-binary',
-      'cache-control': published ? 'public, max-age=86400' : 'private, no-store',
+      'cache-control': published ? 'public, max-age=3600' : 'private, no-store',
       'x-content-type-options': 'nosniff',
     },
   })

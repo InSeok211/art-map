@@ -3,7 +3,7 @@ import { error, fromThisApp } from './http'
 import { adminAlleys, deleteTrail, listTrails, publicAlleys, saveAlleys, saveTrail } from './alleys'
 import { adminBuildings, discard, publicBuildings, publish, saveDraft } from './buildings'
 import { deleteModel, getModel, listModels, uploadModel } from './models'
-import { getPhoto, uploadPhoto } from './images'
+import { deletePhoto, getPhoto, uploadPhoto } from './images'
 import { ensureMapTables } from './schema'
 import { readPlaces, savePlaces } from './places'
 import { busArrivals } from './busArrivals'
@@ -40,6 +40,7 @@ const routes: [method: string, pattern: RegExp, admin: boolean, handler: Handler
 
   ['GET', /^\/api\/map-images\/([\w-]+)$/, false, (request, env, _url, [id]) => getPhoto(id, request, env)],
   ['POST', /^\/api\/admin\/map-images$/, true, (request, env) => uploadPhoto(request, env)],
+  ['DELETE', /^\/api\/admin\/map-images\/([\w-]+)$/, true, (_request, env, _url, [id]) => deletePhoto(id, env)],
 ]
 
 // 홈페이지가 넘겨줄 주소 목록입니다(이 주소들만 handleApi로 보내면 됩니다).

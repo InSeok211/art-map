@@ -231,7 +231,6 @@ export function genericRoof(id: number) {
   }
   return genericRoofs[0]
 }
-const workshop = streetMeters([129.00930268855, 35.095522407839])
 
 // Each photographed building is tied to one OSM footprint. Addresses 173,
 // 175 and 176 were checked against address points; the neighboring restaurant
@@ -953,12 +952,6 @@ const roadviewByFootprint: Record<number, Pick<StreetBuilding,
   },
 }
 
-// 로드뷰로 정면을 볼 수 없는 공방 주변 건물의 추정 외관입니다(사용자 요청: 주변과 비슷하게 추정).
-// 가까운 확인 건물(로드뷰·영상) 중 하나의 벽 재료·색을 빌려 쓰며, 근거 건물 ID를 함께 남깁니다.
-// 실제 외관을 확인한 결과가 아니므로 대조 현황에서는 별도 상태로 집계합니다.
-// 개별 외관 근거가 없는 건물에 이웃 외벽을 복사하지 않습니다.
-export const INFERRED_RADIUS_METERS = 0
-
 const conceptAppearance: Record<NonNullable<StreetBuilding['concept']>, Pick<StreetBuilding,
   'heightMeters' | 'wallColor' | 'roofColor' | 'accentColor' | 'storefront' | 'shopfrontStyle' | 'roofStyle' | 'brickFacade'>> = {
   soup: { heightMeters: 9.1, wallColor: 0x8d5142, roofColor: 0x7f817d, accentColor: 0xe4d7b7, storefront: true, shopfrontStyle: 'glass', roofStyle: 'flat', brickFacade: true },
@@ -1006,52 +999,6 @@ export function sharedBuildingEdges(outline: [number, number][], neighbors: [num
 
 // OSM 도로와 관리자가 확인한 골목길(recordedAlleys.ts)
 const mapRoads = [...mapSurfaces.roads, ...RECORDED_ALLEY_WAYS]
-const allRoads = (mapRoads as unknown as { points: StreetPoint[] }[]).map((road) => ({
-  points: road.points, meters: road.points.map(streetMeters),
-}))
-
-function centerMeters(building: StreetBuilding): [number, number] {
-  const meters = building.outline.map(streetMeters)
-  return [meters.reduce((sum, [x]) => sum + x, 0) / meters.length, meters.reduce((sum, [, z]) => sum + z, 0) / meters.length]
-}
-
-function nearestRoadPoints(center: [number, number]) {
-  let best = { distance: Infinity, points: allRoads[0]?.points ?? [] }
-  for (const road of allRoads) for (let index = 0; index < road.meters.length - 1; index++) {
-    const distance = pointSegmentDistance(center, road.meters[index], road.meters[index + 1])
-    if (distance < best.distance) best = { distance, points: road.points }
-  }
-  return best.points
-}
-
-// 공방 주변에서 외관이 확인되지 않은 건물에 가장 가까운 확인 건물의 재료·색을 빌려 줍니다.
-// 같은 근거 건물을 여러 이웃이 똑같이 복사하지 않도록 가까운 세 동 중에서 ID로 하나를 고릅니다.
-function inferNearbyFacades(buildings: StreetBuilding[]) {
-  const verified = buildings.filter((building) => building.roadview || building.observed)
-    .map((building) => ({ building, center: centerMeters(building) }))
-  if (!verified.length) return
-  for (const building of buildings) {
-    if (building.concept || building.roadview || building.observed || building.id === 1469906540) continue
-    const center = centerMeters(building)
-    if (Math.hypot(center[0] - workshop[0], center[1] - workshop[1]) > INFERRED_RADIUS_METERS) continue
-    const basis = verified
-      .map((candidate) => ({ ...candidate, distance: Math.hypot(candidate.center[0] - center[0], candidate.center[1] - center[1]) }))
-      .sort((a, b) => a.distance - b.distance).slice(0, 3)
-    const source = basis[building.id % basis.length].building
-    const facade = source.roadview ?? source.observed!
-    building.wallColor = source.wallColor
-    building.accentColor = source.accentColor
-    // 가까운 외벽만 상세 기하를 사용하고 먼 동네는 분할 로딩 모델을 유지합니다.
-    building.detail = Math.hypot(center[0] - workshop[0], center[1] - workshop[1]) <= 80 ? 'featured' : 'context'
-    building.inferred = {
-      basis: basis.map((item) => item.building.id),
-      surface: facade.surface,
-      ground: facade.ground === 'window' || facade.ground === 'shutter' ? facade.ground : 'house',
-      windowRows: building.heightMeters > 6 ? 1 : 0,
-      frontRoad: nearestRoadPoints(center),
-    }
-  }
-}
 
 // 도로 침범 보정. OSM 건물 윤곽과 도로 중심선은 따로 그려져 있어, 거리 장면이 그리는 도로 폭(roadCorridors)과
 // 겹치는 건물이 있습니다. 지도 자료에 그렇게 표기되어 있더라도 건물이 도로에 튀어나오지 않도록 윤곽에서 도로
@@ -1332,7 +1279,6 @@ export function getPhotographedStreetBuildings(): StreetBuilding[] {
         : generic
     result.push(appearance)
   }
-  inferNearbyFacades(result)
   const outlines = result.map((building) => building.outline.map(streetMeters))
   const bounds = outlines.map((outline) => ({
     west: Math.min(...outline.map(([x]) => x)), east: Math.max(...outline.map(([x]) => x)),

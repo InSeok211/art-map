@@ -18,6 +18,9 @@ interface TrailPanelProps {
 }
 
 const when = (iso: string) => {
+  // 서버는 기록 시작을 날짜(YYYY-MM-DD)로만 저장합니다. 옛 기록처럼 시각까지 있으면 그대로 보여 줍니다.
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  if (dateOnly) return `${Number(dateOnly[2])}/${Number(dateOnly[3])}`
   const date = new Date(iso)
   return Number.isNaN(date.getTime()) ? iso : `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
@@ -40,6 +43,11 @@ export function TrailPanel({
       <p className="gamcheon-map__model-help">
         휴대폰의 GPS 기록 앱(안드로이드 GPSLogger, 아이폰 Open GPX Tracker 등)으로 기록한 GPX 파일을 올려 주세요.
         가만히 있을 때의 흔들림과 정확도가 나쁜 점은 거르고, 여러 파일을 한 번에 올릴 수 있습니다.
+      </p>
+      <p className="gamcheon-map__model-help">
+        <b>본인이 직접 걸으며 기록한 파일만</b> 올려 주세요. 다른 사람의 기록은 그 사람의 동의를 받은 뒤에만 올립니다.
+        서버에는 감천 작업 범위 안의 경로와 기록한 날짜만 남고, 시각(몇 시 몇 분)과 범위 밖의 위치는 저장하지 않습니다.
+        골목 후보를 확인한 뒤에는 기록을 지워도 됩니다.
       </p>
       <label className="gamcheon-map__gpx-button">
         GPX 파일 선택

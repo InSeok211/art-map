@@ -1,39 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { deflateSync } from 'node:zlib'
 import * as THREE from 'three'
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
+import { installCanvasShims } from './lib/png-canvas.mjs'
 
-globalThis.FileReader ??= class {
-  result=null
-  onloadend=null
-  readAsArrayBuffer(blob){blob.arrayBuffer().then((value)=>{this.result=value;this.onloadend?.()})}
-  readAsDataURL(blob){blob.arrayBuffer().then((value)=>{this.result=`data:${blob.type};base64,${Buffer.from(value).toString('base64')}`;this.onloadend?.()})}
-}
-const crcTable=Array.from({length:256},(_,index)=>{let value=index;for(let bit=0;bit<8;bit++)value=(value>>>1)^(value&1?0xedb88320:0);return value>>>0})
-function pngChunk(type,data){
-  const label=Buffer.from(type),chunk=Buffer.alloc(12+data.length)
-  chunk.writeUInt32BE(data.length,0);label.copy(chunk,4);data.copy(chunk,8)
-  let crc=0xffffffff
-  for(let i=4;i<8+data.length;i++)crc=crcTable[(crc^chunk[i])&255]^(crc>>>8)
-  chunk.writeUInt32BE((crc^0xffffffff)>>>0,8+data.length)
-  return chunk
-}
-function encodePng(width,height,rgba){
-  const header=Buffer.alloc(13);header.writeUInt32BE(width,0);header.writeUInt32BE(height,4);header[8]=8;header[9]=6
-  const rows=Buffer.alloc(height*(1+width*4))
-  for(let y=0;y<height;y++)Buffer.from(rgba.buffer,rgba.byteOffset+y*width*4,width*4).copy(rows,y*(1+width*4)+1)
-  return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),pngChunk('IHDR',header),pngChunk('IDAT',deflateSync(rows)),pngChunk('IEND',Buffer.alloc(0))])
-}
-globalThis.ImageData ??= class {constructor(data,width,height){this.data=data;this.width=width;this.height=height}}
-globalThis.document ??= {createElement(kind){
-  if(kind!=='canvas')throw new Error(`Unsupported DOM node: ${kind}`)
-  const canvas={width:1,height:1,pixels:null}
-  const context={translate(){},scale(){},putImageData(image){canvas.pixels=image.data}}
-  canvas.getContext=()=>context
-  canvas.toBlob=(callback)=>callback(new Blob([encodePng(canvas.width,canvas.height,canvas.pixels)],{type:'image/png'}))
-  return canvas
-}}
+installCanvasShims()
 // 벽화·그림·로고는 각 작가와 가게의 저작물이라 사진을 쓰지 않습니다. 자리마다 사진에서 한 번 구한 대표색(보이는
 // 픽셀의 평균)만 남겨 단색 면으로 그리고, 원본 사진 조각은 지웠습니다. 로고 자리는 글자 없는 옅은 판입니다.
 const PANEL_COLORS={

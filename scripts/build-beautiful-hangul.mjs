@@ -1,35 +1,11 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { deflateSync } from 'node:zlib'
 import * as THREE from 'three'
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
+import { installCanvasShims } from './lib/png-canvas.mjs'
 
 // Node canvas bridge for GLB export (the model itself no longer embeds photographs).
-globalThis.FileReader ??= class {
-  result=null; onloadend=null
-  readAsArrayBuffer(blob){blob.arrayBuffer().then(v=>{this.result=v;this.onloadend?.()})}
-  readAsDataURL(blob){blob.arrayBuffer().then(v=>{this.result=`data:${blob.type};base64,${Buffer.from(v).toString('base64')}`;this.onloadend?.()})}
-}
-const crcTable=Array.from({length:256},(_,i)=>{let v=i;for(let j=0;j<8;j++)v=(v>>>1)^(v&1?0xedb88320:0);return v>>>0})
-function pngChunk(type,data){
-  const chunk=Buffer.alloc(data.length+12);chunk.writeUInt32BE(data.length,0);Buffer.from(type).copy(chunk,4);data.copy(chunk,8)
-  let crc=0xffffffff;for(let i=4;i<8+data.length;i++)crc=crcTable[(crc^chunk[i])&255]^(crc>>>8)
-  chunk.writeUInt32BE((crc^0xffffffff)>>>0,data.length+8);return chunk
-}
-function encodePng(width,height,rgba){
-  const head=Buffer.alloc(13);head.writeUInt32BE(width,0);head.writeUInt32BE(height,4);head[8]=8;head[9]=6
-  const rows=Buffer.alloc(height*(width*4+1))
-  for(let y=0;y<height;y++)Buffer.from(rgba.buffer,rgba.byteOffset+y*width*4,width*4).copy(rows,y*(width*4+1)+1)
-  return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),pngChunk('IHDR',head),pngChunk('IDAT',deflateSync(rows)),pngChunk('IEND',Buffer.alloc(0))])
-}
-globalThis.ImageData ??= class {constructor(data,width,height){this.data=data;this.width=width;this.height=height}}
-globalThis.document ??= {createElement(kind){
-  if(kind!=='canvas')throw new Error(`Unsupported DOM node: ${kind}`)
-  const canvas={width:1,height:1,pixels:null}
-  canvas.getContext=()=>({translate(){},scale(){},putImageData(image){canvas.pixels=image.data}})
-  canvas.toBlob=callback=>callback(new Blob([encodePng(canvas.width,canvas.height,canvas.pixels)],{type:'image/png'}))
-  return canvas
-}}
+installCanvasShims()
 
 const scene=new THREE.Scene();scene.name='Beautiful-Hangul-calligraphy-storefront-concept'
 const material=(name,color,extra={})=>new THREE.MeshStandardMaterial({name,color,roughness:0.82,side:THREE.DoubleSide,...extra})

@@ -99,13 +99,17 @@ export async function saveTrail(request: Request, env: MapEnv) {
     return error(`기록 형식이 맞지 않거나 너무 깁니다(최대 ${MAX_TRAIL_POINTS}점).`, 400)
   }
   // 감천 작업 범위 밖의 점은 저장하지 않습니다.
-  const points: TrailPoint[] = body.points.flatMap((point: unknown) => {
+  const kept: TrailPoint[] = body.points.flatMap((point: unknown) => {
     if (!Array.isArray(point) || point.length !== 4 || !point.every((part) => typeof part === 'number' && Number.isFinite(part))) return []
     const [lng, lat, accuracy, time] = point as TrailPoint
     return insideWorkArea(lng, lat) ? [[round7(lng), round7(lat), Math.round(accuracy * 10) / 10, Math.round(time)] as TrailPoint] : []
   })
-  if (points.length < 5) return error('감천 작업 범위 안에서 기록한 위치가 너무 적습니다.', 400)
-  const startedAt = new Date(body.startedAt).toISOString()
+  if (kept.length < 5) return error('감천 작업 범위 안에서 기록한 위치가 너무 적습니다.', 400)
+  // 개인정보를 줄이기 위해 시각은 절대 시각이 아니라 첫 점부터의 경과(ms)로, 시작 시각은 날짜만 남깁니다.
+  // 골목 추출(cleanTrail)은 점 사이의 시간 차이만 쓰므로 결과는 같습니다.
+  const first = Math.min(...kept.map((point) => point[3]))
+  const points: TrailPoint[] = kept.map(([lng, lat, accuracy, time]) => [lng, lat, accuracy, time - first])
+  const startedAt = new Date(body.startedAt).toISOString().slice(0, 10)
   await env.DB.prepare(`INSERT INTO gps_trails (id, started_at, points_json) VALUES (?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET points_json = excluded.points_json`)
     .bind(body.id, startedAt, JSON.stringify(points)).run()

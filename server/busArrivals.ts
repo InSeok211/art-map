@@ -3,6 +3,15 @@ import type { MapEnv } from './env'
 import { error, json } from './http'
 const cache = new Map<string, { until: number; value: unknown }>()
 const pending = new Map<string, Promise<unknown>>()
+// 실패한 정류소 번호는 잠시 다시 묻지 않습니다. 공공데이터포털이 느리거나 장애일 때 요청마다 8초짜리 호출이
+// 반복되고 일일 호출 한도가 소진되는 것을 막습니다(성공 캐시와 같은 30초).
+const failedUntil = new Map<string, number>()
+const CACHE_MS = 30_000
+
+/** 테스트에서 모듈 캐시를 비울 때 씁니다. */
+export function resetBusArrivalsCache() {
+  cache.clear(); pending.clear(); failedUntil.clear()
+}
 const decode = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
 function field(xml: string, tag: string) {
   return decode(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`).exec(xml)?.[1]?.trim() ?? '').slice(0, 100)
@@ -28,21 +37,29 @@ type StopArrivals = { stopId: string; arrivals: ReturnType<typeof parseBusArriva
 async function stopArrivals(key: string, stopId: string): Promise<StopArrivals> {
   const saved = cache.get(stopId)
   if (saved && saved.until > Date.now()) return saved.value as StopArrivals
+  const failed = failedUntil.get(stopId)
+  if (failed && failed > Date.now()) throw new Error('upstream recently failed')
   let job = pending.get(stopId) as Promise<StopArrivals> | undefined
   if (!job) {
     job = (async () => {
-      let decodedKey = key
-      try { decodedKey = decodeURIComponent(key) } catch { /* An unencoded key is also accepted. */ }
-      const upstream = new URL('https://apis.data.go.kr/6260000/BusanBIMS/stopArrByBstopid')
-      upstream.searchParams.set('serviceKey', decodedKey)
-      upstream.searchParams.set('bstopid', stopId)
-      const response = await fetch(upstream, { signal: AbortSignal.timeout(8000) })
-      if (!response.ok) throw new Error('upstream request failed')
-      const xml = await response.text()
-      if (xml.length > 1_000_000) throw new Error('upstream response too large')
-      const value = { stopId, arrivals: parseBusArrivals(xml), updatedAt: new Date().toISOString() }
-      cache.set(stopId, { until: Date.now() + 30_000, value })
-      return value
+      try {
+        let decodedKey = key
+        try { decodedKey = decodeURIComponent(key) } catch { /* An unencoded key is also accepted. */ }
+        const upstream = new URL('https://apis.data.go.kr/6260000/BusanBIMS/stopArrByBstopid')
+        upstream.searchParams.set('serviceKey', decodedKey)
+        upstream.searchParams.set('bstopid', stopId)
+        const response = await fetch(upstream, { signal: AbortSignal.timeout(8000) })
+        if (!response.ok) throw new Error('upstream request failed')
+        const xml = await response.text()
+        if (xml.length > 1_000_000) throw new Error('upstream response too large')
+        const value = { stopId, arrivals: parseBusArrivals(xml), updatedAt: new Date().toISOString() }
+        cache.set(stopId, { until: Date.now() + CACHE_MS, value })
+        failedUntil.delete(stopId)
+        return value
+      } catch (cause) {
+        failedUntil.set(stopId, Date.now() + CACHE_MS)
+        throw cause
+      }
     })()
     pending.set(stopId, job)
     const settled = job
