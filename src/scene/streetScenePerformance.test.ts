@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import * as THREE from 'three'
+import { readFileSync } from 'node:fs'
 import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings, streetMeters } from './streetSceneData'
 import { StreetSceneLayer } from './StreetSceneLayer'
+import { decodeRoadGroundMesh, setRoadGroundMesh } from './roadGroundMesh'
 import { loadTerrain } from '../map/terrain'
 
 // 성능 예산: 첫 화면을 막는 3D 거리 장면 만들기 시간입니다. 개발 PC(Node)에서 약 3.5초이고, 도로 면을 미리
@@ -15,6 +17,10 @@ let layer: StreetSceneLayer
 let elapsed = 0
 let deferred = 0
 beforeAll(() => {
+  // 지도 앱은 fetch로 받는 도로·보도 면 데이터를 테스트에서는 파일에서 읽어 넣어 둡니다.
+  // (jsdom 환경에서는 import.meta.url이 http 주소라 작업 폴더 기준 경로로 읽습니다)
+  const bytes = readFileSync('src/generated/road-ground-mesh.bin')
+  setRoadGroundMesh(decodeRoadGroundMesh(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)))
   getPhotographedStreetBuildings()
   const started = performance.now()
   layer = new StreetSceneLayer()

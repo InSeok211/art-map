@@ -2,3 +2,4 @@
 export { computeBuildingOutlines, getPhotographedStreetBuildings } from '../src/scene/streetSceneData'
 export { getStreetSceneBounds } from '../src/scene/streetSurfaceData'
 export { computeRoadGround, roundRoadGround } from '../src/scene/roadGround'
+export { encodeRoadGroundMesh } from '../src/scene/roadGroundMesh'

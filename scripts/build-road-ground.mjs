@@ -1,7 +1,8 @@
 // 거리 장면의 미리 계산하는 데이터를 만듭니다. 사용법: npm run build:road-ground
 //  1) src/generated/building-outlines.json: 건물마다 도로·골목길과 겹친 부분을 깎은 윤곽
 //  2) src/generated/road-ground.json: 도로·보도 면(1의 윤곽으로 건물 자리를 뺌)
-// 둘 다 지도를 열 때마다 하던 무거운 계산이라 미리 해 둡니다. 입력이 바뀌면 테스트가 다시 만들라고 알려 줍니다.
+//  3) src/generated/road-ground-mesh.bin: 2를 삼각형으로 나눈 꼭짓점·인덱스(지도가 실제로 받는 파일)
+// 모두 지도를 열 때마다 하던 무거운 계산이라 미리 해 둡니다. 입력이 바뀌면 테스트가 다시 만들라고 알려 줍니다.
 import { writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { build } from 'rolldown'
@@ -22,8 +23,14 @@ writeFileSync('src/generated/building-outlines.json', JSON.stringify({ inputsHas
 const trimmed = outlines.filter((outline) => outline !== 0).length
 console.log(`building-outlines.json: ${outlines.length} buildings, ${trimmed} trimmed or removed`)
 
-const { getPhotographedStreetBuildings, getStreetSceneBounds, computeRoadGround, roundRoadGround } = await load()
+const { getPhotographedStreetBuildings, getStreetSceneBounds, computeRoadGround, roundRoadGround, encodeRoadGroundMesh } = await load()
 const ground = roundRoadGround(computeRoadGround(getPhotographedStreetBuildings(), getStreetSceneBounds()))
-writeFileSync('src/generated/road-ground.json', JSON.stringify({ inputsHash: roadGroundInputsHash(), ...ground }))
+const inputsHash = roadGroundInputsHash()
+writeFileSync('src/generated/road-ground.json', JSON.stringify({ inputsHash, ...ground }))
 const vertices = Object.values(ground).flat(3).length
 console.log(`road-ground.json: ${vertices} vertices, ${Math.round(performance.now() - started) / 1000}s`)
+
+// 3) src/generated/road-ground-mesh.bin: 2의 다각형을 삼각형으로 나눈 꼭짓점·인덱스. 지도는 JSON 대신 이 파일을 따로 받습니다.
+const mesh = encodeRoadGroundMesh(ground, inputsHash)
+writeFileSync('src/generated/road-ground-mesh.bin', mesh)
+console.log(`road-ground-mesh.bin: ${mesh.byteLength.toLocaleString()} bytes, ${Math.round(performance.now() - started) / 1000}s`)

@@ -2,7 +2,6 @@ import { MercatorCoordinate } from 'maplibre-gl'
 import type { CustomLayerInterface, Map } from 'maplibre-gl'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import * as polygonClipping from 'polygon-clipping'
 import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings, shiftOffCarriageways, MEETING_CIRCLE_CENTER, nearestStreet, PHOTOGRAPHED_STREET, STREET_ORIGIN, streetMeters } from './streetSceneData'
 import { BEAUTIFUL_HANGUL_CENTER, BEAUTIFUL_HANGUL_FOOTPRINT_ID, BEAUTIFUL_HANGUL_OUTLINE, BEAUTIFUL_HANGUL_ROTATION } from './beautifulHangul'
 import type { FacadeOpening } from './streetSceneData'
@@ -10,7 +9,9 @@ import { clipPolygonToBounds, getStreetSceneBounds, STREET_SURFACE_WAYS } from '
 import { isSafeGableOutline, roofInteriorPoint } from './streetRoofGeometry'
 import { distanceToRoad } from './streetRoadGeometry'
 import { conceptTexture } from './streetTextures'
-import roadGroundCache from '../generated/road-ground.json'
+import { getRoadGroundMesh, GROUND_TEXTURE_METERS, roadGroundMeshGeometry } from './roadGroundMesh'
+import type { RoadGroundGroup, RoadGroundMesh } from './roadGroundMesh'
+import { yieldToMain } from './yieldToMain'
 import { ALLEY_EDGE, roadOutlines, unionRoadAreas } from './roadCorridors'
 import { isBakedAlley } from '../alleys/recordedAlleys'
 import type { Alley } from '../alleys/alleys'
@@ -30,7 +31,6 @@ import { mergeByMaterial } from './mergeModel'
 import { routeLineMeshes } from './routeLine'
 import { createRoadviewBusShelter } from './roadviewBusShelter'
 import type { Place } from '../types'
-import type { RoadGround } from './roadGround'
 import { findPointOccluders } from './streetOcclusion'
 import type { Occluder } from './streetOcclusion'
 import { buildArtistWorkshopModel } from './artistWorkshopModel'
@@ -60,8 +60,6 @@ type FacadeKind = NonNullable<StreetBuilding['concept']>
 const SHADOW_CENTER: [number, number] = [20, -40]
 const SHADOW_EXTENT = 260
 
-
-const ROAD_GROUND = roadGroundCache as unknown as RoadGround
 // 기둥·난간처럼 기울어 놓이는 막대는 끝면이 보일 수 있어 여섯 면을 모두 둡니다(복사해 쓰려고 미리 만듦).
 const UNIT_BEAM = new THREE.BoxGeometry(1, 1, 1).toNonIndexed()
 // 상자의 아랫면은 위에서 내려다보는 지도에서 보이지 않으므로 빼 둡니다(삼각형 1/6 절약).
@@ -118,8 +116,7 @@ export function greenHouseOsmPlacement() {
 // 골목길 포장 색(따뜻한 베이지)
 const ALLEY_PAVING_COLOR = 0xead2ad
 
-// 바닥 무늬(돌·포장 질감) 한 장이 덮는 크기(m)
-const GROUND_TEXTURE_METERS = 20
+// 바닥 무늬(돌·포장 질감) 한 장이 덮는 크기(m)는 roadGroundMesh.ts의 GROUND_TEXTURE_METERS입니다(미리 계산한 uv와 같아야 함).
 // 3D 지형의 바닥 층 순서. 층마다 삼각형을 다르게 나눠 비탈에 얹으면 높이가 몇 cm~수십 cm씩 어긋나, 몇 cm 차이로
 // 쌓은 층(흰 바닥·돌 포장·골목길·차도)이 서로 뚫고 나와 길에 얼룩(노이즈)이 생깁니다. 그래서 지형에서는 바닥이
 // 깊이값을 남기지 않고 아래 층부터 차례로 덮어 그리게 합니다(건물·나무는 그 뒤에 깊이를 비교해 그립니다).
@@ -170,16 +167,6 @@ const DISTRICT_FLUSH_BUILDINGS = 150
 // 고친 건물만 다시 만들 때 한 번에 다룰 최대 건물 수(이보다 많으면 3D 거리를 통째로 다시 만듭니다)
 const MAX_PATCHED_BUILDINGS = 40
 // 건물을 구별하는 키(관리자가 그린 건물은 편집 번호, 나머지는 OSM 번호)와 모양을 정하는 값
-// 도로·보도 면(미리 계산한 저장본)을 삼각형으로 나눈 결과를 기억해 둡니다. 큰 면은 구멍이 수백 개라 나누는 데만
-// 0.1~0.2초씩 걸리는데, 3D 지형을 켜고 끌 때마다 다시 나누지 않게 합니다(같은 면이면 복사해 씀).
-const flatPolygonCache = new WeakMap<object, globalThis.Map<number, THREE.BufferGeometry>>()
-function cachedFlatPolygon(polygon: polygonClipping.Polygon, y: number) {
-  let byHeight = flatPolygonCache.get(polygon)
-  if (!byHeight) flatPolygonCache.set(polygon, byHeight = new globalThis.Map())
-  let geometry = byHeight.get(y)
-  if (!geometry) byHeight.set(y, geometry = flatPolygonGeometry(polygon, y, GROUND_TEXTURE_METERS))
-  return geometry.clone()
-}
 const buildingKey = (building: StreetBuilding) => building.editorId ?? String(building.id)
 const buildingSpec = (building: StreetBuilding) => JSON.stringify(building)
 // 길을 가리는 거리 건물이 남기는 픽셀 비율(형태는 알아보되 뒤의 길이 보이도록)
@@ -278,11 +265,18 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private readonly picking: boolean
   private occluderBases: number[] = []
 
+  // 미리 삼각분할해 둔 도로·보도 면(roadGroundMesh.ts). 지도 앱은 loadRoadGroundMesh로 받아 넘기고, 테스트는 setRoadGroundMesh로 넣어 둡니다.
+  private readonly roadGround: RoadGroundMesh
+
   // focus: 처음 화면 중심(경도·위도). 이 근처 건물부터 만듭니다(없으면 작가님 공방 근처).
   // buildingEdits: 관리자가 고친 건물(높이·색·지붕·숨기기, 새 건물, 올린 3D 모델, buildingEdits.ts)
   // onModelError: 관리자가 올린 3D 모델을 불러오지 못했을 때(모델 이름)
-  constructor(options: { terrain?: TerrainSampler; focus?: [number, number]; buildingEdits?: BuildingEdits; picking?: boolean; onModelError?: (name: string) => void } = {}) {
+  // roadGround: 미리 계산한 도로·보도 면. 없으면 setRoadGroundMesh로 넣어 둔 것을 씁니다.
+  constructor(options: { terrain?: TerrainSampler; focus?: [number, number]; buildingEdits?: BuildingEdits; picking?: boolean; onModelError?: (name: string) => void; roadGround?: RoadGroundMesh } = {}) {
     const started = performance.now()
+    const roadGround = options.roadGround ?? getRoadGroundMesh()
+    if (!roadGround) throw new Error('도로·보도 면 데이터(road-ground-mesh.bin)를 먼저 불러와야 합니다(loadRoadGroundMesh 또는 setRoadGroundMesh).')
+    this.roadGround = roadGround
     this.terrain = options.terrain
     this.picking = options.picking ?? false
     this.buildingEdits = options.buildingEdits
@@ -790,9 +784,10 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   // 도로·보도 면을 하나씩 만들고 쉽니다(지형에 얹는 계산이 무거워 나눠 만듭니다).
-  private *roadAreaSteps(polygons: polygonClipping.MultiPolygon, y: number, color: number, surface?: ConceptSurface): Generator<void, void> {
-    for (const polygon of polygons) {
-      if (isDrawablePolygon(polygon)) yield* this.addGeometrySteps(color, cachedFlatPolygon(polygon, y), false, surface)
+  // 삼각분할은 빌드 때 끝내 둔 것(roadGroundMesh)을 꼭짓점 배열로 바로 씁니다.
+  private *roadAreaSteps(group: RoadGroundGroup, y: number, color: number, surface?: ConceptSurface): Generator<void, void> {
+    for (const range of this.roadGround.groups[group]) {
+      yield* this.addGeometrySteps(color, roadGroundMeshGeometry(this.roadGround, range, y), false, surface)
       yield
     }
   }
@@ -1160,13 +1155,12 @@ export class StreetSceneLayer implements CustomLayerInterface {
       yield
     }
 
-    // 도로·보도 면은 미리 계산한 저장본을 그립니다(roadGround.ts, npm run build:road-ground).
-    const ground = ROAD_GROUND
-    yield* this.roadAreaSteps(ground.outer, 0.05, 0xffffff, 'ground-stone')
-    yield* this.roadAreaSteps(ground.roads, 0.07, 0xffffff, 'ground-lane')
+    // 도로·보도 면은 미리 계산해 삼각형까지 나눠 둔 저장본을 그립니다(roadGround.ts·roadGroundMesh.ts, npm run build:road-ground).
+    yield* this.roadAreaSteps('outer', 0.05, 0xffffff, 'ground-stone')
+    yield* this.roadAreaSteps('roads', 0.07, 0xffffff, 'ground-lane')
     // 골목길은 차도와 구별되는 따뜻한 베이지 포장으로 그리고, 차도보다 살짝 낮게 깔아 교차하는 곳에서는 차도가
     // 위로 보이게 합니다. 가장자리에는 아래 돌 포장(outer)이 밝은 테두리로 드러납니다.
-    yield* this.roadAreaSteps(ground.footways, 0.06, ALLEY_PAVING_COLOR, 'ground-stone')
+    yield* this.roadAreaSteps('footways', 0.06, ALLEY_PAVING_COLOR, 'ground-stone')
   }
 
   private sign(text: string, x: number, y: number, z: number, rotation: number, nx: number, nz: number, width: number, color: string) {
@@ -1943,11 +1937,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
     // Only its pavement edges are drawn separately, outside intersections.
     const points = PHOTOGRAPHED_STREET.map(streetMeters)
     const laneLift = 0.03
-    yield* this.roadAreaSteps(ROAD_GROUND.kerbStone, 0.083 + laneLift, 0xffffff, 'ground-stone')
-    yield* this.roadAreaSteps(ROAD_GROUND.kerbLine, 0.105 + laneLift, 0xe5e9df)
+    yield* this.roadAreaSteps('kerbStone', 0.083 + laneLift, 0xffffff, 'ground-stone')
+    yield* this.roadAreaSteps('kerbLine', 0.105 + laneLift, 0xe5e9df)
     // 원형 포장 무늬(위치·크기는 streetSceneData의 MEETING_CIRCLE_* 참고)
     const [roundX, roundZ] = streetMeters(MEETING_CIRCLE_CENTER)
-    yield* this.roadAreaSteps(ROAD_GROUND.meeting, 0.088 + laneLift, 0xffffff, 'ground-stone')
+    yield* this.roadAreaSteps('meeting', 0.088 + laneLift, 0xffffff, 'ground-stone')
     for (const radius of [2.3, 2.66]) {
       const border = new THREE.TorusGeometry(radius, 0.03, 4, 48)
       border.rotateX(-Math.PI / 2)
@@ -1999,11 +1993,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   // 첫 장면을 화면이 멈추지 않게 조금씩(한 번에 약 12ms) 만들고, 다 만들면 끝납니다. 지도에 붙이기 전에 기다립니다.
-  prepare() {
-    return new Promise<void>((resolve) => {
-      const step = () => this.runBuild(performance.now() + 12) ? resolve() : setTimeout(step, 0)
-      step()
-    })
+  // 조각 사이에는 yieldToMain으로 브라우저에 차례를 넘깁니다(setTimeout(0)은 중첩 지연 때문에 벽시계가 1.5~2배였음).
+  async prepare() {
+    while (!this.runBuild(performance.now() + 12)) await yieldToMain()
   }
 
   // 이 지도에서 이미 3D 거리를 그린 적이 있으면, 바꿔 붙이기 전에 새 장면의 셰이더를 미리 컴파일해 둡니다.

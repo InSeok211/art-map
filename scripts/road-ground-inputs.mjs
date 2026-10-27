@@ -29,6 +29,9 @@ export const ROAD_GROUND_INPUTS = [
   'src/scene/streetRoadGeometry.ts',
   'src/scene/roadCorridors.ts',
   'src/scene/roadGround.ts',
+  // 삼각분할(road-ground-mesh.bin)에 영향을 주는 코드
+  'src/scene/roadGroundMesh.ts',
+  'src/scene/groundGeometry.ts',
   'src/data/recorded-alleys.json',
   'src/alleys/recordedAlleys.ts',
   'src/alleys/alleys.ts',

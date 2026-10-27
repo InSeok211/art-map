@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Map, Marker, NavigationControl, setWorkerUrl } from 'maplibre-gl'
 import type { MapMouseEvent, StyleSpecification } from 'maplibre-gl'
@@ -9,8 +9,6 @@ import './desktop-map.css'
 import { filterPlaces } from './places/filterPlaces'
 import { GAMCHEON_MAP_BOUNDS, isInsideGamcheonMap } from './map/gamcheonBoundary'
 import { BUILDING_EDIT_LAYER_IDS, BUILDING_FOOTPRINT_LAYER_IDS, createMinimalStyle, DEM_SOURCE_ID, ROUTE_LAYER_IDS, TRAIL_LAYER_IDS } from './map/mapStyle'
-import { BuildingEditor } from './buildings/BuildingEditor'
-import { LocalWorkspaceTools } from './buildings/LocalWorkspaceTools'
 import { useBuildingEditing } from './buildings/useBuildingEditing'
 import type { BuildingEditStore } from './buildings/buildingEditStore'
 import type { BuildingEdits } from './buildings/buildingEdits'
@@ -24,6 +22,7 @@ import type { GpsTrailStore } from './alleys/useAlleyFinder'
 import { TrailPanel } from './alleys/TrailPanel'
 import { SEE_THROUGH_OPACITY, StreetSceneLayer } from './scene/StreetSceneLayer'
 import { prefetchPlacedModels, prefetchStreetModels } from './scene/modelFiles'
+import { loadRoadGroundMesh, prefetchRoadGroundMesh } from './scene/roadGroundMeshLoader'
 import { RoutePanel } from './route/RoutePanel'
 import { MobileMapUI } from './map/MobileMapUI'
 import type { MobileView } from './map/MobileMapUI'
@@ -84,6 +83,11 @@ export const MAX_PIXEL_RATIO = 2
 
 // 바탕 지도가 다 그려지기를 기다리는 최대 시간(ms). 이후에는 3D 거리를 바로 만듭니다.
 export const STREET_LAYER_FALLBACK_MS = 3500
+
+// 편집 앱(studio)에서만 쓰는 건물 편집 패널(모델 라이브러리·작업 파일 도구 포함)은 공개 지도 번들에 넣지 않고 처음 열 때 따로 받습니다.
+// 골목길 편집 패널은 작아서 그대로 둡니다.
+const BuildingEditor = lazy(() => import('./buildings/BuildingEditor').then((module) => ({ default: module.BuildingEditor })))
+const LocalWorkspaceTools = lazy(() => import('./buildings/LocalWorkspaceTools').then((module) => ({ default: module.LocalWorkspaceTools })))
 
 function applyBuildingVisibility(map: Map, visible: boolean) {
   for (const id of BUILDING_FOOTPRINT_LAYER_IDS) {
@@ -348,8 +352,9 @@ export function GamcheonMap({
     // 개발 서버에서만: 성능 측정 스크립트가 지도를 찾을 수 있게 둡니다.
     if (import.meta.env.DEV) (window as unknown as { __gamcheonMap?: Map }).__gamcheonMap = map
 
-    // 3D 거리를 만드는 동안 그린하우스·아름다운한글 모델 파일을 미리 받아 둡니다.
+    // 3D 거리를 만드는 동안 그린하우스·아름다운한글 모델 파일과 도로·보도 면 데이터를 미리 받아 둡니다.
     prefetchStreetModels()
+    prefetchRoadGroundMesh()
     // 3D 거리 장면은 만드는 데 몇 초가 걸리므로, 바탕 지도를 먼저 그린 뒤에 만들어 빈 화면으로 기다리지 않게 합니다.
     let streetLayer: StreetSceneLayer | null = null
     let disposed = false
@@ -365,9 +370,17 @@ export function GamcheonMap({
       const version = ++buildVersion
       // 지금 화면 중심 근처 건물부터 만들어 3D 거리를 빨리 띄웁니다.
       const edits = buildingEditsRef.current
+      // 미리 삼각분할한 도로·보도 면. 받지 못하면 3D 거리 없이 바탕 지도만 보여 줍니다.
+      let roadGround
+      try { roadGround = await loadRoadGroundMesh() } catch (cause) {
+        console.error('road ground mesh failed to load', cause)
+        if (!disposed && version === buildVersion) setPlacedModelError('3D 거리 데이터를 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.')
+        return
+      }
+      if (disposed || version !== buildVersion) return
       const next = new StreetSceneLayer({
         terrain, focus: map.getCenter().toArray() as [number, number], buildingEdits: edits,
-        picking: !!buildingEditor,
+        picking: !!buildingEditor, roadGround,
         onModelError: (name) => setPlacedModelError(`3D 모델 '${name}'을(를) 불러오지 못했습니다.`),
       })
       await next.prepare()
@@ -415,7 +428,9 @@ export function GamcheonMap({
       if (!streetLayer && !fallbackTimer) fallbackTimer = window.setTimeout(buildStreetLayer, STREET_LAYER_FALLBACK_MS)
     }
     map.on('style.load', attachLayers)
-    map.once('idle', buildStreetLayer)
+    // 바탕 지도의 첫 그리기('load')가 끝나는 대로 3D 거리를 만들기 시작합니다. 예전에는 타일까지 다 받은 'idle'을
+    // 기다려 타일이 느리면 시작이 최대 3.5초 늦었습니다. 장면은 12ms 조각으로 만들어 타일 그리기와 번갈아 돌아갑니다.
+    map.once('load', buildStreetLayer)
     // 휴대폰에서 메모리가 모자라면 그래픽(WebGL) 연결이 끊길 수 있습니다. 다시 연결되면 3D 층을 새로 붙입니다.
     const handleContextLost = () => setSceneStatus('lost')
     // MapLibre는 연결이 끊길 때 사용자 정의 3D 층을 스스로 떼어 내므로, 스타일이 다시 준비되면 붙입니다.
@@ -726,9 +741,9 @@ export function GamcheonMap({
           <button type="button" className={mode === 'route' ? 'is-active' : ''} onClick={() => switchMode('route')}>길찾기</button>
         </div>
 
-        {mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : mode === 'buildings' && buildingEditing.panelProps ? <BuildingEditor {...buildingEditing.panelProps} sceneError={placedModelError}
+        {mode === 'route' ? <RoutePanel {...routeFinder.panelProps} /> : mode === 'buildings' && buildingEditing.panelProps ? <Suspense fallback={null}><BuildingEditor {...buildingEditing.panelProps} sceneError={placedModelError}
           workspace={buildingEditor && <LocalWorkspaceTools store={buildingEditor} alleys={alley.editorProps.alleys} onAlleysChange={onAlleysChange}
-            terrainMode={terrainMode} onTerrainMode={setTerrainMode} />} /> : mode === 'alleys' ? <>
+            terrainMode={terrainMode} onTerrainMode={setTerrainMode} />} /></Suspense> : mode === 'alleys' ? <>
           {alleyFinder.enabled && <div className="gamcheon-map__tool-switch" role="tablist" aria-label="골목길 도구">
             <button type="button" role="tab" aria-selected={alleyTool === 'draw'} className={alleyTool === 'draw' ? 'is-active' : ''} onClick={() => setAlleyTool('draw')}>직접 그리기 · {alley.editorProps.alleys.length}</button>
             <button type="button" role="tab" aria-selected={alleyTool === 'walk'} className={alleyTool === 'walk' ? 'is-active' : ''} onClick={() => { alley.stopDrawing(); setAlleyTool('walk') }}>
