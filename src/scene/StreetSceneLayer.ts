@@ -51,7 +51,8 @@ type MaterialSlot = {
   material: SlotMaterial; plain?: SlotMaterial; buffer: SlotBuffer; ground: boolean; parent: THREE.Object3D
   // 3D 지형에서 바닥 층을 그리는 순서(아래 층부터). 있으면 깊이값을 남기지 않고 이 순서대로 덮어 그립니다.
   groundLayer?: number
-  flushed: { geometry: THREE.BufferGeometry; meshes: THREE.Mesh[]; split?: FadeSplit }[]
+  // 합친 조각들: cell은 그 조각의 건물이 속한 공간 셀(cellKey, 시야 컬링 단위). 'first'는 첫 장면, 'patch'는 고친 건물.
+  flushed: { geometry: THREE.BufferGeometry; meshes: THREE.Mesh[]; split?: FadeSplit; cell: string }[]
 }
 // 고리 메시 하나를 '비치지 않는 건물'과 '비치는 건물' 두 메시로 나눠 그리기 위한 정보입니다. 두 메시는 꼭짓점을
 // 함께 쓰고, 한 인덱스 버퍼의 앞부분(plain)과 뒷부분(fade)을 그립니다. runs: [건물 번호, 첫 꼭짓점, 꼭짓점 수]
@@ -161,6 +162,18 @@ function releaseTextureUnits(gl: WebGL2RenderingContext) {
 const renderersByCanvas = new WeakMap<HTMLCanvasElement, THREE.WebGLRenderer>()
 // 먼 동네를 나눠 만들 때 이만큼 모이면 메시로 합쳐 보여 줍니다
 const DISTRICT_FLUSH_BUILDINGS = 150
+// 시야 컬링 단위인 공간 셀의 한 변(장면 미터). 먼 동네 건물은 셀마다 따로 메시로 합쳐 두고, 카메라 시야(절두체)에
+// 들어오지 않는 셀은 그리지 않습니다(three.js frustumCulled). 전체화면 PC에서 한 화면에 들어오는 꼭짓점은 전체의
+// 절반 정도라 셀로 나누면 그만큼의 꼭짓점 처리를 아낍니다. 셀을 너무 잘게 나누면 그리기 호출(재질×셀)이 늘어
+// CPU 시간이 오히려 커지므로, 동네(약 430×720m)를 열다섯 셀 정도로 나누는 크기입니다.
+const CULL_CELL_METERS = 150
+// 이보다 꼭짓점이 적은 재질은 셀로 나누지 않고 하나로 합칩니다(나눠 봤자 그리기 호출만 늘어남).
+const CULL_SPLIT_MIN_VERTICES = 100_000
+const cellKey = (x: number, z: number) => `${Math.floor(x / CULL_CELL_METERS)},${Math.floor(z / CULL_CELL_METERS)}`
+const cellCenter = (key: string): [number, number] => {
+  const [column, row] = key.split(',').map(Number)
+  return [(column + 0.5) * CULL_CELL_METERS, (row + 0.5) * CULL_CELL_METERS]
+}
 // 고친 건물만 다시 만들 때 한 번에 다룰 최대 건물 수(이보다 많으면 3D 거리를 통째로 다시 만듭니다)
 const MAX_PATCHED_BUILDINGS = 40
 // 건물을 구별하는 키(관리자가 그린 건물은 편집 번호, 나머지는 OSM 번호)와 모양을 정하는 값
@@ -240,7 +253,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private extraAlleyShapes = new globalThis.Map<string, THREE.BufferGeometry[][]>()
   private workshopCenter: [number, number] = [0, 0]
   // 첫 화면 뒤에 나눠 만들 건물(화면 중심에서 가까운 순서)
-  private pendingBuildings: { building: StreetBuilding; outline: [number, number][]; distance: number }[] = []
+  private pendingBuildings: { building: StreetBuilding; outline: [number, number][]; distance: number; cell: string }[] = []
+  // 지금 합치는(flushSlotsSteps) 조각이 속한 공간 셀
+  private flushCell = 'first'
   private readonly focus?: [number, number]
   private buildingEdits?: BuildingEdits
   // 나눠 만드는 중인 첫 장면(바닥·길·화면 근처 건물·나무). 다 만들면 null
@@ -577,13 +592,55 @@ export class StreetSceneLayer implements CustomLayerInterface {
     geometry = yield* this.onTerrainSteps(geometry, maxGroundEdge, true)
     // 꼭짓점 색(0~255, 선형)·건물 번호와 함께 재질 버퍼에 펼쳐 넣습니다. 큰 바닥 면은 5만 꼭짓점마다 쉽니다.
     const count = geometry.getIndex()?.count ?? geometry.getAttribute('position').count
-    const buffer = this.material(glass, surface).buffer, rgb = colorBytes(color), tags = this.vertexTags()
+    const slot = this.material(glass, surface), buffer = slot.buffer, rgb = colorBytes(color), tags = this.vertexTags()
+    if (count >= CULL_SPLIT_MIN_VERTICES && this.group === 'scene') {
+      yield* this.addGeometryByCellSteps(slot, geometry, rgb, tags)
+      geometry.dispose()
+      return
+    }
     const chunk = 50_000
     for (let from = 0; from < count; from += chunk) {
       buffer.appendGeometry(geometry, rgb, tags, from, from + chunk)
       if (from + chunk < count) yield
     }
     geometry.dispose()
+  }
+
+  // 도로·바닥처럼 동네 전체에 걸친 큰 면은 삼각형마다 속한 공간 셀을 찾아 셀별 메시로 바로 만듭니다. 그래야 시야 밖
+  // 셀의 바닥을 그리지 않습니다(전체화면에서 바닥 꼭짓점 49만 개 중 보이는 것은 1/3 정도였습니다).
+  private *addGeometryByCellSteps(slot: MaterialSlot, geometry: THREE.BufferGeometry, rgb: [number, number, number], tags: VertexTags): Generator<void, void> {
+    // 버퍼에 먼저 모인 작은 조각은 지금 셀 이름으로 따로 메시를 만들어 둡니다.
+    this.flushSlot(slot)
+    const position = geometry.getAttribute('position'), index = geometry.getIndex()
+    const pa = position.array as ArrayLike<number>, ia = index?.array as ArrayLike<number> | undefined
+    const triangles = Math.floor((index ? index.count : position.count) / 3)
+    // 셀 → 그 셀에 속한 삼각형 구간[from, to) 목록. 이어진 삼각형은 대개 같은 셀이라 구간이 길게 묶입니다.
+    const runs = new globalThis.Map<string, [number, number][]>()
+    let runCell = '', runStart = 0
+    for (let triangle = 0; triangle <= triangles; triangle++) {
+      let cell = ''
+      if (triangle < triangles) {
+        let x = 0, z = 0
+        for (let corner = 0; corner < 3; corner++) {
+          const vertex = ia ? ia[triangle * 3 + corner] : triangle * 3 + corner
+          x += pa[vertex * 3]
+          z += pa[vertex * 3 + 2]
+        }
+        cell = cellKey(x / 3, z / 3)
+      }
+      if (cell === runCell) continue
+      if (runCell) runs.set(runCell, [...(runs.get(runCell) ?? []), [runStart * 3, triangle * 3]])
+      runCell = cell
+      runStart = triangle
+    }
+    const previous = this.flushCell
+    for (const [cell, ranges] of runs) {
+      for (const [from, to] of ranges) slot.buffer.appendGeometry(geometry, rgb, tags, from, to)
+      this.flushCell = cell
+      this.flushSlot(slot)
+      yield
+    }
+    this.flushCell = previous
   }
 
   // 지금 만드는 건물의 번호를 도형의 모든 꼭짓점에 붙입니다(고리 묶음의 건물만). 첫 도형에서 번호를 받습니다.
@@ -1220,7 +1277,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.onTerrain(geometry)
     const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false, forceSinglePass: true }))
     this.fadeWithBuilding(mesh)
-    mesh.frustumCulled = false
+    mesh.frustumCulled = true
     mesh.renderOrder = 4
     this.signMeshes.push(mesh)
     this.signTextures.push(texture)
@@ -1964,7 +2021,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
       if (building.id === ARTIST_WORKSHOP_FOOTPRINT_ID || distance <= FIRST_BUILD_RADIUS) {
         this.buildOne(building, outline)
         yield
-      } else this.pendingBuildings.push({ building, outline, distance })
+      } else this.pendingBuildings.push({ building, outline, distance, cell: cellKey(cx, cz) })
     }
 
 
@@ -2010,8 +2067,16 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.busShelter.position.set(shelterX + 1.1, this.terrain?.height(shelterX + 1.1, shelterZ) ?? 0, shelterZ)
     this.scene.add(this.busShelter)
     yield* this.flushSlotsSteps()
-    // 화면에 가까운 건물부터 채워지도록 가까운 순서로 만듭니다.
-    this.pendingBuildings.sort((a, b) => a.distance - b.distance)
+    // 화면에 가까운 셀부터 채워지도록 셀을 가까운 순서로 두고, 같은 셀의 건물은 이어서(가까운 순) 만듭니다.
+    // 같은 셀의 건물이 잇달아 만들어져야 셀마다 메시 하나로 합쳐집니다(scheduleDistrictBuild).
+    const cellDistance = new globalThis.Map<string, number>()
+    for (const { cell } of this.pendingBuildings) {
+      if (cellDistance.has(cell)) continue
+      const [cx, cz] = cellCenter(cell)
+      cellDistance.set(cell, Math.hypot(cx - focus[0], cz - focus[1]))
+    }
+    this.pendingBuildings.sort((a, b) => a.cell === b.cell ? a.distance - b.distance
+      : cellDistance.get(a.cell)! - cellDistance.get(b.cell)! || (a.cell < b.cell ? -1 : 1))
   }
 
   // 첫 장면을 deadline(performance.now 기준)까지 만듭니다. 다 만들면 true.
@@ -2052,6 +2117,13 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.finishBuild()
     while (this.pendingBuildings.length) {
       const next = this.pendingBuildings.shift()!
+      // 지도에서처럼 셀이 바뀌면 그때까지의 건물을 메시로 합칩니다.
+      if (next.cell !== this.flushCell) {
+        this.group = 'scene'
+        this.buildingContext = null
+        this.flushSlots()
+        this.flushCell = next.cell
+      }
       this.buildOne(next.building, next.outline)
     }
     this.group = 'scene'
@@ -2156,6 +2228,7 @@ export class StreetSceneLayer implements CustomLayerInterface {
     }
     this.group = 'scene'
     this.buildingContext = null
+    this.flushCell = 'patch'
     this.flushSlots()
     this.writeFade()
     for (const split of this.fadeSplits) this.partition(split, true)
@@ -2380,61 +2453,84 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private *flushSlotsSteps(): Generator<void, void> {
     for (const slot of this.slots.values()) {
       yield
-      if (slot.buffer.count === 0) continue
-      const merged = slot.buffer.toGeometry()
-      if (!merged) continue
-      const ring = this.buildingRings.indexOf(slot.parent as THREE.Group)
-      if (ring >= 0) {
-        // 꺼지는 애니메이션에서 내릴 깊이(고리에서 가장 높은 지점 + 1m)를 미리 재 둡니다.
-        merged.computeBoundingBox()
-        this.ringDepth[ring] = Math.max(this.ringDepth[ring], (merged.boundingBox?.max.y ?? 0) + 1)
+      this.flushSlot(slot)
+    }
+  }
+
+  // 재질 하나의 버퍼에 모인 도형을 메시로 만들어 붙입니다(공간 셀 flushCell의 조각으로 기록).
+  private flushSlot(slot: MaterialSlot) {
+    if (slot.buffer.count === 0) return
+    const merged = slot.buffer.toGeometry()
+    if (!merged) return
+    const ring = this.buildingRings.indexOf(slot.parent as THREE.Group)
+    // 시야 컬링(cullMeshes)에 쓰는 경계 상자. 그리기 범위와 상관없이 전체 꼭짓점 기준입니다.
+    merged.computeBoundingBox()
+    if (ring >= 0) {
+      // 꺼지는 애니메이션에서 내릴 깊이(고리에서 가장 높은 지점 + 1m)를 미리 재 둡니다.
+      this.ringDepth[ring] = Math.max(this.ringDepth[ring], (merged.boundingBox?.max.y ?? 0) + 1)
+    }
+    if (slot.plain) {
+      // 같은 꼭짓점을 두 메시가 나눠 그립니다(비치지 않는 건물 / 비치는 건물).
+      const index = new THREE.BufferAttribute(new Uint32Array(merged.getAttribute('position').count), 1)
+      const fadeGeometry = new THREE.BufferGeometry()
+      for (const [name, attribute] of Object.entries(merged.attributes)) fadeGeometry.setAttribute(name, attribute)
+      merged.setIndex(index)
+      fadeGeometry.setIndex(index)
+      fadeGeometry.boundingBox = merged.boundingBox
+      const runs = buildingRuns(merged.getAttribute('buildingIndex'))
+      const split: FadeSplit = {
+        runs, index, state: new Uint8Array(runs.length / 3),
+        plain: this.addSlotMesh(merged, slot.plain, slot, ring),
+        fade: this.addSlotMesh(fadeGeometry, slot.material, slot, ring),
       }
-      if (slot.plain) {
-        // 같은 꼭짓점을 두 메시가 나눠 그립니다(비치지 않는 건물 / 비치는 건물).
-        const index = new THREE.BufferAttribute(new Uint32Array(merged.getAttribute('position').count), 1)
-        const fadeGeometry = new THREE.BufferGeometry()
-        for (const [name, attribute] of Object.entries(merged.attributes)) fadeGeometry.setAttribute(name, attribute)
-        merged.setIndex(index)
-        fadeGeometry.setIndex(index)
-        const runs = buildingRuns(merged.getAttribute('buildingIndex'))
-        const split: FadeSplit = {
-          runs, index, state: new Uint8Array(runs.length / 3),
-          plain: this.addSlotMesh(merged, slot.plain, slot, ring),
-          fade: this.addSlotMesh(fadeGeometry, slot.material, slot, ring),
-        }
-        this.partition(split, true)
-        this.fadeSplits.push(split)
-        slot.flushed.push({ geometry: merged, meshes: [split.plain, split.fade], split })
-      } else {
-        slot.flushed.push({ geometry: merged, meshes: [this.addSlotMesh(merged, slot.material, slot, ring)] })
-      }
+      this.partition(split, true)
+      this.fadeSplits.push(split)
+      slot.flushed.push({ geometry: merged, meshes: [split.plain, split.fade], split, cell: this.flushCell })
+    } else {
+      slot.flushed.push({ geometry: merged, meshes: [this.addSlotMesh(merged, slot.material, slot, ring)], cell: this.flushCell })
     }
   }
 
   // 나눠 만들면서 생긴 같은 재질의 메시 여러 개를 하나로 합칩니다. 메시마다 그리기 호출과 재질 전환이 따로 들어
   // 휴대폰에서는 CPU 시간이 프레임을 가장 많이 잡아먹습니다. 화면이 멈추지 않게 재질 하나씩 나눠 합칩니다.
+  // 꼭짓점이 많은 재질은 공간 셀마다 메시 하나로 합쳐, 시야 밖 셀을 그리지 않게 합니다(CULL_CELL_METERS).
   private consolidateSlots() {
-    const pending = [...this.slots.values()].filter((slot) => slot.flushed.length > 1)
-    const step = () => {
-      const slot = pending.shift()
-      if (!slot || !this.map) return
-      const old = slot.flushed
-      slot.flushed = []
-      for (const { geometry, meshes, split } of old) {
-        // 인덱스 없이 꼭짓점 속성만 다시 합칩니다(나눠 그리기 인덱스는 합친 뒤 새로 만듭니다). 색·건물 번호는 도형에 이미 있어 그대로 복사됩니다.
-        const source = new THREE.BufferGeometry()
-        for (const [name, attribute] of Object.entries(geometry.attributes)) source.setAttribute(name, attribute)
-        slot.buffer.appendGeometry(source, null, { building: 0, pick: -1 })
-        for (const mesh of meshes) {
-          mesh.removeFromParent()
-          this.meshes.splice(this.meshes.indexOf(mesh), 1)
-          const caster = this.ringShadowCasters.indexOf(mesh)
-          if (caster >= 0) this.ringShadowCasters.splice(caster, 1)
-        }
-        if (split) this.fadeSplits.splice(this.fadeSplits.indexOf(split), 1)
+    // 재질마다 합칠 묶음(셀 → 조각들). 같은 셀의 조각이 하나뿐이면 합칠 것이 없습니다.
+    const pending: { slot: MaterialSlot; groups: globalThis.Map<string, MaterialSlot['flushed']> }[] = []
+    for (const slot of this.slots.values()) {
+      if (slot.flushed.length < 2) continue
+      const vertices = slot.flushed.reduce((sum, { geometry }) => sum + geometry.getAttribute('position').count, 0)
+      const groups = new globalThis.Map<string, MaterialSlot['flushed']>()
+      for (const piece of slot.flushed) {
+        const key = vertices >= CULL_SPLIT_MIN_VERTICES ? piece.cell : 'all'
+        groups.set(key, [...(groups.get(key) ?? []), piece])
       }
-      this.flushSlots()
-      for (const { meshes } of old) for (const mesh of meshes) mesh.geometry.dispose()
+      if ([...groups.values()].some((pieces) => pieces.length > 1)) pending.push({ slot, groups })
+    }
+    const step = () => {
+      const next = pending.shift()
+      if (!next || !this.map) return
+      const { slot, groups } = next
+      slot.flushed = []
+      for (const [cell, old] of groups) {
+        if (old.length === 1) { slot.flushed.push(old[0]); continue }
+        for (const { geometry, meshes, split } of old) {
+          // 인덱스 없이 꼭짓점 속성만 다시 합칩니다(나눠 그리기 인덱스는 합친 뒤 새로 만듭니다). 색·건물 번호는 도형에 이미 있어 그대로 복사됩니다.
+          const source = new THREE.BufferGeometry()
+          for (const [name, attribute] of Object.entries(geometry.attributes)) source.setAttribute(name, attribute)
+          slot.buffer.appendGeometry(source, null, { building: 0, pick: -1 })
+          for (const mesh of meshes) {
+            mesh.removeFromParent()
+            this.meshes.splice(this.meshes.indexOf(mesh), 1)
+            const caster = this.ringShadowCasters.indexOf(mesh)
+            if (caster >= 0) this.ringShadowCasters.splice(caster, 1)
+          }
+          if (split) this.fadeSplits.splice(this.fadeSplits.indexOf(split), 1)
+        }
+        this.flushCell = cell
+        this.flushSlots()
+        for (const { meshes } of old) for (const mesh of meshes) mesh.geometry.dispose()
+      }
       // 같은 도형을 합치기만 하므로 그림자는 그대로입니다(다시 굽지 않음).
       this.map.triggerRepaint()
       if (pending.length) void yieldToMain().then(step)
@@ -2444,6 +2540,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
 
   private addSlotMesh(geometry: THREE.BufferGeometry, material: SlotMaterial, slot: MaterialSlot, ring: number) {
     const mesh = new THREE.Mesh(geometry, material)
+    // 시야 밖 메시는 render의 cullMeshes가 경계 상자로 가려 숨깁니다. three.js 기본 판정(경계 구)은 셀 크기의
+    // 메시에서 너무 느슨해(구가 시야에 걸치기만 해도 그림) 쓰지 않습니다.
     mesh.frustumCulled = false
     mesh.castShadow = !slot.ground
     mesh.receiveShadow = !material.transparent
@@ -2483,6 +2581,13 @@ export class StreetSceneLayer implements CustomLayerInterface {
       }
       this.map?.triggerRepaint()
     }
+    const startFlush = () => {
+      // 새 메시는 이미 고리 묶음 안에 들어가므로, 숨긴 상태면 함께 숨겨진 채로 붙습니다.
+      this.group = 'scene'
+      this.buildingContext = null
+      flushing = this.flushSlotsSteps()
+      sinceFlush = 0
+    }
     const step = () => {
       if (!this.map) return
       const deadline = performance.now() + 12
@@ -2492,16 +2597,14 @@ export class StreetSceneLayer implements CustomLayerInterface {
           continue
         }
         if (!this.pendingBuildings.length) break
-        const next = this.pendingBuildings.shift()!
+        const next = this.pendingBuildings[0]
+        // 다른 셀의 건물로 넘어가기 전에 지금까지 모은 건물을 그 셀의 메시로 합칩니다.
+        if (sinceFlush > 0 && next.cell !== this.flushCell) { startFlush(); continue }
+        this.pendingBuildings.shift()
+        this.flushCell = next.cell
         this.buildOne(next.building, next.outline)
         sinceFlush++
-        if (sinceFlush >= DISTRICT_FLUSH_BUILDINGS || !this.pendingBuildings.length) {
-          // 새 메시는 이미 고리 묶음 안에 들어가므로, 숨긴 상태면 함께 숨겨진 채로 붙습니다.
-          this.group = 'scene'
-          this.buildingContext = null
-          flushing = this.flushSlotsSteps()
-          sinceFlush = 0
-        }
+        if (sinceFlush >= DISTRICT_FLUSH_BUILDINGS || !this.pendingBuildings.length) startFlush()
       }
       this.group = 'scene'
       this.buildingContext = null
@@ -2555,6 +2658,24 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private shadowBakeAt = 0
   private shadowMapsPrepared = false
 
+  private readonly frustum = new THREE.Frustum()
+  private readonly cullBox = new THREE.Box3()
+  // 합쳐 그리는 메시(건물·바닥 셀) 가운데 카메라 시야 밖의 것을 숨깁니다. 카메라는 MapLibre의 투영 행렬을
+  // 그대로 쓰므로(render) 절두체는 그 행렬에서 바로 나오고, 고리 묶음이 꺼지는 동안의 높이(parent.position)도
+  // 함께 봅니다. all이면 모두 보이게 합니다(그림자 굽기). 나눠 그리기(partition)로 비어 있는 쪽은 늘 숨깁니다.
+  private cullMeshes(all: boolean) {
+    if (!all) this.frustum.setFromProjectionMatrix(this.camera.projectionMatrix)
+    for (const mesh of this.meshes) {
+      const geometry = mesh.geometry
+      if (geometry.drawRange.count === 0) { mesh.visible = false; continue }
+      if (all) { mesh.visible = true; continue }
+      if (!geometry.boundingBox) geometry.computeBoundingBox()
+      this.cullBox.copy(geometry.boundingBox!)
+      if (mesh.parent) this.cullBox.translate(mesh.parent.position)
+      mesh.visible = this.frustum.intersectsBox(this.cullBox)
+    }
+  }
+
   pickBuildingAt(point: { x: number; y: number }): BuildingSelection | null {
     if (!this.picking || !this.map || !this.shadersReady) return null
     const canvas = this.map.getCanvas()
@@ -2586,11 +2707,14 @@ export class StreetSceneLayer implements CustomLayerInterface {
         this.shadowBakeAt = now + SHADOW_BAKE_DELAY_MS
         window.setTimeout(() => this.map?.triggerRepaint(), SHADOW_BAKE_DELAY_MS + 20)
       } else if (now >= this.shadowBakeAt) {
+        // 그림자 지도는 한 번 구워 계속 쓰므로, 시야 밖 건물의 그림자도 담기도록 모두 보이게 한 채 굽습니다.
+        this.cullMeshes(true)
         bakeShadowMap(this.renderer, this.scene, this.camera, _gl)
         this.shadowsBaked = true
         this.shadowBakeAt = 0
       }
     }
+    this.cullMeshes(false)
     // 그림자 패스가 끝난 뒤 뷰포트를 지도 캔버스 크기로 되돌리도록 매번 맞춥니다.
     this.renderer.setViewport(0, 0, _gl.drawingBufferWidth, _gl.drawingBufferHeight)
     // 경로 띠는 화면 기준 굵기를 지키도록, 줌이 꽤 바뀌면 그 굵기로 다시 만듭니다.
