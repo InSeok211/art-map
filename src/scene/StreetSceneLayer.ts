@@ -163,7 +163,7 @@ const renderersByCanvas = new WeakMap<HTMLCanvasElement, THREE.WebGLRenderer>()
 // 먼 동네를 나눠 만들 때 이만큼 모이면 메시로 합쳐 보여 줍니다
 const DISTRICT_FLUSH_BUILDINGS = 150
 // 시야 컬링 단위인 공간 셀의 한 변(장면 미터). 먼 동네 건물은 셀마다 따로 메시로 합쳐 두고, 카메라 시야(절두체)에
-// 들어오지 않는 셀은 그리지 않습니다(three.js frustumCulled). 전체화면 PC에서 한 화면에 들어오는 꼭짓점은 전체의
+// 들어오지 않는 셀은 그리지 않습니다(render의 cullMeshes). 전체화면 PC에서 한 화면에 들어오는 꼭짓점은 전체의
 // 절반 정도라 셀로 나누면 그만큼의 꼭짓점 처리를 아낍니다. 셀을 너무 잘게 나누면 그리기 호출(재질×셀)이 늘어
 // CPU 시간이 오히려 커지므로, 동네(약 430×720m)를 열다섯 셀 정도로 나누는 크기입니다.
 const CULL_CELL_METERS = 150
@@ -2495,22 +2495,22 @@ export class StreetSceneLayer implements CustomLayerInterface {
   // 휴대폰에서는 CPU 시간이 프레임을 가장 많이 잡아먹습니다. 화면이 멈추지 않게 재질 하나씩 나눠 합칩니다.
   // 꼭짓점이 많은 재질은 공간 셀마다 메시 하나로 합쳐, 시야 밖 셀을 그리지 않게 합니다(CULL_CELL_METERS).
   private consolidateSlots() {
-    // 재질마다 합칠 묶음(셀 → 조각들). 같은 셀의 조각이 하나뿐이면 합칠 것이 없습니다.
-    const pending: { slot: MaterialSlot; groups: globalThis.Map<string, MaterialSlot['flushed']> }[] = []
-    for (const slot of this.slots.values()) {
-      if (slot.flushed.length < 2) continue
+    const pending = [...this.slots.values()].filter((slot) => slot.flushed.length > 1)
+    const step = () => {
+      const slot = pending.shift()
+      if (!slot || !this.map) return
+      // 합칠 묶음(셀 → 조각들)은 재질 차례가 왔을 때 셉니다(그사이 고친 건물 조각이 더해졌을 수 있음).
+      // 같은 셀의 조각이 하나뿐이면 합칠 것이 없습니다.
       const vertices = slot.flushed.reduce((sum, { geometry }) => sum + geometry.getAttribute('position').count, 0)
       const groups = new globalThis.Map<string, MaterialSlot['flushed']>()
       for (const piece of slot.flushed) {
         const key = vertices >= CULL_SPLIT_MIN_VERTICES ? piece.cell : 'all'
         groups.set(key, [...(groups.get(key) ?? []), piece])
       }
-      if ([...groups.values()].some((pieces) => pieces.length > 1)) pending.push({ slot, groups })
-    }
-    const step = () => {
-      const next = pending.shift()
-      if (!next || !this.map) return
-      const { slot, groups } = next
+      if (![...groups.values()].some((pieces) => pieces.length > 1)) {
+        if (pending.length) void yieldToMain().then(step)
+        return
+      }
       slot.flushed = []
       for (const [cell, old] of groups) {
         if (old.length === 1) { slot.flushed.push(old[0]); continue }
