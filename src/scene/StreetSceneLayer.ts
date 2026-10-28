@@ -24,7 +24,7 @@ import type { BuildingEdits, PlacedModel } from '../buildings/buildingEdits'
 import type { BuildingSettings } from '../buildings/buildingSettings'
 import type { BuildingSelection } from '../buildings/buildingSelection'
 import { pickBuilding } from './buildingPicking'
-import { drapeOnTerrainSteps, flatPolygonGeometry, isDrawablePolygon, TERRAIN_GROUND_LIFT } from './groundGeometry'
+import { drapeOnTerrainSteps, flatPolygonGeometry, gridPlaneGeometry, isDrawablePolygon, TERRAIN_GROUND_LIFT } from './groundGeometry'
 import { buildingFoundationFaces } from './terrain/buildingFoundation'
 import { terrainBuildingPlan, terrainWallGeometry } from './terrain/terrainBuildingGeometry'
 import { BEAUTIFUL_HANGUL_URL, GREEN_HOUSE_URL, loadModel } from './modelFiles'
@@ -160,6 +160,22 @@ function releaseTextureUnits(gl: WebGL2RenderingContext) {
   gl.activeTexture(gl.TEXTURE0)
 }
 const renderersByCanvas = new WeakMap<HTMLCanvasElement, THREE.WebGLRenderer>()
+// 지도의 WebGL 연결 위에 만든 three.js 렌더러(없으면 만듦). gl을 주지 않으면 캔버스에서 같은 연결을 받습니다
+// (getContext는 이미 있는 연결을 돌려줌). 층을 붙이기 전에도 셰이더를 미리 컴파일할 수 있게 따로 둡니다.
+function sharedRenderer(map: Map, gl?: WebGL2RenderingContext | null) {
+  const canvas = map.getCanvas()
+  const context = gl ?? (canvas.getContext('webgl2') as WebGL2RenderingContext | null)
+  if (!context) return null
+  let shared = sharedRenderers.get(context)
+  if (!shared) {
+    shared = new THREE.WebGLRenderer({ canvas, context, antialias: true })
+    // 장면이 움직이지 않으므로 그림자 지도는 첫 프레임에 한 번만 계산합니다.
+    configureRenderer(shared)
+    sharedRenderers.set(context, shared)
+  }
+  renderersByCanvas.set(canvas, shared)
+  return shared
+}
 // 먼 동네를 나눠 만들 때 이만큼 모이면 메시로 합쳐 보여 줍니다
 const DISTRICT_FLUSH_BUILDINGS = 150
 // 나무 잎 덩어리와 줄기는 같은 모양을 수백 번 쓰므로 단위 도형의 꼭짓점을 한 번만 펼쳐 두고 크기·위치만 바꿔 넣습니다
@@ -1238,13 +1254,24 @@ export class StreetSceneLayer implements CustomLayerInterface {
     // 지형에서는 길과 바닥판을 휴대폰 메모리에 맞게 6m 단위로 굵게 나눠 얹으므로, 굽은 비탈에서 두 면의 높이가
     // 수십 cm까지 어긋납니다. 바닥판을 길보다 0.5m 아래에 깔아 길 위로 뚫고 올라오지 않게 합니다.
     // (길을 2.5m로 잘게 나누면 꼭짓점이 3.5배로 늘어 브라우저가 메모리 부족으로 멈췄습니다.)
-    yield* this.boxSteps(0xffffff, width, 0.035, depth, cx, this.terrain ? -0.5 : -0.012, cz, 0, 'ground-pavers')
+    if (this.terrain) {
+      // 지형에서는 상자 대신 6m 격자 판으로 만듭니다(상자를 이등분으로 쪼개 얹으면 꼭짓점 35만 개·0.7초). 윗면 높이는
+      // 상자(두께 0.035m, 중심 -0.5m)의 윗면과 같고, 옆면은 땅속이라 두지 않습니다.
+      yield* this.addGeometrySteps(0xffffff, gridPlaneGeometry(bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ, -0.5 + 0.0175, 6,
+        boxUvTile('ground-pavers') ?? undefined), false, 'ground-pavers')
+    } else yield* this.boxSteps(0xffffff, width, 0.035, depth, cx, -0.012, cz, 0, 'ground-pavers')
     yield
     for (const [x, z, alongX, length] of [
       [cx, bounds.minZ, true, width], [cx, bounds.maxZ, true, width],
       [bounds.minX, cz, false, depth], [bounds.maxX, cz, false, depth],
     ] as const) {
-      yield* this.boxSteps(0xd6e0d7, length, 0.12, 0.16, x, -0.015, z, alongX ? 0 : Math.PI / 2)
+      if (this.terrain) {
+        // 가장자리 띠(폭 0.16m)도 길이 방향으로만 6m씩 나눈 납작한 판으로 둡니다(상자 4개를 쪼개면 꼭짓점 25만 개).
+        const half = 0.08, top = -0.015 + 0.06
+        yield* this.addGeometrySteps(0xd6e0d7, alongX
+          ? gridPlaneGeometry(x - length / 2, x + length / 2, z - half, z + half, top, 6)
+          : gridPlaneGeometry(x - half, x + half, z - length / 2, z + length / 2, top, 6))
+      } else yield* this.boxSteps(0xd6e0d7, length, 0.12, 0.16, x, -0.015, z, alongX ? 0 : Math.PI / 2)
       yield
     }
 
@@ -2139,14 +2166,20 @@ export class StreetSceneLayer implements CustomLayerInterface {
 
   // 첫 장면을 화면이 멈추지 않게 조금씩(한 번에 약 12ms) 만들고, 다 만들면 끝납니다. 지도에 붙이기 전에 기다립니다.
   // 조각 사이에는 yieldToMain으로 브라우저에 차례를 넘깁니다(setTimeout(0)은 중첩 지연 때문에 벽시계가 1.5~2배였음).
-  async prepare() {
-    while (!this.runBuild(performance.now() + 12)) await yieldToMain()
+  // onMaterials: 첫 재질이 생긴 뒤 한 번 부릅니다(그때부터 셰이더를 미리 컴파일할 수 있음, GamcheonMap).
+  async prepare(onMaterials?: () => void) {
+    let notified = false
+    while (!this.runBuild(performance.now() + 12)) {
+      if (!notified && this.slots.size > 0) { notified = true; onMaterials?.() }
+      await yieldToMain()
+    }
   }
 
-  // 이 지도에서 이미 3D 거리를 그린 적이 있으면, 바꿔 붙이기 전에 새 장면의 셰이더를 미리 컴파일해 둡니다.
-  // 그래야 지금 거리를 뗀 뒤 새 거리가 그려지기까지 3D 거리가 잠깐 사라지는 틈이 없습니다.
+  // 지도에 붙이기 전에 장면의 셰이더를 미리 컴파일해 둡니다(지도의 WebGL 연결을 함께 쓰는 렌더러, sharedRenderer).
+  // 처음 만들 때는 첫 장면을 만드는 동안 이미 생긴 재질부터 컴파일해 빌드와 겹치고(남은 재질은 onAdd에서),
+  // 다시 만들 때는 지금 거리를 뗀 뒤 새 거리가 그려지기까지 3D 거리가 잠깐 사라지는 틈이 없게 합니다.
   async warmUp(map: Map) {
-    const renderer = renderersByCanvas.get(map.getCanvas())
+    const renderer = sharedRenderer(map)
     if (renderer) await renderer.compileAsync(this.scene, this.camera).catch(() => undefined)
   }
 
@@ -2667,17 +2700,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
     if (this.pendingBuildings.length) this.scheduleDistrictBuild()
     map.on('moveend', this.scheduleOcclusion)
     this.scheduleOcclusion()
-    // 같은 지도(그래픽 연결)에서는 렌더러를 함께 씁니다. 3D 거리를 다시 만들 때(지형 켜고 끄기) 셰이더를 처음부터
-    // 다시 컴파일하지 않아 멈춤이 줄어듭니다.
-    let shared = sharedRenderers.get(gl)
-    if (!shared) {
-      shared = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true })
-      // 장면이 움직이지 않으므로 그림자 지도는 첫 프레임에 한 번만 계산합니다.
-      configureRenderer(shared)
-      sharedRenderers.set(gl, shared)
-    }
-    renderersByCanvas.set(map.getCanvas(), shared)
-    this.renderer = shared
+    // 같은 지도(그래픽 연결)에서는 렌더러를 함께 씁니다(sharedRenderer). 3D 거리를 다시 만들 때(지형 켜고 끄기)
+    // 셰이더를 처음부터 다시 컴파일하지 않아 멈춤이 줄어듭니다.
+    this.renderer = sharedRenderer(map, gl)!
     // 처음 그릴 때 셰이더 수십 개를 한꺼번에 컴파일하느라 화면이 몇 초 멈췄습니다(휴대폰에서 특히). 그래픽
     // 드라이버가 뒤에서 컴파일하도록(KHR_parallel_shader_compile) 미리 맡겨 두고, 끝나면 그리기 시작합니다.
     // 그동안 바탕 지도는 그대로 보이고 움직일 수 있습니다.

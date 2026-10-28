@@ -32,6 +32,38 @@ export function flatPolygonGeometry(polygon: PlanePolygon, y = 0, uvMeters?: num
   return geometry
 }
 
+// 축에 나란한 직사각형(minX~maxX, minZ~maxZ)을 높이 y에 눕힌 판을 한 변 maxEdge(m) 이하의 격자로 만듭니다. 지형에
+// 얹을 큰 판(바닥판·가장자리 띠)은 상자를 삼각형 이등분으로 쪼개는 대신 이렇게 처음부터 격자로 만듭니다: 430×720m
+// 바닥판을 이등분으로 쪼개면 꼭짓점 35만 개가 생겨 0.7초가 걸렸는데, 격자는 꼭짓점 1.8만 개로 끝납니다.
+// uvMeters가 있으면 질감 한 장이 그 크기(m)를 덮도록 UV를 둡니다(상자 윗면과 같은 축척).
+export function gridPlaneGeometry(minX: number, maxX: number, minZ: number, maxZ: number, y: number, maxEdge: number, uvMeters?: [number, number]) {
+  const columns = Math.max(1, Math.ceil((maxX - minX) / maxEdge)), rows = Math.max(1, Math.ceil((maxZ - minZ) / maxEdge))
+  const count = (columns + 1) * (rows + 1)
+  const position = new Float32Array(count * 3), normal = new Float32Array(count * 3), uv = new Float32Array(count * 2)
+  for (let row = 0; row <= rows; row++) for (let column = 0; column <= columns; column++) {
+    const vertex = row * (columns + 1) + column
+    const x = minX + (maxX - minX) * column / columns, z = minZ + (maxZ - minZ) * row / rows
+    position[vertex * 3] = x; position[vertex * 3 + 1] = y; position[vertex * 3 + 2] = z
+    normal[vertex * 3 + 1] = 1
+    uv[vertex * 2] = uvMeters ? (x - minX) / uvMeters[0] : column / columns
+    uv[vertex * 2 + 1] = uvMeters ? (z - minZ) / uvMeters[1] : row / rows
+  }
+  const index = new (count > 65535 ? Uint32Array : Uint16Array)(columns * rows * 6)
+  let at = 0
+  for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
+    const a = row * (columns + 1) + column, b = a + 1, c = a + columns + 1, d = c + 1
+    // 위(+y)에서 봤을 때 반시계가 되도록(x 오른쪽, z 아래) a-c-b, b-c-d
+    index[at++] = a; index[at++] = c; index[at++] = b
+    index[at++] = b; index[at++] = c; index[at++] = d
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(position, 3))
+  geometry.setAttribute('normal', new THREE.BufferAttribute(normal, 3))
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+  geometry.setIndex(new THREE.BufferAttribute(index, 1))
+  return geometry
+}
+
 // 평평하게 만든 바닥 도형을 지형에 얹습니다. 긴 변을 maxEdge(m) 이하로 나눈 뒤 꼭짓점마다 지형 높이를 더합니다.
 // (넓은 도로 면을 그대로 올리면 큰 삼각형이 비탈을 가로질러 땅속으로 파고들기 때문입니다.)
 // 변의 가운데 점은 이웃 삼각형과 함께 쓰므로(변마다 한 번만 만듦) 나눈 자리에 틈이 생기지 않습니다.
@@ -49,6 +81,9 @@ const DRAPE_STEP = 4000
 // expand: 인덱스 없이 삼각형마다 꼭짓점을 펼친 도형으로 돌려줍니다(3D 거리 바닥이 쓰는 모양, toNonIndexed와 같음).
 // 법선은 펼치기 전에 이웃 삼각형과 함께 계산하므로 비탈이 매끈하게 보입니다.
 export function* drapeOnTerrainSteps(geometry: THREE.BufferGeometry, terrain: Pick<TerrainSampler, 'height'>, lift = TERRAIN_GROUND_LIFT, maxEdge = 6, expand = false): Generator<void, THREE.BufferGeometry> {
+  // 나눌 변이 없으면(건물 바닥 띠처럼 작은 도형, 이미 격자인 판) 꼭짓점 높이만 더합니다. 아래의 일반 경로는 꼭짓점
+  // 표를 다시 만들어 도형마다 고정 비용이 커서, 건물 1,270동의 작은 바닥 조각에서는 이 길이 훨씬 빠릅니다.
+  if (!needsSubdivision(geometry, maxEdge)) return yield* liftOntoTerrainSteps(geometry, terrain, lift, expand)
   const names = Object.keys(geometry.attributes)
   const attributes = names.map((name) => geometry.getAttribute(name) as THREE.BufferAttribute)
   const sizes = attributes.map((attribute) => attribute.itemSize)
@@ -139,5 +174,39 @@ export function* drapeOnTerrainSteps(geometry: THREE.BufferGeometry, terrain: Pi
   }
   if (!expand) result.setIndex(triangles)
   geometry.dispose()
+  return result
+}
+
+// 어떤 삼각형이든 변(xz 평면)이 maxEdge보다 길면 참
+function needsSubdivision(geometry: THREE.BufferGeometry, maxEdge: number) {
+  const position = geometry.getAttribute('position') as THREE.BufferAttribute
+  const array = position.array as ArrayLike<number>
+  const index = geometry.getIndex()
+  const count = index ? index.count : position.count
+  const limit = maxEdge * maxEdge
+  const read = (corner: number) => (index ? index.getX(corner) : corner) * 3
+  for (let corner = 0; corner < count; corner += 3) {
+    const a = read(corner), b = read(corner + 1), c = read(corner + 2)
+    const ab = (array[a] - array[b]) ** 2 + (array[a + 2] - array[b + 2]) ** 2
+    const bc = (array[b] - array[c]) ** 2 + (array[b + 2] - array[c + 2]) ** 2
+    const ca = (array[c] - array[a]) ** 2 + (array[c + 2] - array[a + 2]) ** 2
+    if (ab > limit || bc > limit || ca > limit) return true
+  }
+  return false
+}
+
+// 나누지 않고 꼭짓점마다 지형 높이를 더합니다(법선은 도형에 법선 속성이 있을 때만 다시 계산). expand면 펼친 도형으로.
+// 큰 격자 판(바닥판)은 꼭짓점 수천 개마다 쉽니다.
+function* liftOntoTerrainSteps(geometry: THREE.BufferGeometry, terrain: Pick<TerrainSampler, 'height'>, lift: number, expand: boolean): Generator<void, THREE.BufferGeometry> {
+  const result = expand && geometry.index ? geometry.toNonIndexed() : geometry
+  if (result !== geometry) geometry.dispose()
+  const position = result.getAttribute('position') as THREE.BufferAttribute
+  const array = position.array as Float32Array
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    array[vertex * 3 + 1] += terrain.height(array[vertex * 3], array[vertex * 3 + 2]) + lift
+    if (vertex % DRAPE_STEP === DRAPE_STEP - 1) yield
+  }
+  position.needsUpdate = true
+  if (result.getAttribute('normal')) result.computeVertexNormals()
   return result
 }

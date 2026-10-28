@@ -360,6 +360,8 @@ export function GamcheonMap({
     // 3D 거리를 만드는 동안 그린하우스·아름다운한글 모델 파일과 도로·보도 면 데이터를 미리 받아 둡니다.
     prefetchStreetModels()
     prefetchRoadGroundMesh()
+    // '3D 지형'을 켜 둔 기기는 지형 표(약 100KB)도 지금 받아, 바탕 지도가 뜬 뒤에 받느라 기다리지 않게 합니다.
+    if (terrainModeRef.current) void loadTerrain().catch(() => undefined)
     // 3D 거리 장면은 만드는 데 몇 초가 걸리므로, 바탕 지도를 먼저 그린 뒤에 만들어 빈 화면으로 기다리지 않게 합니다.
     let streetLayer: StreetSceneLayer | null = null
     let disposed = false
@@ -388,7 +390,12 @@ export function GamcheonMap({
         picking: !!buildingEditor, roadGround,
         onModelError: (name) => setPlacedModelError(`3D 모델 '${name}'을(를) 불러오지 못했습니다.`),
       })
-      await next.prepare()
+      // 첫 장면을 만드는 동안 그때까지 생긴 재질의 셰이더를 미리 컴파일합니다(컴파일은 그래픽 드라이버가 뒤에서 하므로
+      // 만들기와 겹침). 내장 GPU PC에서 컴파일만 0.8초라, 다 만든 뒤에 시작하면 그만큼 3D 거리가 늦게 보였습니다.
+      let warmUp: Promise<void> = Promise.resolve()
+      await next.prepare(() => { warmUp = next.warmUp(map) })
+      await warmUp
+      // 나중에 생긴 재질까지 마저 컴파일합니다(이미 된 것은 건너뜀).
       await next.warmUp(map)
       // 만드는 사이에 다른 설정으로 다시 만들기 시작했으면 이 거리는 버립니다.
       if (disposed || version !== buildVersion) return
@@ -433,9 +440,10 @@ export function GamcheonMap({
       if (!streetLayer && !fallbackTimer) fallbackTimer = window.setTimeout(buildStreetLayer, STREET_LAYER_FALLBACK_MS)
     }
     map.on('style.load', attachLayers)
-    // 바탕 지도의 첫 그리기('load')가 끝나는 대로 3D 거리를 만들기 시작합니다. 예전에는 타일까지 다 받은 'idle'을
-    // 기다려 타일이 느리면 시작이 최대 3.5초 늦었습니다. 장면은 12ms 조각으로 만들어 타일 그리기와 번갈아 돌아갑니다.
-    map.once('load', buildStreetLayer)
+    // 스타일이 준비되는 대로('style.load', 타일과 첫 그리기 전) 3D 거리를 만들기 시작합니다. 예전에는 첫 그리기('load'),
+    // 그 전에는 타일까지 다 받은 'idle'을 기다려 시작이 0.5~3.5초 늦었습니다. 장면은 12ms 조각으로 만들어 타일 그리기와
+    // 번갈아 돌아가므로 바탕 지도가 늦게 뜨지는 않습니다.
+    map.once('style.load', buildStreetLayer)
     // 휴대폰에서 메모리가 모자라면 그래픽(WebGL) 연결이 끊길 수 있습니다. 다시 연결되면 3D 층을 새로 붙입니다.
     const handleContextLost = () => setSceneStatus('lost')
     // MapLibre는 연결이 끊길 때 사용자 정의 3D 층을 스스로 떼어 내므로, 스타일이 다시 준비되면 붙입니다.
@@ -472,7 +480,7 @@ export function GamcheonMap({
       window.clearTimeout(fallbackTimer)
       streetLayerRef.current = null
       map.off('style.load', attachLayers)
-      map.off('idle', buildStreetLayer)
+      map.off('style.load', buildStreetLayer)
       map.off('webglcontextlost', handleContextLost)
       map.off('webglcontextrestored', handleContextRestored)
       mapRef.current = null
