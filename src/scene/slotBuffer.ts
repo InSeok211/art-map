@@ -243,17 +243,28 @@ export class SlotBuffer {
       else { this.uv[(start + i) * 2] = 0; this.uv[(start + i) * 2 + 1] = 0 }
     }
     if (this.color && color) {
-      // 정규화된 uint8 속성은 getX가 0~1을 돌려주므로 다시 0~255로(합친 메시를 다시 합칠 때만 지나는 길)
-      const scale = color.normalized ? 255 : 1
+      // 합친 메시를 다시 합칠 때 지나는 길. 이 버퍼가 만든 uint8 색은 바이트를 그대로 복사하고, 다른 형식은 getX로 읽습니다.
+      const ca = color.array
+      const bytes = ca instanceof Uint8Array && color.normalized
       for (let i = 0; i < count; i++) {
-        const source = ia ? ia[from + i] : from + i, vertex = (start + i) * 3
-        this.color[vertex] = Math.round(color.getX(source) * scale)
-        this.color[vertex + 1] = Math.round(color.getY(source) * scale)
-        this.color[vertex + 2] = Math.round(color.getZ(source) * scale)
+        const source = ia ? ia[from + i] : from + i, vertex = (start + i) * 3, read = source * 3
+        if (bytes) { this.color[vertex] = ca[read]; this.color[vertex + 1] = ca[read + 1]; this.color[vertex + 2] = ca[read + 2] }
+        else {
+          const scale = color.normalized ? 255 : 1
+          this.color[vertex] = Math.round(color.getX(source) * scale)
+          this.color[vertex + 1] = Math.round(color.getY(source) * scale)
+          this.color[vertex + 2] = Math.round(color.getZ(source) * scale)
+        }
       }
     }
-    if (this.buildingIndex && building) for (let i = 0; i < count; i++) this.buildingIndex[start + i] = building.getX(ia ? ia[from + i] : from + i)
-    if (this.pickIndex && pick) for (let i = 0; i < count; i++) this.pickIndex[start + i] = pick.getX(ia ? ia[from + i] : from + i)
+    if (this.buildingIndex && building) {
+      const ba = building.array as ArrayLike<number>
+      for (let i = 0; i < count; i++) this.buildingIndex[start + i] = ba[ia ? ia[from + i] : from + i]
+    }
+    if (this.pickIndex && pick) {
+      const ka = pick.array as ArrayLike<number>
+      for (let i = 0; i < count; i++) this.pickIndex[start + i] = ka[ia ? ia[from + i] : from + i]
+    }
     this.count += count
     // 도형에 없던 속성만 채웁니다(있던 것은 위에서 복사함).
     if (this.color && !color && rgb) {

@@ -2437,9 +2437,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
       for (const { meshes } of old) for (const mesh of meshes) mesh.geometry.dispose()
       // 같은 도형을 합치기만 하므로 그림자는 그대로입니다(다시 굽지 않음).
       this.map.triggerRepaint()
-      if (pending.length) setTimeout(step, 0)
+      if (pending.length) void yieldToMain().then(step)
     }
-    setTimeout(step, 0)
+    void yieldToMain().then(step)
   }
 
   private addSlotMesh(geometry: THREE.BufferGeometry, material: SlotMaterial, slot: MaterialSlot, ring: number) {
@@ -2505,10 +2505,11 @@ export class StreetSceneLayer implements CustomLayerInterface {
       }
       this.group = 'scene'
       this.buildingContext = null
-      if (this.pendingBuildings.length || flushing) setTimeout(step, 0)
+      // 조각 사이 양보는 setTimeout(0) 대신 yieldToMain(중첩 지연 없음)으로 합니다.
+      if (this.pendingBuildings.length || flushing) void yieldToMain().then(step)
       else performance.measure(DISTRICT_BUILD_MEASURE, { start: started, end: performance.now() })
     }
-    setTimeout(step, 0)
+    void yieldToMain().then(step)
   }
 
   onAdd(map: Map, gl: WebGL2RenderingContext) {
