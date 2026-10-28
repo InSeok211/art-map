@@ -5,8 +5,11 @@ import * as THREE from 'three'
 // 조각 5.9만 개·꼭짓점 152만 개가 생겨 그 객체 생성과 두 번의 복사가 빌드 시간의 대부분이었습니다.
 // 이제 조각은 재질별로 키워 둔 TypedArray 끝에 좌표를 바로 써 넣고, 메시로 만들 때 한 번만 잘라 냅니다.
 //
-// 속성 배치는 예전 mergeGeometries 결과와 같습니다: position·normal·uv(float32), color(uint8, 정규화, 선형 색),
-// 고리 묶음이면 buildingIndex(float32), 편집기면 pickIndex(float32).
+// 속성 배치: position·uv(float32), normal(int8, 정규화: GPU가 /127로 되돌림), color(uint8, 정규화, 선형 색),
+// 고리 묶음이면 buildingIndex(uint16), 편집기면 pickIndex(int16, 없으면 -1).
+// 법선·번호를 32비트 실수 대신 8·16비트로 두면 꼭짓점 하나가 43바이트에서 30바이트로 줄어, 꼭짓점 177만 개의
+// 그래픽 메모리(76MB→53MB)와 프레임마다 GPU가 읽는 양이 줄어듭니다. 내장 GPU는 시스템 메모리를 같이 쓰므로 효과가 있습니다.
+// 셰이더의 'attribute float buildingIndex'는 정수 배열도 실수로 받습니다(vertexAttribPointer, 정규화 안 함).
 
 export interface SlotBufferOptions {
   /** 꼭짓점 색(vertexColors 재질). 완성 재질(finishedMaterial)은 재질 색을 쓰므로 false */
@@ -74,28 +77,28 @@ export class SlotBuffer {
   count = 0
   private capacity = 0
   private position = new Float32Array(0)
-  private normal = new Float32Array(0)
+  private normal = new Int8Array(0)
   private uv = new Float32Array(0)
   private color: Uint8Array | null = null
-  private buildingIndex: Float32Array | null = null
-  private pickIndex: Float32Array | null = null
+  private buildingIndex: Uint16Array | null = null
+  private pickIndex: Int16Array | null = null
 
   constructor(readonly options: SlotBufferOptions) {
     this.allocate(INITIAL_CAPACITY)
   }
 
   private allocate(capacity: number) {
-    const copy = <T extends Float32Array | Uint8Array>(old: T, size: number, make: (length: number) => T) => {
+    const copy = <T extends Float32Array | Uint8Array | Int8Array | Uint16Array | Int16Array>(old: T, size: number, make: (length: number) => T) => {
       const next = make(capacity * size)
-      if (this.count) next.set(old.subarray(0, this.count * size))
+      if (this.count) next.set(old.subarray(0, this.count * size) as unknown as ArrayLike<number>)
       return next
     }
     this.position = copy(this.position, 3, (length) => new Float32Array(length))
-    this.normal = copy(this.normal, 3, (length) => new Float32Array(length))
+    this.normal = copy(this.normal, 3, (length) => new Int8Array(length))
     this.uv = copy(this.uv, 2, (length) => new Float32Array(length))
     if (this.options.color) this.color = copy(this.color ?? new Uint8Array(0), 3, (length) => new Uint8Array(length))
-    if (this.options.buildingIndex) this.buildingIndex = copy(this.buildingIndex ?? new Float32Array(0), 1, (length) => new Float32Array(length))
-    if (this.options.pickIndex) this.pickIndex = copy(this.pickIndex ?? new Float32Array(0), 1, (length) => new Float32Array(length))
+    if (this.options.buildingIndex) this.buildingIndex = copy(this.buildingIndex ?? new Uint16Array(0), 1, (length) => new Uint16Array(length))
+    if (this.options.pickIndex) this.pickIndex = copy(this.pickIndex ?? new Int16Array(0), 1, (length) => new Int16Array(length))
     this.capacity = capacity
   }
 
@@ -135,9 +138,9 @@ export class SlotBuffer {
       this.position[vertex] = px * c + pz * s + x
       this.position[vertex + 1] = py + y
       this.position[vertex + 2] = -px * s + pz * c + z
-      this.normal[vertex] = nx * c + nz * s
-      this.normal[vertex + 1] = ny
-      this.normal[vertex + 2] = -nx * s + nz * c
+      this.normal[vertex] = Math.round((nx * c + nz * s) * 127)
+      this.normal[vertex + 1] = Math.round(ny * 127)
+      this.normal[vertex + 2] = Math.round((-nx * s + nz * c) * 127)
       let u = BOX_UV[i * 2], v = BOX_UV[i * 2 + 1]
       if (uvTile) {
         const side = Math.abs(nx) > 0.5, top = Math.abs(ny) > 0.5
@@ -172,9 +175,9 @@ export class SlotBuffer {
       this.position[vertex + 1] = m[1] * px + m[5] * py + m[9] * pz + m[13]
       this.position[vertex + 2] = m[2] * px + m[6] * py + m[10] * pz + m[14]
       // 회전만 있는 행렬이므로 법선은 그대로 돌리면 됩니다(길이 1 유지).
-      this.normal[vertex] = n[0] * nx + n[3] * ny + n[6] * nz
-      this.normal[vertex + 1] = n[1] * nx + n[4] * ny + n[7] * nz
-      this.normal[vertex + 2] = n[2] * nx + n[5] * ny + n[8] * nz
+      this.normal[vertex] = Math.round((n[0] * nx + n[3] * ny + n[6] * nz) * 127)
+      this.normal[vertex + 1] = Math.round((n[1] * nx + n[4] * ny + n[7] * nz) * 127)
+      this.normal[vertex + 2] = Math.round((n[2] * nx + n[5] * ny + n[8] * nz) * 127)
       this.uv[(start + i) * 2] = BEAM_UV[i * 2]
       this.uv[(start + i) * 2 + 1] = BEAM_UV[i * 2 + 1]
     }
@@ -192,8 +195,9 @@ export class SlotBuffer {
     const start = this.count
     this.position.set(positions, start * 3)
     this.uv.set(uvs, start * 2)
-    if (normals) this.normal.set(normals, start * 3)
-    else {
+    if (normals) {
+      for (let i = 0, limit = count * 3; i < limit; i++) this.normal[start * 3 + i] = Math.round(normals[i] * 127)
+    } else {
       for (let i = 0; i < count; i += 3) {
         const a = i * 3, b = a + 3, c = a + 6
         const abx = positions[b] - positions[a], aby = positions[b + 1] - positions[a + 1], abz = positions[b + 2] - positions[a + 2]
@@ -201,9 +205,10 @@ export class SlotBuffer {
         let nx = aby * acz - abz * acy, ny = abz * acx - abx * acz, nz = abx * acy - aby * acx
         const length = Math.hypot(nx, ny, nz) || 1
         nx /= length; ny /= length; nz /= length
+        const bx = Math.round(nx * 127), by = Math.round(ny * 127), bz = Math.round(nz * 127)
         for (let k = 0; k < 3; k++) {
           const vertex = (start + i + k) * 3
-          this.normal[vertex] = nx; this.normal[vertex + 1] = ny; this.normal[vertex + 2] = nz
+          this.normal[vertex] = bx; this.normal[vertex + 1] = by; this.normal[vertex + 2] = bz
         }
       }
     }
@@ -234,11 +239,19 @@ export class SlotBuffer {
     const pa = position.array as ArrayLike<number>, na = normal.array as ArrayLike<number>
     const ua = uv?.array as ArrayLike<number> | undefined
     const ia = index?.array as ArrayLike<number> | undefined
+    // 합친 메시를 다시 합칠 때는 이 버퍼가 만든 int8 법선을 그대로 복사하고, 실수 법선은 8비트로 줄입니다.
+    const packedNormal = na instanceof Int8Array && normal.normalized
+    const normalScale = packedNormal ? 1 : 127
     for (let i = 0; i < count; i++) {
       const source = ia ? ia[from + i] : from + i
       const vertex = (start + i) * 3, read = source * 3
       this.position[vertex] = pa[read]; this.position[vertex + 1] = pa[read + 1]; this.position[vertex + 2] = pa[read + 2]
-      this.normal[vertex] = na[read]; this.normal[vertex + 1] = na[read + 1]; this.normal[vertex + 2] = na[read + 2]
+      if (packedNormal) { this.normal[vertex] = na[read]; this.normal[vertex + 1] = na[read + 1]; this.normal[vertex + 2] = na[read + 2] }
+      else {
+        this.normal[vertex] = Math.round(na[read] * normalScale)
+        this.normal[vertex + 1] = Math.round(na[read + 1] * normalScale)
+        this.normal[vertex + 2] = Math.round(na[read + 2] * normalScale)
+      }
       if (ua) { this.uv[(start + i) * 2] = ua[source * 2]; this.uv[(start + i) * 2 + 1] = ua[source * 2 + 1] }
       else { this.uv[(start + i) * 2] = 0; this.uv[(start + i) * 2 + 1] = 0 }
     }
@@ -280,7 +293,7 @@ export class SlotBuffer {
     if (!this.count) return null
     const geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', new THREE.BufferAttribute(this.position.slice(0, this.count * 3), 3))
-    geometry.setAttribute('normal', new THREE.BufferAttribute(this.normal.slice(0, this.count * 3), 3))
+    geometry.setAttribute('normal', new THREE.BufferAttribute(this.normal.slice(0, this.count * 3), 3, true))
     geometry.setAttribute('uv', new THREE.BufferAttribute(this.uv.slice(0, this.count * 2), 2))
     if (this.color) geometry.setAttribute('color', new THREE.BufferAttribute(this.color.slice(0, this.count * 3), 3, true))
     if (this.buildingIndex) geometry.setAttribute('buildingIndex', new THREE.BufferAttribute(this.buildingIndex.slice(0, this.count), 1))

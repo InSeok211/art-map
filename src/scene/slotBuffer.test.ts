@@ -13,6 +13,18 @@ function near(actual: ArrayLike<number>, expected: ArrayLike<number>, digits = 5
   for (let i = 0; i < actual.length; i++) expect(actual[i], `index ${i}`).toBeCloseTo(expected[i], digits)
 }
 
+// 법선은 int8(정규화)로 담으므로 1/127 안에서 같으면 됩니다. BufferAttribute.getX가 되돌린 값으로 비교합니다.
+function nearNormal(attribute: THREE.BufferAttribute, expected: ArrayLike<number>) {
+  expect(attribute.normalized).toBe(true)
+  expect(attribute.array).toBeInstanceOf(Int8Array)
+  expect(attribute.count * 3).toBe(expected.length)
+  for (let i = 0; i < attribute.count; i++) {
+    expect(attribute.getX(i), `normal x ${i}`).toBeCloseTo(expected[i * 3], 1)
+    expect(attribute.getY(i), `normal y ${i}`).toBeCloseTo(expected[i * 3 + 1], 1)
+    expect(attribute.getZ(i), `normal z ${i}`).toBeCloseTo(expected[i * 3 + 2], 1)
+  }
+}
+
 // 예전 StreetSceneLayer.boxGeometry와 같은 계산
 function legacyBox(width: number, height: number, depth: number, x: number, y: number, z: number, rotation: number, tile: BoxUvTile) {
   const geometry = UNIT_BOX.clone()
@@ -54,7 +66,7 @@ describe('slot buffer', () => {
       const geometry = buffer.toGeometry()!
       const legacy = legacyBox(w, h, d, x, y, z, rotation, tile)
       near(geometry.getAttribute('position').array, legacy.getAttribute('position').array)
-      near(geometry.getAttribute('normal').array, legacy.getAttribute('normal').array)
+      nearNormal(geometry.getAttribute('normal') as THREE.BufferAttribute, legacy.getAttribute('normal').array)
       near(geometry.getAttribute('uv').array, legacy.getAttribute('uv').array)
       expect(geometry.getAttribute('position').count).toBe(30)
     }
@@ -80,7 +92,7 @@ describe('slot buffer', () => {
     const geometry = buffer.toGeometry()!
     const legacy = legacyBeam(from, to, 0.08)
     near(geometry.getAttribute('position').array, legacy.getAttribute('position').array)
-    near(geometry.getAttribute('normal').array, legacy.getAttribute('normal').array)
+    nearNormal(geometry.getAttribute('normal') as THREE.BufferAttribute, legacy.getAttribute('normal').array)
     near(geometry.getAttribute('uv').array, legacy.getAttribute('uv').array)
   })
 
@@ -92,7 +104,7 @@ describe('slot buffer', () => {
     const legacy = new THREE.BufferGeometry()
     legacy.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
     legacy.computeVertexNormals()
-    near(buffer.toGeometry()!.getAttribute('normal').array, legacy.getAttribute('normal').array)
+    nearNormal(buffer.toGeometry()!.getAttribute('normal') as THREE.BufferAttribute, legacy.getAttribute('normal').array)
   })
 
   it('expands indexed geometry and fills colour and tags, copying attributes that already exist', () => {
@@ -108,11 +120,14 @@ describe('slot buffer', () => {
     expect(Array.from(color.array.slice(0, 3))).toEqual(RED)
     expect(new Set(geometry.getAttribute('buildingIndex').array)).toEqual(new Set([3]))
     expect(new Set(geometry.getAttribute('pickIndex').array)).toEqual(new Set([7]))
+    expect(geometry.getAttribute('buildingIndex').array).toBeInstanceOf(Uint16Array)
+    expect(geometry.getAttribute('pickIndex').array).toBeInstanceOf(Int16Array)
 
     // 합친 메시를 다시 합칠 때: 이미 있는 색·번호를 그대로 복사하고 새 값으로 덮지 않습니다.
     const again = new SlotBuffer({ color: true, buildingIndex: true, pickIndex: true })
     again.appendGeometry(geometry, colorBytes(0x00ff00), { building: 9, pick: 9 })
     const copied = again.toGeometry()!
+    expect(Array.from(copied.getAttribute('normal').array)).toEqual(Array.from(geometry.getAttribute('normal').array))
     expect(Array.from((copied.getAttribute('color') as THREE.BufferAttribute).array.slice(0, 3))).toEqual(RED)
     expect(new Set(copied.getAttribute('buildingIndex').array)).toEqual(new Set([3]))
     expect(new Set(copied.getAttribute('pickIndex').array)).toEqual(new Set([7]))

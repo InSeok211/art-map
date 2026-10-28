@@ -162,6 +162,22 @@ function releaseTextureUnits(gl: WebGL2RenderingContext) {
 const renderersByCanvas = new WeakMap<HTMLCanvasElement, THREE.WebGLRenderer>()
 // 먼 동네를 나눠 만들 때 이만큼 모이면 메시로 합쳐 보여 줍니다
 const DISTRICT_FLUSH_BUILDINGS = 150
+// 나무 잎 덩어리와 줄기는 같은 모양을 수백 번 쓰므로 단위 도형의 꼭짓점을 한 번만 펼쳐 두고 크기·위치만 바꿔 넣습니다
+// (addUnitShape). 지도 축척에서는 잎 덩어리 세분 1단계(80면)로도 둥글게 보입니다(2단계는 320면).
+type UnitShape = { position: Float32Array; normal: Float32Array; uv: Float32Array }
+function unitShape(geometry: THREE.BufferGeometry): UnitShape {
+  const flat = geometry.index ? geometry.toNonIndexed() : geometry
+  const shape = {
+    position: (flat.getAttribute('position').array as Float32Array).slice(),
+    normal: (flat.getAttribute('normal').array as Float32Array).slice(),
+    uv: (flat.getAttribute('uv').array as Float32Array).slice(),
+  }
+  flat.dispose()
+  if (flat !== geometry) geometry.dispose()
+  return shape
+}
+const UNIT_FOLIAGE = unitShape(new THREE.IcosahedronGeometry(1, 1))
+const UNIT_TRUNK = unitShape(new THREE.CylinderGeometry(0.105, 0.17, 1, 6, 1, true))
 // 시야 컬링 단위인 공간 셀의 한 변(장면 미터). 먼 동네 건물은 셀마다 따로 메시로 합쳐 두고, 카메라 시야(절두체)에
 // 들어오지 않는 셀은 그리지 않습니다(render의 cullMeshes). 전체화면 PC에서 한 화면에 들어오는 꼭짓점은 전체의
 // 절반 정도라 셀로 나누면 그만큼의 꼭짓점 처리를 아낍니다. 셀을 너무 잘게 나누면 그리기 호출(재질×셀)이 늘어
@@ -1092,18 +1108,15 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   private tree(x: number, z: number, height: number, blossoms: boolean) {
-    const trunk = new THREE.CylinderGeometry(0.105, 0.17, height * 0.58, 6, 1, true)
-    trunk.translate(x, height * 0.29, z)
-    this.addGeometry(0x78664f, trunk)
+    this.addUnitShape(0x78664f, UNIT_TRUNK, 1, height * 0.58, 1, x, height * 0.29, z)
     for (const [ox, oy, oz, radius, tone] of [
       [0, 0.83, 0, 0.3, 0], [-0.22, 0.7, 0.07, 0.2, 1],
       [0.2, 0.69, -0.12, 0.22, 2], [0.04, 0.57, 0.21, 0.17, 1],
       [-0.1, 0.95, -0.06, 0.18, 2],
     ] as const) {
-      // 지도 축척에서는 세분 1단계(80면)로도 둥글게 보입니다(2단계는 320면).
-      const foliage = new THREE.IcosahedronGeometry(height * radius, 1)
-      foliage.translate(x + ox * height, height * oy, z + oz * height)
-      this.addGeometry(blossoms ? [0xe4bec4, 0xd6a6b2, 0xefd0ce][tone] : [0x658761, 0x75996e, 0x8cab77][tone], foliage)
+      const size = height * radius
+      this.addUnitShape(blossoms ? [0xe4bec4, 0xd6a6b2, 0xefd0ce][tone] : [0x658761, 0x75996e, 0x8cab77][tone],
+        UNIT_FOLIAGE, size, size, size, x + ox * height, height * oy, z + oz * height)
     }
   }
 
@@ -1111,10 +1124,40 @@ export class StreetSceneLayer implements CustomLayerInterface {
     this.box(0x827d69, 0.82, 0.34, 0.5, x, 0.22, z)
     this.box(0x514f3d, 0.7, 0.035, 0.4, x, 0.41, z)
     for (const offset of [-0.23, 0, 0.23]) {
-      const crown = new THREE.IcosahedronGeometry(offset === 0 ? 0.31 : 0.25, 1)
-      crown.translate(x + offset, 0.71 + (offset === 0 ? 0.07 : 0), z)
-      this.addGeometry(blossoms ? 0xc98396 : 0x688465, crown)
+      const size = offset === 0 ? 0.31 : 0.25
+      this.addUnitShape(blossoms ? 0xc98396 : 0x688465, UNIT_FOLIAGE, size, size, size, x + offset, 0.71 + (offset === 0 ? 0.07 : 0), z)
     }
+  }
+
+  // 단위 도형(UNIT_FOLIAGE·UNIT_TRUNK)을 (sx, sy, sz)배로 늘여 (x, y, z)에 둡니다. 평지에서는 꼭짓점을 재질 버퍼에 바로
+  // 쓰고(나무마다 IcosahedronGeometry를 만들던 때보다 훨씬 빠름), 지형에서는 예전처럼 도형을 만들어 땅에 얹습니다.
+  private addUnitShape(color: number, shape: UnitShape, sx: number, sy: number, sz: number, x: number, y: number, z: number) {
+    const count = shape.position.length / 3
+    const positions = new Float32Array(count * 3)
+    const normals = new Float32Array(count * 3)
+    const uniform = sx === sy && sy === sz
+    for (let i = 0; i < count; i++) {
+      const at = i * 3
+      positions[at] = shape.position[at] * sx + x
+      positions[at + 1] = shape.position[at + 1] * sy + y
+      positions[at + 2] = shape.position[at + 2] * sz + z
+      if (uniform) { normals[at] = shape.normal[at]; normals[at + 1] = shape.normal[at + 1]; normals[at + 2] = shape.normal[at + 2] }
+      else {
+        // 비균등 확대에서 법선은 역수로 늘인 뒤 다시 정규화합니다.
+        const nx = shape.normal[at] / sx, ny = shape.normal[at + 1] / sy, nz = shape.normal[at + 2] / sz
+        const length = Math.hypot(nx, ny, nz) || 1
+        normals[at] = nx / length; normals[at + 1] = ny / length; normals[at + 2] = nz / length
+      }
+    }
+    if (this.terrain) {
+      const geometry = new THREE.BufferGeometry()
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+      geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
+      geometry.setAttribute('uv', new THREE.BufferAttribute(shape.uv.slice(), 2))
+      this.addGeometry(color, geometry)
+      return
+    }
+    this.material().buffer.appendTriangles(positions, normals, shape.uv, colorBytes(color), this.vertexTags())
   }
 
   private *landscapeSteps(buildings: StreetBuilding[]): Generator<void, void> {

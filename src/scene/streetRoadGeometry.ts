@@ -97,12 +97,50 @@ export function markRoadJunctions(runs: RoadRun[]) {
   }
 }
 
+// 도로 조각을 넣어 둔 격자(한 칸 20m). 건물 1,270동의 변마다 가장 가까운 길을 찾는데, 조각을 매번 다 보면 3D 거리 빌드
+// 시간의 1/3이 여기에 들었습니다. 점이 든 칸부터 바깥 고리로 넓혀 보다가, 남은 고리가 지금 찾은 거리보다 멀면 멈춥니다.
+const ROAD_GRID_METERS = 20
+let roadGrid: { cells: globalThis.Map<string, number[]>; segments: [[number, number], [number, number]][]; maxRing: number } | null = null
+
+function buildRoadGrid() {
+  const cells = new globalThis.Map<string, number[]>()
+  // 0.1m보다 짧은 조각은 방향이 불안정해 건너뜁니다.
+  const segments = ROAD_SEGMENTS.filter(([start, end]) => (end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2 >= 0.01)
+  let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity
+  segments.forEach(([start, end], index) => {
+    const col0 = Math.floor(Math.min(start[0], end[0]) / ROAD_GRID_METERS), col1 = Math.floor(Math.max(start[0], end[0]) / ROAD_GRID_METERS)
+    const row0 = Math.floor(Math.min(start[1], end[1]) / ROAD_GRID_METERS), row1 = Math.floor(Math.max(start[1], end[1]) / ROAD_GRID_METERS)
+    for (let col = col0; col <= col1; col++) for (let row = row0; row <= row1; row++) {
+      const key = `${col},${row}`
+      const bucket = cells.get(key)
+      if (bucket) bucket.push(index)
+      else cells.set(key, [index])
+    }
+    minCol = Math.min(minCol, col0); maxCol = Math.max(maxCol, col1)
+    minRow = Math.min(minRow, row0); maxRow = Math.max(maxRow, row1)
+  })
+  // 격자 전체를 덮는 고리 수(이보다 바깥에는 조각이 없음)
+  const maxRing = segments.length ? Math.max(maxCol - minCol, maxRow - minRow) + 1 : 0
+  return { cells, segments, maxRing }
+}
+
 export function distanceToRoad(x: number, z: number) {
+  const grid = roadGrid ??= buildRoadGrid()
+  const col = Math.floor(x / ROAD_GRID_METERS), row = Math.floor(z / ROAD_GRID_METERS)
   let closest = Infinity
-  for (const [start, end] of ROAD_SEGMENTS) {
-    // 0.1m보다 짧은 조각은 방향이 불안정해 건너뜁니다.
-    if ((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2 < 0.01) continue
-    closest = Math.min(closest, distanceToSegment(x, z, start, end))
+  // 점은 자기 칸 안 어딘가에 있으므로, 고리 r의 칸에 든 조각은 적어도 (r-1)×20m보다 멉니다.
+  // 고리 r까지 본 뒤 찾은 거리가 r×20m 이하이면 더 바깥 고리는 볼 필요가 없습니다.
+  for (let ring = 0; ring <= grid.maxRing; ring++) {
+    for (let dc = -ring; dc <= ring; dc++) for (let dr = -ring; dr <= ring; dr++) {
+      if (Math.max(Math.abs(dc), Math.abs(dr)) !== ring) continue
+      const bucket = grid.cells.get(`${col + dc},${row + dr}`)
+      if (!bucket) continue
+      for (const index of bucket) {
+        const [start, end] = grid.segments[index]
+        closest = Math.min(closest, distanceToSegment(x, z, start, end))
+      }
+    }
+    if (closest <= ring * ROAD_GRID_METERS) break
   }
   return closest
 }
