@@ -29,7 +29,10 @@ beforeAll(() => {
   elapsed = performance.now() - started
   deferred = (layer as unknown as { pendingBuildings: unknown[] }).pendingBuildings.length
   // 지도에 붙으면 나눠 만들 나머지 건물을 테스트에서는 한 번에 채웁니다.
+  const restStarted = performance.now()
   layer.completePendingBuildings()
+  // 성능 비교용 기록(첫 장면 / 나머지 건물, Node 기준)
+  console.info(`[street scene] first view ${Math.round(elapsed)}ms, remaining ${deferred} buildings ${Math.round(performance.now() - restStarted)}ms`)
 }, 120000)
 
 describe('street scene', () => {

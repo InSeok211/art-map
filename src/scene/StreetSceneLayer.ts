@@ -10,6 +10,8 @@ import { isSafeGableOutline, roofInteriorPoint } from './streetRoofGeometry'
 import { distanceToRoad } from './streetRoadGeometry'
 import { conceptTexture } from './streetTextures'
 import { getRoadGroundMesh, GROUND_TEXTURE_METERS, roadGroundMeshGeometry } from './roadGroundMesh'
+import { colorBytes, SlotBuffer, UNIT_BEAM, UNIT_BOX } from './slotBuffer'
+import type { BoxUvTile, VertexTags } from './slotBuffer'
 import type { RoadGroundGroup, RoadGroundMesh } from './roadGroundMesh'
 import { yieldToMain } from './yieldToMain'
 import { ALLEY_EDGE, roadOutlines, unionRoadAreas } from './roadCorridors'
@@ -46,7 +48,7 @@ type SlotMaterial = THREE.MeshStandardMaterial | THREE.MeshLambertMaterial
 // 가려진 픽셀을 미리 건너뛸 수 있습니다. material은 길을 가려 비치게 그릴 건물에 씁니다.
 // flushed: 이 재질로 이미 만든 메시들. 먼 동네를 나눠 만드는 동안 여러 개가 생기므로, 다 만든 뒤 하나로 합칩니다.
 type MaterialSlot = {
-  material: SlotMaterial; plain?: SlotMaterial; geometries: THREE.BufferGeometry[]; ground: boolean; parent: THREE.Object3D
+  material: SlotMaterial; plain?: SlotMaterial; buffer: SlotBuffer; ground: boolean; parent: THREE.Object3D
   // 3D 지형에서 바닥 층을 그리는 순서(아래 층부터). 있으면 깊이값을 남기지 않고 이 순서대로 덮어 그립니다.
   groundLayer?: number
   flushed: { geometry: THREE.BufferGeometry; meshes: THREE.Mesh[]; split?: FadeSplit }[]
@@ -60,22 +62,17 @@ type FacadeKind = NonNullable<StreetBuilding['concept']>
 const SHADOW_CENTER: [number, number] = [20, -40]
 const SHADOW_EXTENT = 260
 
-// 기둥·난간처럼 기울어 놓이는 막대는 끝면이 보일 수 있어 여섯 면을 모두 둡니다(복사해 쓰려고 미리 만듦).
-const UNIT_BEAM = new THREE.BoxGeometry(1, 1, 1).toNonIndexed()
-// 상자의 아랫면은 위에서 내려다보는 지도에서 보이지 않으므로 빼 둡니다(삼각형 1/6 절약).
-// BoxGeometry의 면 순서는 +x, -x, +y, -y, +z, -z이고 면마다 꼭짓점 6개입니다.
-const UNIT_BOX = (() => {
-  const full = new THREE.BoxGeometry(1, 1, 1).toNonIndexed()
-  const keep = (attribute: THREE.BufferAttribute) => {
-    const size = attribute.itemSize
-    const array = attribute.array as Float32Array
-    return new THREE.Float32BufferAttribute([...array.slice(0, 18 * size), ...array.slice(24 * size)], size)
-  }
-  const box = new THREE.BufferGeometry()
-  for (const name of ['position', 'normal', 'uv']) box.setAttribute(name, keep(full.getAttribute(name) as THREE.BufferAttribute))
-  full.dispose()
-  return box
-})()
+// 단위 상자·막대(UNIT_BOX·UNIT_BEAM)와 재질별 꼭짓점 버퍼는 slotBuffer.ts에 있습니다. 건물 조각은 BufferGeometry를
+// 거치지 않고 버퍼에 바로 써 넣고, 지형에 얹어야 하는 바닥 조각만 예전처럼 도형을 만들어 넘깁니다.
+
+// 상자 UV를 실제 축척으로 늘이는 질감(벽돌·나무·동네 외벽)의 한 장 크기(m). 그 외는 면마다 0~1.
+function boxUvTile(surface?: ConceptSurface): BoxUvTile {
+  if (surface === 'lane-brick') return [2.4, 1.2]
+  if (surface === 'wood') return [1.2, 1.2]
+  if (surface === 'district-facade') return [DISTRICT_BAY_WIDTH, DISTRICT_FLOOR_HEIGHT]
+  if (surface === 'workshop-brick') return [1.44, 1.44]
+  return null
+}
 // 합친 도형의 건물 번호 속성에서 같은 건물이 이어지는 구간을 [번호, 첫 꼭짓점, 꼭짓점 수]로 모읍니다.
 // 건물마다 도형을 이어서 넣으므로 한 건물은 한 메시 안에서 대개 한 구간입니다.
 export function buildingRuns(attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute) {
@@ -330,7 +327,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
         ? new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.22, metalness: 0.2, side, ...textures })
         : new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, side, ...textures }))
       slot = {
-        ...shared, geometries: [], ground: surface?.startsWith('ground-') ?? false, parent: this.currentParent(), flushed: [],
+        ...shared, buffer: new SlotBuffer({ color: true, buildingIndex: this.group !== 'scene', pickIndex: this.picking }),
+        ground: surface?.startsWith('ground-') ?? false, parent: this.currentParent(), flushed: [],
         groundLayer: this.terrain && this.group === 'scene' && surface ? TERRAIN_GROUND_ORDER[surface] : undefined,
       }
       this.slots.set(key, slot)
@@ -354,7 +352,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
           // 비치는 양면 재질을 three.js는 뒷면·앞면 두 번 그리며 매 프레임 셰이더를 다시 고릅니다. 얇은 면이라 한 번이면 됩니다.
           forceSinglePass: true,
         })),
-        geometries: [],
+        // 완성 재질은 재질 자체의 색을 쓰므로 꼭짓점 색이 없습니다.
+        buffer: new SlotBuffer({ color: false, buildingIndex: this.group !== 'scene', pickIndex: this.picking }),
         // 유리와 바닥 띠는 그림자를 드리우지 않습니다.
         ground: transparent,
         parent: this.currentParent(),
@@ -482,10 +481,29 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private addFinishedGeometry(color: number, geometry: THREE.BufferGeometry, finish?: SurfaceFinish) {
     if (!finish) return this.addGeometry(color, geometry)
     geometry = this.onTerrain(geometry)
-    const plain = geometry.index ? geometry.toNonIndexed() : geometry
-    if (plain !== geometry) geometry.dispose()
-    this.tagBuilding(plain)
-    this.finishedMaterial(color, finish).geometries.push(plain)
+    this.finishedMaterial(color, finish).buffer.appendGeometry(geometry, null, this.vertexTags())
+    geometry.dispose()
+  }
+
+  // 지금 만드는 건물의 번호(고리 묶음만)와 편집기 클릭 번호. 건물의 첫 조각에서 번호를 받습니다(예전 tagBuilding과 같음).
+  private vertexTags(): VertexTags {
+    const pick = this.buildingContext ? this.currentPick : -1
+    if (this.group === 'scene') return { building: 0, pick }
+    if (this.currentBuilding < 0 && this.buildingContext && this.occluders.length < FADE_TEXTURE_SIZE * FADE_TEXTURE_SIZE) {
+      this.currentBuilding = this.occluders.push(this.buildingContext) - 1
+      this.occluderBases[this.currentBuilding] = this.buildingBase
+    }
+    return { building: Math.max(0, this.currentBuilding), pick }
+  }
+
+  // 건물 조각을 버퍼에 바로 쓸 수 있는지: 지형에 얹어야 하는 바닥 조각(지형 모드의 장면 그룹)만 도형을 거칩니다.
+  private get directPrimitives() {
+    return !this.terrain || !!this.buildingContext
+  }
+
+  // 건물 안의 조각은 position만 건물 바닥 높이(3D 지형)만큼 올립니다(예전 onTerrainSteps의 translate와 같음).
+  private get primitiveLift() {
+    return this.buildingContext ? this.buildingBase : 0
   }
 
   // 3D 지형이면 도형을 제 높이로 올립니다: 건물(과 그 간판·장식)은 건물 바닥 높이만큼 통째로, 바닥처럼 납작한
@@ -557,20 +575,15 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private *addGeometrySteps(color: number, geometry: THREE.BufferGeometry, glass = false, surface?: ConceptSurface, maxGroundEdge = 6): Generator<void, void> {
     // 지형에 얹을 때 바로 펼친 도형(인덱스 없음)으로 받아 toNonIndexed를 따로 하지 않습니다.
     geometry = yield* this.onTerrainSteps(geometry, maxGroundEdge, true)
-    const plain = geometry.index ? geometry.toNonIndexed() : geometry
-    if (plain !== geometry) geometry.dispose()
-    this.tagBuilding(plain)
-    // 꼭짓점 색은 0~255 정수로 담아 메모리를 줄입니다(선형 색 공간 값).
-    const linear = new THREE.Color(color)
-    const count = plain.getAttribute('position').count
-    const colors = new Uint8Array(count * 3)
-    const r = Math.round(linear.r * 255), g = Math.round(linear.g * 255), b = Math.round(linear.b * 255)
-    for (let index = 0; index < count; index++) {
-      colors[index * 3] = r; colors[index * 3 + 1] = g; colors[index * 3 + 2] = b
-      if (index % 50_000 === 49_999) yield
+    // 꼭짓점 색(0~255, 선형)·건물 번호와 함께 재질 버퍼에 펼쳐 넣습니다. 큰 바닥 면은 5만 꼭짓점마다 쉽니다.
+    const count = geometry.getIndex()?.count ?? geometry.getAttribute('position').count
+    const buffer = this.material(glass, surface).buffer, rgb = colorBytes(color), tags = this.vertexTags()
+    const chunk = 50_000
+    for (let from = 0; from < count; from += chunk) {
+      buffer.appendGeometry(geometry, rgb, tags, from, from + chunk)
+      if (from + chunk < count) yield
     }
-    plain.setAttribute('color', new THREE.BufferAttribute(colors, 3, true))
-    this.material(glass, surface).geometries.push(plain)
+    geometry.dispose()
   }
 
   // 지금 만드는 건물의 번호를 도형의 모든 꼭짓점에 붙입니다(고리 묶음의 건물만). 첫 도형에서 번호를 받습니다.
@@ -741,8 +754,13 @@ export class StreetSceneLayer implements CustomLayerInterface {
   }
 
   private box(color: number, width: number, height: number, depth: number, x: number, y: number, z: number, rotation = 0, glass = false, surface?: ConceptSurface) {
-    const geometry = this.boxGeometry(width, height, depth, x, y, z, rotation, surface)
-    if (geometry) this.addGeometry(color, geometry, glass, surface)
+    if (width <= 0 || height <= 0 || depth <= 0) return
+    if (!this.directPrimitives) {
+      const geometry = this.boxGeometry(width, height, depth, x, y, z, rotation, surface)
+      if (geometry) this.addGeometry(color, geometry, glass, surface)
+      return
+    }
+    this.material(glass, surface).buffer.appendBox(width, height, depth, x, y + this.primitiveLift, z, rotation, boxUvTile(surface), y, colorBytes(color), this.vertexTags())
   }
 
   // 지형에 얹는 큰 바닥 상자를 조금씩 나눠 놓습니다.
@@ -759,9 +777,9 @@ export class StreetSceneLayer implements CustomLayerInterface {
     geometry.scale(width, height, depth)
     // Keep brick courses at a physical scale rather than stretching one
     // texture over every facade, regardless of the building's dimensions.
-    if (surface === 'lane-brick' || surface === 'workshop-brick' || surface === 'wood' || surface === 'district-facade') {
-      const [tileWidth, tileHeight] = surface === 'lane-brick' ? [2.4, 1.2]
-        : surface === 'wood' ? [1.2, 1.2] : surface === 'district-facade' ? [DISTRICT_BAY_WIDTH, DISTRICT_FLOOR_HEIGHT] : [1.44, 1.44]
+    const tile = boxUvTile(surface)
+    if (tile) {
+      const [tileWidth, tileHeight] = tile
       const uv = geometry.getAttribute('uv'), normal = geometry.getAttribute('normal')
       for (let i = 0; i < uv.count; i++) {
         const side = Math.abs(normal.getX(i)) > 0.5
@@ -805,15 +823,21 @@ export class StreetSceneLayer implements CustomLayerInterface {
       const mx = (a[0] + b[0] + c[0] + d[0]) / 4, mz = (a[2] + b[2] + c[2] + d[2]) / 4
       flip = normal.x * (mx - cx) + normal.z * (mz - cz) < 0
     }
-    const geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(flip
-      ? [...a, ...c, ...b, ...a, ...d, ...c] : [...a, ...b, ...c, ...a, ...c, ...d], 3))
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(flip
-      ? [0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1] : [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], 2))
-    geometry.computeVertexNormals()
+    const positions = flip ? [...a, ...c, ...b, ...a, ...d, ...c] : [...a, ...b, ...c, ...a, ...c, ...d]
+    const uvs = flip ? [0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1] : [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]
     const previous = this.doubleSided
     this.doubleSided ||= doubleSided
-    this.addGeometry(color, geometry, false, surface)
+    if (this.directPrimitives) {
+      const lift = this.primitiveLift
+      if (lift) for (let i = 1; i < positions.length; i += 3) positions[i] += lift
+      this.material(false, surface).buffer.appendTriangles(positions, null, uvs, colorBytes(color), this.vertexTags())
+    } else {
+      const geometry = new THREE.BufferGeometry()
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+      geometry.computeVertexNormals()
+      this.addGeometry(color, geometry, false, surface)
+    }
     this.doubleSided = previous
   }
 
@@ -832,16 +856,29 @@ export class StreetSceneLayer implements CustomLayerInterface {
     const flip = (bx - ax) * nz - (bz - az) * nx < 0
     const [p, q] = flip ? [[bx, bz], [ax, az]] : [[ax, az], [bx, bz]]
     const [u0, u1] = flip ? [u, 0] : [0, u]
+    const lift = this.directPrimitives ? this.primitiveLift : 0
+    const a = [p[0] + ox, bottom + lift, p[1] + oz], b = [q[0] + ox, bottom + lift, q[1] + oz]
+    const c = [q[0] + ox, top + lift, q[1] + oz], d = [p[0] + ox, top + lift, p[1] + oz]
+    const positions = [...a, ...b, ...c, ...a, ...c, ...d]
+    const uvs = [u0, v0, u1, v0, u1, v1, u0, v0, u1, v1, u0, v1]
+    const normals = Array(6).fill([nx, 0, nz]).flat()
+    if (this.directPrimitives) {
+      this.material(false, surface).buffer.appendTriangles(positions, normals, uvs, colorBytes(color), this.vertexTags())
+      return
+    }
     const geometry = new THREE.BufferGeometry()
-    const a = [p[0] + ox, bottom, p[1] + oz], b = [q[0] + ox, bottom, q[1] + oz]
-    const c = [q[0] + ox, top, q[1] + oz], d = [p[0] + ox, top, p[1] + oz]
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...b, ...c, ...a, ...c, ...d], 3))
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute([u0, v0, u1, v0, u1, v1, u0, v0, u1, v1, u0, v1], 2))
-    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(Array(6).fill([nx, 0, nz]).flat(), 3))
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
     this.addGeometry(color, geometry, false, surface)
   }
 
   private beam(color: number, from: [number, number, number], to: [number, number, number], thickness: number) {
+    if (this.directPrimitives) {
+      const lift = this.primitiveLift
+      this.material().buffer.appendBeam([from[0], from[1] + lift, from[2]], [to[0], to[1] + lift, to[2]], thickness, colorBytes(color), this.vertexTags())
+      return
+    }
     const start = new THREE.Vector3(...from)
     const end = new THREE.Vector3(...to)
     const vector = end.clone().sub(start)
@@ -2343,8 +2380,8 @@ export class StreetSceneLayer implements CustomLayerInterface {
   private *flushSlotsSteps(): Generator<void, void> {
     for (const slot of this.slots.values()) {
       yield
-      if (slot.geometries.length === 0) continue
-      const merged = mergeGeometries(slot.geometries)
+      if (slot.buffer.count === 0) continue
+      const merged = slot.buffer.toGeometry()
       if (!merged) continue
       const ring = this.buildingRings.indexOf(slot.parent as THREE.Group)
       if (ring >= 0) {
@@ -2371,8 +2408,6 @@ export class StreetSceneLayer implements CustomLayerInterface {
       } else {
         slot.flushed.push({ geometry: merged, meshes: [this.addSlotMesh(merged, slot.material, slot, ring)] })
       }
-      slot.geometries.forEach((geometry) => geometry.dispose())
-      slot.geometries = []
     }
   }
 
@@ -2386,10 +2421,10 @@ export class StreetSceneLayer implements CustomLayerInterface {
       const old = slot.flushed
       slot.flushed = []
       for (const { geometry, meshes, split } of old) {
-        // 인덱스 없이 꼭짓점 속성만 다시 합칩니다(나눠 그리기 인덱스는 합친 뒤 새로 만듭니다).
+        // 인덱스 없이 꼭짓점 속성만 다시 합칩니다(나눠 그리기 인덱스는 합친 뒤 새로 만듭니다). 색·건물 번호는 도형에 이미 있어 그대로 복사됩니다.
         const source = new THREE.BufferGeometry()
         for (const [name, attribute] of Object.entries(geometry.attributes)) source.setAttribute(name, attribute)
-        slot.geometries.push(source)
+        slot.buffer.appendGeometry(source, null, { building: 0, pick: -1 })
         for (const mesh of meshes) {
           mesh.removeFromParent()
           this.meshes.splice(this.meshes.indexOf(mesh), 1)
