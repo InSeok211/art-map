@@ -13,6 +13,7 @@ import { useBuildingEditing } from './buildings/useBuildingEditing'
 import type { BuildingEditStore } from './buildings/buildingEditStore'
 import type { BuildingEdits } from './buildings/buildingEdits'
 import { loadTerrain } from './map/terrain'
+import { gpuRendererName, isIntegratedGpu, shouldAntialias } from './map/renderQuality'
 import type { TerrainSampler } from './map/terrain'
 import { AlleyEditor } from './alleys/AlleyEditor'
 import type { Alley } from './alleys/alleys'
@@ -325,6 +326,10 @@ export function GamcheonMap({
     const element = mapElementRef.current
     if (!element) return
 
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO)
+    const antialias = shouldAntialias({
+      width: element.clientWidth, height: element.clientHeight, pixelRatio, integratedGpu: isIntegratedGpu(gpuRendererName()),
+    })
     const map = new Map({
       container: element,
       style: MAP_STYLE,
@@ -339,10 +344,10 @@ export function GamcheonMap({
       scrollZoom: true,
       dragRotate: true,
       pitchWithRotate: true,
-      // 화면 밀도가 2 이상이면 계단 현상이 거의 안 보이므로 멀티샘플링(MSAA)을 꺼 픽셀 부담을 줄입니다.
-      canvasContextAttributes: { antialias: (window.devicePixelRatio || 1) < MAX_PIXEL_RATIO },
+      // 멀티샘플링(MSAA)은 화면 밀도가 2 이상이거나, 내장 GPU에서 캔버스가 크면(전체화면 PC) 끕니다(renderQuality.ts).
+      canvasContextAttributes: { antialias },
       // 화면 밀도가 3인 휴대폰은 픽셀 수가 9배라 3D 장면이 크게 느려집니다. 2배까지만 그려도 선명합니다.
-      pixelRatio: Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO),
+      pixelRatio,
       // 출처 표시는 화면 크기와 관계없이 항상 펼쳐 둡니다. OpenStreetMap 데이터(ODbL)는 지도 위에 출처가 보여야 하고,
       // (i) 버튼 뒤에 접어 두는 방식은 OSM 재단 출처 표시 지침에 맞지 않습니다. 타일·스타일 출처는 MAP_STYLE의 소스가 채우고,
       // 지형 고도와 버스 정보 출처만 여기서 덧붙입니다.
