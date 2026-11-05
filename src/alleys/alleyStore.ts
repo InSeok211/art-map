@@ -5,6 +5,7 @@ import { sanitizeTrails } from './gpsTrails'
 import type { GpsTrail } from './gpsTrails'
 import type { GpsTrailStore } from './useAlleyFinder'
 import { deleteTrail, postTrail } from './adminTrailApi'
+import { useAutosave } from '../useAutosave'
 
 // 관리자 골목지도 작업실의 골목길·GPS 기록 저장소입니다.
 //  - 편집 앱(지도 앱 서버의 /studio/)에서 열리면 서버 데이터베이스(D1)에 저장합니다. 관리자로 로그인해야 쓸 수
@@ -47,12 +48,6 @@ export function useAlleyStore() {
   const [server, setServer] = useState(false)
   const [ready, setReady] = useState(!hosted)
   const [notice, setNotice] = useState('')
-  const saveTimer = useRef(0)
-  const saving = useRef(false)
-  const saveAgain = useRef(false)
-  // 서버에 아직 저장되지 않은 수정이 있는지 알기 위한 수정 횟수입니다.
-  const editCount = useRef(0)
-  const savedCount = useRef(0)
   const latest = useRef({ alleys, dismissed })
   latest.current = { alleys, dismissed }
 
@@ -78,17 +73,6 @@ export function useAlleyStore() {
     return () => { cancelled = true }
   }, [hosted])
 
-  // 다시 열면 서버 값을 불러오므로, 저장되지 않은 수정이 있으면 떠나기 전에 경고합니다.
-  useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => {
-      if (editCount.current === savedCount.current) return
-      event.preventDefault()
-      event.returnValue = ''
-    }
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [])
-
   async function putAlleys(nextAlleys: Alley[], nextDismissed: LngLat[][]) {
     const response = await fetch(ALLEYS_API, {
       method: 'PUT',
@@ -101,34 +85,16 @@ export function useAlleyStore() {
     }
   }
 
-  // 저장은 한 번에 하나씩만 보냅니다. 늦게 끝난 옛 저장이 새 값을 덮지 않게, 그동안 생긴 수정은 끝난 뒤 최신 값으로 보냅니다.
-  function saveLatest() {
-    if (saving.current) {
-      saveAgain.current = true
-      return
-    }
-    saving.current = true
-    const sending = editCount.current
-    putAlleys(latest.current.alleys, latest.current.dismissed)
-      .then(() => {
-        savedCount.current = sending
-        setNotice('')
-      })
-      .catch((error: Error) => setNotice(`${error.message} 잠시 뒤 다시 고쳐 주세요.`))
-      .finally(() => {
-        saving.current = false
-        if (!saveAgain.current) return
-        saveAgain.current = false
-        saveLatest()
-      })
-  }
-
   // 점을 끄는 동안 여러 번 바뀌므로 잠시 모았다가 한 번에 저장합니다.
+  const autosave = useAutosave<{ alleys: Alley[]; dismissed: LngLat[][] }>({
+    delayMs: 800,
+    save: (value) => putAlleys(value.alleys, value.dismissed),
+    onSaved: () => setNotice(''),
+    onError: (error) => setNotice(`${error.message} 잠시 뒤 다시 고쳐 주세요.`),
+  })
+
   function scheduleSave() {
-    if (!server) return
-    editCount.current += 1
-    window.clearTimeout(saveTimer.current)
-    saveTimer.current = window.setTimeout(saveLatest, 800)
+    if (server) autosave.change(latest.current)
   }
 
   function updateAlleys(next: Alley[]) {

@@ -130,37 +130,7 @@ describe('자동 저장', () => {
   })
 })
 
-describe('저장 순서', () => {
-  it('앞선 저장이 끝나기 전에는 다음 저장을 보내지 않아, 늦게 끝난 옛 값이 새 값을 덮지 못한다', async () => {
-    const { result, puts, held, state } = await hostedStore()
-    state.hold = true
-    act(() => result.current.updateAlleys([alley('a1', 2)]))
-    await tick(800)
-    expect(puts).toHaveLength(1)
-
-    act(() => result.current.updateAlleys([alley('a1', 4)]))
-    await tick(800)
-    expect(puts).toHaveLength(1)
-
-    await act(async () => { held[0](json({ ok: true })); await vi.advanceTimersByTimeAsync(0) })
-    expect(puts).toHaveLength(2)
-    expect(puts[1].alleys).toEqual([alley('a1', 4)])
-  })
-
-  it('앞선 저장이 실패해도 기다리던 수정은 이어서 저장한다', async () => {
-    const { result, puts, held, state } = await hostedStore()
-    state.hold = true
-    act(() => result.current.updateAlleys([alley('a1', 2)]))
-    await tick(800)
-    act(() => result.current.updateAlleys([alley('a1', 4)]))
-    await tick(800)
-
-    await act(async () => { held[0](json({ error: '일시 오류' }, 500)); await vi.advanceTimersByTimeAsync(0) })
-    expect(puts).toHaveLength(2)
-    expect(puts[1].alleys).toEqual([alley('a1', 4)])
-  })
-})
-
+// 저장 순서·경고의 자세한 규칙은 useAutosave.test.tsx에 있고, 여기서는 이 저장소에 연결됐는지만 봅니다.
 describe('저장 전에 페이지를 떠날 때', () => {
   const leaving = () => {
     const event = new Event('beforeunload', { cancelable: true })
@@ -180,26 +150,6 @@ describe('저장 전에 페이지를 떠날 때', () => {
 
     await act(async () => { held[0](json({ ok: true })); await vi.advanceTimersByTimeAsync(0) })
     expect(leaving()).toBe(false)
-  })
-
-  it('저장 중에 또 고쳤으면 앞선 저장이 끝나도 계속 경고한다', async () => {
-    const { result, held, state } = await hostedStore()
-    state.hold = true
-    act(() => result.current.updateAlleys([alley('a1', 2)]))
-    await tick(800)
-    act(() => result.current.updateAlleys([alley('a1', 4)]))
-
-    await act(async () => { held[0](json({ ok: true })); await vi.advanceTimersByTimeAsync(0) })
-    expect(leaving()).toBe(true)
-  })
-
-  it('저장에 실패한 내용이 남아 있으면 계속 경고한다', async () => {
-    const { result, state } = await hostedStore()
-    state.putStatus = 500
-    act(() => result.current.updateAlleys([alley('a1')]))
-    await tick(800)
-    expect(result.current.notice).not.toBe('')
-    expect(leaving()).toBe(true)
   })
 
   it('이 브라우저에 바로 저장되는 개발 미리보기에서는 경고하지 않는다', async () => {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { EMPTY_BUILDING_EDITS, sameBuildingEdits, sanitizeBuildingEdits } from './buildingEdits'
 import type { BuildingEdits } from './buildingEdits'
 import { EditHistory } from './editHistory'
+import { useAutosave } from '../useAutosave'
 
 // 골목지도 작업실 '건물' 탭의 저장소입니다. 초안(작업실에서만 보임)과 공개본(공개 지도) 두 벌을 다룹니다.
 //  - 편집 앱(지도 앱 서버의 /studio/)에서 열리면 서버 데이터베이스에 저장합니다(관리자만).
@@ -59,8 +60,6 @@ export function useBuildingEditStore(): BuildingEditStore {
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const busyRef = useRef(false)
-  const saveTimer = useRef(0)
-  const saveQueue = useRef<Promise<void>>(Promise.resolve())
   const latestDraft = useRef(draft)
   latestDraft.current = draft
   const history = useRef(new EditHistory(draft))
@@ -86,27 +85,20 @@ export function useBuildingEditStore(): BuildingEditStore {
     return () => { cancelled = true }
   }, [hosted])
 
-  function queueSave(next: BuildingEdits) {
-    const pending = saveQueue.current.then(async () => {
-      await call(API, { method: 'PUT', body: JSON.stringify({ draft: next }) })
-    })
-    // 실패한 자동 저장이 뒤따르는 저장·버리기를 막지 않도록 큐만 정상 상태로 되돌립니다.
-    saveQueue.current = pending.catch(() => undefined)
-    return pending
-  }
+  // 조절바를 끄는 동안 여러 번 바뀌므로 잠시 모았다가 저장합니다.
+  const autosave = useAutosave<BuildingEdits>({
+    delayMs: 700,
+    save: async (next) => { await call(API, { method: 'PUT', body: JSON.stringify({ draft: next }) }) },
+    onSaved: () => setStatus(''),
+    onError: (error) => setStatus(`초안을 저장하지 못했습니다: ${error.message}`),
+  })
 
   function saveDraftSoon(next: BuildingEdits) {
     if (mode === 'local') {
       setStatus(writeLocal(DRAFT_KEY, next) ? '이 브라우저에 초안을 저장했습니다.' : '저장 공간이 부족합니다. 백업을 내려받아 주세요.')
       return
     }
-    // 조절바를 끄는 동안 여러 번 바뀌므로 잠시 모았다가 저장합니다.
-    window.clearTimeout(saveTimer.current)
-    saveTimer.current = window.setTimeout(() => {
-      queueSave(latestDraft.current)
-        .then(() => setStatus(''))
-        .catch((error: Error) => setStatus(`초안을 저장하지 못했습니다: ${error.message}`))
-    }, 700)
+    autosave.change(next)
   }
 
   function changeDraft(next: BuildingEdits, record = true) {
@@ -165,9 +157,7 @@ export function useBuildingEditStore(): BuildingEditStore {
     onPublish: () => void run(async () => {
       if (mode === 'server') {
         // 남아 있는 초안 저장을 먼저 끝내고 공개합니다.
-        window.clearTimeout(saveTimer.current)
-        await saveQueue.current
-        await queueSave(latestDraft.current)
+        await autosave.flush()
         const result = await call(`${API}/publish`, { method: 'POST' })
         setPublished(sanitizeBuildingEdits(result.published))
       } else {
@@ -177,9 +167,12 @@ export function useBuildingEditStore(): BuildingEditStore {
     }, mode === 'server' ? '공개 지도에 반영했습니다.' : '이 브라우저의 미리보기에 저장했습니다.'),
     onDiscard: () => void run(async () => {
       if (mode === 'server') {
-        window.clearTimeout(saveTimer.current)
-        await saveQueue.current
-        const result = await call(`${API}/discard`, { method: 'POST' })
+        await autosave.discard()
+        // 되돌리지 못하면 화면의 수정은 그대로 남으므로, 잃지 않게 다시 저장합니다.
+        const result = await call(`${API}/discard`, { method: 'POST' }).catch((error: Error) => {
+          autosave.change(latestDraft.current)
+          throw error
+        })
         const restored = sanitizeBuildingEdits(result.draft)
         history.current.change(restored)
         latestDraft.current = restored
