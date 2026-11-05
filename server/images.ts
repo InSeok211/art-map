@@ -45,6 +45,9 @@ export async function deletePhoto(id: string, env: MapEnv) {
 
 // 초안 저장·공개·되돌리기 뒤에 호출합니다. 바꾸기 전 사진처럼 초안·공개본 어디에도 남지 않은 파일을 R2에서 지워
 // 고아 파일이 쌓이지 않게 합니다. 실패해도 저장 결과에는 영향이 없습니다(호출하는 쪽에서 catch).
+// 올린 지 하루가 안 된 사진은 두고 다음 기회에 지웁니다. 사진을 올리는 사이에 다른 자동 저장이 끝나거나, 편집 중
+// 실행 취소로 이전 사진을 되살려도 파일이 남아 있게 하기 위해서입니다. 공개 지도에는 어차피 보이지 않습니다.
+const UNUSED_PHOTO_GRACE_MS = 24 * 60 * 60 * 1000
 export async function deleteUnusedPhotos(env: MapEnv) {
   if (typeof env.MODELS.list !== 'function') return 0
   const { draft, published } = await readBothVersions(env)
@@ -53,7 +56,10 @@ export async function deleteUnusedPhotos(env: MapEnv) {
   let cursor: string | undefined
   do {
     const page = await env.MODELS.list({ prefix: PREFIX, cursor })
-    for (const object of page.objects) if (!keep.has(object.key.slice(PREFIX.length))) unused.push(object.key)
+    for (const object of page.objects) {
+      const old = Date.now() - object.uploaded.getTime() > UNUSED_PHOTO_GRACE_MS
+      if (old && !keep.has(object.key.slice(PREFIX.length))) unused.push(object.key)
+    }
     cursor = page.truncated ? page.cursor : undefined
   } while (cursor)
   if (unused.length) await env.MODELS.delete(unused)
