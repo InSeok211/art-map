@@ -51,6 +51,20 @@ async function shippedPackages(root) {
   return result
 }
 
+// 패키지가 아닌 폰트는 public/fonts/OFL-<폰트 이름>.txt를 함께 둡니다. SIL OFL은 폰트와 함께 저작권 표시와 라이선스를 두도록 요구합니다.
+async function fontSections(roots) {
+  const sections = []
+  for (const root of roots) {
+    const directory = path.join(root, 'public/fonts')
+    if (!existsSync(directory)) continue
+    for (const file of (await readdir(directory)).filter((name) => /^OFL-.+\.txt$/i.test(name)).sort()) {
+      const name = file.replace(/^OFL-/i, '').replace(/\.txt$/i, '')
+      sections.push(`${name} (SIL Open Font License 1.1)\n${'-'.repeat(60)}\n${(await readFile(path.join(directory, file), 'utf8')).trim()}`)
+    }
+  }
+  return sections
+}
+
 export async function writeThirdPartyNotices(output, roots) {
   const seen = new Map()
   for (const root of roots) for (const item of await shippedPackages(root)) seen.set(`${item.name}@${item.version}`, item)
@@ -60,7 +74,9 @@ export async function writeThirdPartyNotices(output, roots) {
     const text = await licenseText(item.directory)
     sections.push(`${item.name} ${item.version} (${item.license})\n${'-'.repeat(60)}\n${text || `라이선스: ${item.license} (패키지에 별도 라이선스 파일이 없습니다)`}`)
   }
-  const body = `감천 작가 지도 — 제3자 고지(Third-party notices)\n\n${DATA_NOTICE}\n\n오픈소스 소프트웨어\n========================================\n\n${sections.join('\n\n\n')}\n`
+  const fonts = await fontSections(roots)
+  const fontBlock = fonts.length ? `폰트\n========================================\n\n${fonts.join('\n\n\n')}\n\n\n` : ''
+  const body = `감천 작가 지도 — 제3자 고지(Third-party notices)\n\n${DATA_NOTICE}\n\n${fontBlock}오픈소스 소프트웨어\n========================================\n\n${sections.join('\n\n\n')}\n`
   await writeFile(output, body)
   return packages
 }
