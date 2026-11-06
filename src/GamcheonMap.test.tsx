@@ -1,12 +1,17 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { GamcheonMap, STREET_LAYER_FALLBACK_MS } from './GamcheonMap'
+import { GamcheonMap, GRAPHICS_RESTORE_WAIT_MS, SCENE_NOTICE_MS, STREET_LAYER_FALLBACK_MS } from './GamcheonMap'
+import { MapErrorBoundary } from './MapErrorBoundary'
 import { ARTIST_WORKSHOP_PLACE } from './places/artistWorkshop'
 import { StreetSceneLayer } from './scene/StreetSceneLayer'
 import type { Place } from './types'
 
 const mapOptions = vi.hoisted(() => [] as unknown[])
+const mapEvents = vi.hoisted(() => ({} as Record<string, (() => void) | undefined>))
+const roadGroundFail = vi.hoisted(() => ({ current: false }))
+const mapConstructorError = vi.hoisted(() => ({ current: false }))
+const sceneOptions = vi.hoisted(() => ({ current: null as null | { onModelError: (name: string) => void } }))
 const mapFlyTo = vi.hoisted(() => [] as unknown[])
 const mapEaseTo = vi.hoisted(() => [] as unknown[])
 const styleLoad = vi.hoisted(() => ({ current: null as null | (() => void) }))
@@ -29,12 +34,18 @@ vi.mock('./map/useGeomanGeometry', () => ({ useGeomanGeometry: (_map: unknown, o
 // These tests exercise map controls against a mocked MapLibre canvas. Real
 // district geometry is checked separately and in the browser.
 vi.mock('./scene/modelFiles', () => ({ prefetchStreetModels: () => {}, prefetchPlacedModels: () => {} }))
-vi.mock('./scene/roadGroundMeshLoader', () => ({ prefetchRoadGroundMesh: () => {}, loadRoadGroundMesh: () => Promise.resolve({ inputsHash: '', positions: new Float32Array(), indices: new Uint16Array(), groups: {} }) }))
-vi.mock('./scene/StreetSceneLayer', () => ({ SEE_THROUGH_OPACITY: 0.35, StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d'; prepare() { return Promise.resolve() }; warmUp() { return Promise.resolve() }; updateBuildingEdits() { return true }; setOtherBuildingsHidden() {}; setBuildingOpacity() {}; setMyPosition() {}; setExtraAlleys() {}; setRouteLine() {}; setPlacedModels() {}; setMapPlaces() {} } }))
+vi.mock('./scene/roadGroundMeshLoader', () => ({ prefetchRoadGroundMesh: () => {}, loadRoadGroundMesh: () => roadGroundFail.current ? Promise.reject(new Error('받기 실패')) : Promise.resolve({ inputsHash: '', positions: new Float32Array(), indices: new Uint16Array(), groups: {} }) }))
+vi.mock('./scene/StreetSceneLayer', () => ({ SEE_THROUGH_OPACITY: 0.35, StreetSceneLayer: class { id = 'gamcheon-photographed-street-3d'; constructor(options: typeof sceneOptions.current) { sceneOptions.current = options }; prepare() { return Promise.resolve() }; warmUp() { return Promise.resolve() }; updateBuildingEdits() { return true }; setOtherBuildingsHidden() {}; setBuildingOpacity() {}; setMyPosition() {}; setExtraAlleys() {}; setRouteLine() {}; setPlacedModels() {}; setMapPlaces() {} } }))
+
+vi.mock('./map/terrain', async (original) => ({ ...await original<typeof import('./map/terrain')>(), loadTerrain: () => Promise.resolve({}) }))
 
 vi.mock('maplibre-gl', () => ({
   Map: class {
-    constructor(options: unknown) { mapOptions.push(options) }
+    constructor(options: unknown) {
+      if (mapConstructorError.current) throw new Error('Failed to initialize WebGL')
+      mapOptions.push(options)
+    }
+    isStyleLoaded() { return true }
     addControl() { return this }
     resize() {}
     setPadding() {}
@@ -42,6 +53,7 @@ vi.mock('maplibre-gl', () => ({
     flyTo(options: unknown) { mapFlyTo.push(options) }
     easeTo(options: unknown) { mapEaseTo.push(options) }
     moveLayer() {}
+    removeLayer() {}
     addLayer() {}
     fitBounds(bounds: unknown, options: unknown) { mapFlyTo.push({ bounds, ...(options as object) }) }
     getContainer() { return { clientWidth: 1280 } }
@@ -54,7 +66,7 @@ vi.mock('maplibre-gl', () => ({
     setTerrain() {}
     getTerrain() { return null }
     setLayoutProperty(id: string, _name: string, value: unknown) { layerVisibility[id] = value }
-    on(event: string, listener: typeof mapClick.current) { if (event === 'click') mapClick.current = listener; if (event === 'style.load') styleLoad.current = listener as unknown as () => void }
+    on(event: string, listener: typeof mapClick.current) { mapEvents[event] = listener as unknown as () => void; if (event === 'click') mapClick.current = listener; if (event === 'style.load') styleLoad.current = listener as unknown as () => void }
     off(event: string) { if (event === 'click') mapClick.current = null }
     once() { return this }
   },
@@ -81,6 +93,9 @@ const places: Place[] = [
 
 beforeEach(() => {
   mapOptions.length = 0
+  roadGroundFail.current = false
+  mapConstructorError.current = false
+  for (const key of Object.keys(mapEvents)) delete mapEvents[key]
   mapFlyTo.length = 0
   mapClick.current = null
   geometryDriver.current = null
@@ -95,6 +110,227 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+  localStorage.clear()
+})
+
+const flush = (ms = 0) => act(async () => { await vi.advanceTimersByTimeAsync(ms) })
+// 스타일이 준비되어 3D 거리를 만들기 시작한 지도를 엽니다.
+async function openMap() {
+  const view = render(<GamcheonMap />)
+  act(() => styleLoad.current!())
+  await flush(STREET_LAYER_FALLBACK_MS + 10)
+  return view
+}
+const status = () => screen.queryByRole('status')?.textContent ?? ''
+const pressTerrain = (name: string) => fireEvent.click(screen.getByRole('button', { name }))
+
+describe('3D 거리 실패 안내', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('3D 거리 데이터를 받지 못하면 멈추지 않고 바탕 지도를 쓸 수 있다고 알린다', async () => {
+    roadGroundFail.current = true
+    await openMap()
+    expect(status()).toContain('바탕 지도는 계속 쓸 수 있습니다')
+    expect(status()).not.toContain('불러오는 중')
+    expect(console.error).toHaveBeenCalled()
+  })
+
+  it('3D 거리를 만드는 중 오류가 나도 같은 안내를 보여 준다', async () => {
+    vi.spyOn(StreetSceneLayer.prototype, 'prepare').mockRejectedValueOnce(new Error('만들기 실패'))
+    await openMap()
+    expect(status()).toContain('바탕 지도는 계속 쓸 수 있습니다')
+  })
+
+  it('셰이더 준비 중 오류가 나도 같은 안내를 보여 준다', async () => {
+    vi.spyOn(StreetSceneLayer.prototype, 'warmUp').mockRejectedValue(new Error('컴파일 실패'))
+    await openMap()
+    expect(status()).toContain('바탕 지도는 계속 쓸 수 있습니다')
+  })
+
+  it('실패해도 장소 목록과 길찾기는 계속 쓸 수 있다', async () => {
+    roadGroundFail.current = true
+    const { container } = await openMap()
+    const panel = within(container.querySelector('.gamcheon-map__panel') as HTMLElement)
+    fireEvent.click(panel.getByRole('button', { name: '길찾기' }))
+    expect(panel.getByLabelText('출발지')).toBeTruthy()
+  })
+
+  it('3D 모델 하나를 받지 못한 것은 거리 전체의 실패로 보지 않는다', async () => {
+    await openMap()
+    act(() => sceneOptions.current!.onModelError('모델'))
+    expect(status()).toBe('')
+  })
+
+  it('실패 뒤 다시 만들기에 성공하면 안내가 사라진다', async () => {
+    roadGroundFail.current = true
+    await openMap()
+    roadGroundFail.current = false
+    pressTerrain('3D 지형')
+    expect(status()).toContain('불러오는 중')
+    await flush()
+    expect(status()).toBe('')
+  })
+
+  it('이미 보이는 거리는 지형 보기를 바꾸다 실패해도 유지하고, 버튼과 저장값을 되돌리며 잠시 알린다', async () => {
+    await openMap()
+    expect(status()).toBe('')
+    roadGroundFail.current = true
+    pressTerrain('3D 지형')
+    await flush()
+    expect(status()).toContain('지금 보기를 유지합니다')
+    expect(status()).not.toContain('바탕 지도')
+    expect(screen.getByRole('button', { name: '3D 지형' }).getAttribute('aria-pressed')).toBe('false')
+    expect(localStorage.getItem('gamcheon-map-terrain-v1')).toBe('0')
+
+    await flush(SCENE_NOTICE_MS)
+    expect(status()).toBe('')
+  })
+
+  it('다시 만드는 사이 이미 넘어간 옛 실패는 새 결과를 덮지 않는다', async () => {
+    await openMap()
+    let failOld!: (cause: Error) => void
+    vi.spyOn(StreetSceneLayer.prototype, 'prepare').mockImplementationOnce(() => new Promise((_resolve, reject) => { failOld = reject }))
+    pressTerrain('3D 지형')
+    await flush()
+    pressTerrain('평지')
+    await flush()
+    expect(status()).toBe('')
+
+    await act(async () => { failOld(new Error('옛 실패')); await vi.advanceTimersByTimeAsync(0) })
+    expect(status()).toBe('')
+    expect(screen.getByRole('button', { name: '평지' }).getAttribute('aria-pressed')).toBe('true')
+  })
+})
+
+describe('그래픽 연결', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('잠깐 끊겼다 돌아오면 안내가 사라지고 새로고침을 권하지 않는다', async () => {
+    await openMap()
+    act(() => mapEvents.webglcontextlost!())
+    expect(status()).toContain('다시 불러오는 중')
+    await flush(GRAPHICS_RESTORE_WAIT_MS - 1)
+    act(() => mapEvents.webglcontextrestored!())
+    expect(status()).toBe('')
+    await flush(GRAPHICS_RESTORE_WAIT_MS)
+    expect(status()).toBe('')
+  })
+
+  it('돌아오지 않으면 새로고침을 권하고, 늦게라도 돌아오면 안내가 사라진다', async () => {
+    await openMap()
+    act(() => mapEvents.webglcontextlost!())
+    await flush(GRAPHICS_RESTORE_WAIT_MS)
+    expect(status()).toContain('새로고침')
+    expect(status()).not.toContain('바탕 지도')
+    act(() => mapEvents.webglcontextrestored!())
+    expect(status()).toBe('')
+  })
+
+  it('3D 거리가 실패한 뒤 연결이 돌아오면 멈춘 안내가 아니라 실패 안내로 돌아온다', async () => {
+    roadGroundFail.current = true
+    await openMap()
+    act(() => mapEvents.webglcontextlost!())
+    act(() => mapEvents.webglcontextrestored!())
+    expect(status()).toContain('바탕 지도는 계속 쓸 수 있습니다')
+  })
+
+  it('연결이 끊긴 동안 만들기가 끝나도 끊김 안내를 유지한다', async () => {
+    let finish!: () => void
+    vi.spyOn(StreetSceneLayer.prototype, 'prepare').mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve }))
+    await openMap()
+    act(() => mapEvents.webglcontextlost!())
+    await act(async () => { finish(); await vi.advanceTimersByTimeAsync(0) })
+    expect(status()).toContain('다시 불러오는 중')
+    act(() => mapEvents.webglcontextrestored!())
+    expect(status()).toBe('')
+  })
+
+  it('연결이 끊긴 동안 만들기가 실패하면 돌아온 뒤에 실패를 알린다', async () => {
+    let fail!: (cause: Error) => void
+    vi.spyOn(StreetSceneLayer.prototype, 'prepare').mockImplementationOnce(() => new Promise<void>((_resolve, reject) => { fail = reject }))
+    await openMap()
+    act(() => mapEvents.webglcontextlost!())
+    await act(async () => { fail(new Error('만들기 실패')); await vi.advanceTimersByTimeAsync(0) })
+    expect(status()).toContain('다시 불러오는 중')
+    act(() => mapEvents.webglcontextrestored!())
+    expect(status()).toContain('바탕 지도는 계속 쓸 수 있습니다')
+  })
+
+  it('화면을 닫으면 기다리던 타이머도 치운다', async () => {
+    const { unmount } = await openMap()
+    act(() => mapEvents.webglcontextlost!())
+    unmount()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+})
+
+describe('지도를 만들 수 없을 때', () => {
+  it('그래픽을 쓸 수 없으면 오류 경계가 작가 목록 링크를 보여 준다', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    mapConstructorError.current = true
+    render(<MapErrorBoundary variant="public"><GamcheonMap /></MapErrorBoundary>)
+    expect(screen.getByRole('alert').textContent).toContain('지도를 열지 못했습니다')
+    expect(screen.getByRole('link', { name: '작가 목록 보기' })).toBeTruthy()
+  })
+})
+
+describe('내 위치 길찾기 복구', () => {
+  // 손으로 고른 좌표입니다. FAR는 길에서 80m를 조금 넘게 떨어져 있고, 서쪽으로 약 20m 가면 길 80m 안에 들어옵니다.
+  const FAR: [number, number] = [129.0109, 35.0875]
+  const NEAR_20M: [number, number] = [129.01068, 35.0875]
+  const NEAR_35M: [number, number] = [129.010516, 35.0875]
+
+  function walk() {
+    let report!: (position: { coords: { longitude: number; latitude: number; accuracy: number; heading: null; speed: null } }) => void
+    vi.stubGlobal('navigator', { ...navigator, geolocation: {
+      watchPosition: (success: typeof report) => { report = success; return 7 },
+      clearWatch: () => {},
+    } })
+    const { container } = render(<GamcheonMap places={[ARTIST_WORKSHOP_PLACE]} />)
+    const panel = within(container.querySelector('.gamcheon-map__panel') as HTMLElement)
+    fireEvent.click(panel.getByRole('button', { name: '길찾기' }))
+    const moveTo = ([longitude, latitude]: [number, number]) => act(() => report({ coords: { longitude, latitude, accuracy: 8, heading: null, speed: null } }))
+    return { panel, moveTo }
+  }
+
+  it('처음 위치에서 길을 못 찾아도 약 30m 걸어가면 다시 찾는다', () => {
+    const { panel, moveTo } = walk()
+    moveTo(FAR)
+    expect(panel.getByRole('alert').textContent).toContain('출발지 근처')
+    expect(panel.queryByRole('region', { name: '찾은 길' })).toBeNull()
+
+    moveTo(NEAR_35M)
+    expect(panel.queryByRole('alert')).toBeNull()
+    expect(panel.getByRole('region', { name: '찾은 길' }).textContent).toContain('목적지')
+  })
+
+  it('위치가 조금 흔들리는 정도로는 다시 찾지 않는다', () => {
+    const { panel, moveTo } = walk()
+    moveTo(FAR)
+    moveTo(NEAR_20M)
+    expect(panel.getByRole('alert').textContent).toContain('출발지 근처')
+    expect(panel.queryByRole('region', { name: '찾은 길' })).toBeNull()
+  })
+
+  it('기준 위치에서 30m를 넘게 흔들려 돌아오면 그 위치로 다시 찾는다', () => {
+    const { panel, moveTo } = walk()
+    moveTo(FAR)
+    moveTo(NEAR_20M)
+    moveTo(NEAR_35M)
+    expect(panel.getByRole('region', { name: '찾은 길' })).toBeTruthy()
+    // 길을 찾은 뒤에는 경로에서 25m 벗어날 때만 바뀌므로, 조금 움직여도 길이 유지됩니다.
+    moveTo(NEAR_20M)
+    expect(panel.getByRole('region', { name: '찾은 길' })).toBeTruthy()
+  })
 })
 
 describe('GamcheonMap', () => {

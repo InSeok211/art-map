@@ -4,6 +4,7 @@ import { GamcheonMap } from './GamcheonMap'
 import type { EditTool } from './GamcheonMap'
 import { ARTIST_WORKSHOP_PLACE } from './places/artistWorkshop'
 import { useAlleyStore } from './alleys/alleyStore'
+import { MapErrorBoundary } from './MapErrorBoundary'
 import { useBuildingEditStore } from './buildings/buildingEditStore'
 import './studio.css'
 import { ARTIST_WORKSHOP_FOOTPRINT_ID, getPhotographedStreetBuildings } from './scene/streetSceneData'
@@ -72,7 +73,10 @@ function Studio() {
         </div>
       </header>
       <main className="demo-main">
-        <GamcheonMap initialView={reviewView} places={places} onPlacesChange={placeStore.update} editable={editing && !placeStore.saving} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} alleyProblems={alleyStore.problems} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} buildingEditor={buildingStore} />
+        {/* 지도만 따로 감싸, 지도가 깨져도 저장소의 자동 저장과 이탈 경고, 안내는 그대로 둡니다. */}
+        <MapErrorBoundary variant="studio">
+          <GamcheonMap initialView={reviewView} places={places} onPlacesChange={placeStore.update} editable={editing && !placeStore.saving} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} alleyProblems={alleyStore.problems} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} buildingEditor={buildingStore} />
+        </MapErrorBoundary>
       </main>
       {alleyStore.notice && <div className="demo-note is-alert" role="status">{alleyStore.notice}</div>}
       {placeStore.notice && <div className="studio-place-status" role="status">{placeStore.notice}</div>}
@@ -102,4 +106,4 @@ function StudioGate() {
   return <Studio />
 }
 
-createRoot(document.getElementById('root')!).render(<StudioGate />)
+createRoot(document.getElementById('root')!).render(<MapErrorBoundary variant="studio"><StudioGate /></MapErrorBoundary>)

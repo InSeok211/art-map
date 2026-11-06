@@ -6,6 +6,7 @@ import type { Alley } from './alleys/alleys'
 import { useSiteBuildingEdits } from './buildings/siteBuildingEdits'
 import type { BuildingEdits } from './buildings/buildingEdits'
 import { GamcheonMap } from './GamcheonMap'
+import { MapErrorBoundary } from './MapErrorBoundary'
 import { LOCAL_PUBLIC_PREVIEW, PUBLISHED_ALLEYS_KEY } from './buildings/publicPreview'
 import { isInsideGamcheonMap } from './map/gamcheonBoundary'
 import { useMapPlaces } from './places/mapPlaceStore'
@@ -120,4 +121,4 @@ const EmbeddedMapView = memo(function EmbeddedMapView({ host, alleys, buildingEd
   />
 })
 
-createRoot(document.getElementById('root')!).render(<EmbeddedMap />)
+createRoot(document.getElementById('root')!).render(<MapErrorBoundary variant="public"><EmbeddedMap /></MapErrorBoundary>)

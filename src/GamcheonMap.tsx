@@ -57,6 +57,9 @@ const MAP_DATA_ATTRIBUTION = [
   '버스 <a href="https://www.data.go.kr/" target="_blank" rel="noopener">부산광역시 BIMS · 공공데이터포털</a>',
 ]
 const TERRAIN_MODE_KEY = 'gamcheon-map-terrain-v1'
+function saveTerrainMode(terrainMode: boolean) {
+  try { localStorage.setItem(TERRAIN_MODE_KEY, terrainMode ? '1' : '0') } catch { /* 이 기기에 기억하지 못해도 됩니다. */ }
+}
 function loadTerrainMode() {
   try { return localStorage.getItem(TERRAIN_MODE_KEY) === '1' } catch { return false }
 }
@@ -84,6 +87,17 @@ export const MAX_PIXEL_RATIO = 2
 
 // 바탕 지도가 다 그려지기를 기다리는 최대 시간(ms). 이후에는 3D 거리를 바로 만듭니다.
 export const STREET_LAYER_FALLBACK_MS = 3500
+// 그래픽 연결이 끊긴 뒤 이만큼 돌아오지 않으면 새로고침을 권합니다.
+export const GRAPHICS_RESTORE_WAIT_MS = 20_000
+// 3D 거리를 다시 만들지 못했다는 안내를 보여 주는 시간입니다.
+export const SCENE_NOTICE_MS = 8000
+type SceneStatus = 'loading' | 'lost' | 'stalled' | 'ready' | 'failed'
+const SCENE_TEXT: Record<Exclude<SceneStatus, 'ready'>, string> = {
+  loading: '3D 거리를 불러오는 중입니다.',
+  lost: '그래픽 연결이 끊겨 3D 지도를 다시 불러오는 중입니다.',
+  stalled: '그래픽 연결이 돌아오지 않았습니다. 페이지를 새로고침해 주세요.',
+  failed: '3D 거리를 불러오지 못했습니다. 바탕 지도는 계속 쓸 수 있습니다. 새로고침하면 다시 시도합니다.',
+}
 
 // 편집 앱(studio)에서만 쓰는 건물 편집 패널(모델 라이브러리·작업 파일 도구 포함)은 공개 지도 번들에 넣지 않고 처음 열 때 따로 받습니다.
 // 골목길 편집 패널은 작아서 그대로 둡니다.
@@ -192,8 +206,16 @@ export function GamcheonMap({
   }, [selectedId])
   // 관리자가 올린 3D 모델(건물 탭)을 3D 거리에 불러오지 못했을 때
   const [placedModelError, setPlacedModelError] = useState('')
-  // 3D 거리 장면 상태: 만드는 중(loading), 그래픽 연결이 끊김(lost), 정상(ready)
-  const [sceneStatus, setSceneStatus] = useState<'loading' | 'lost' | 'ready'>('loading')
+  // 3D 거리 장면 상태: 만드는 중(loading), 그래픽 연결이 끊김(lost), 오래 돌아오지 않음(stalled), 정상(ready), 만들지 못함(failed)
+  const [sceneStatus, setSceneStatus] = useState<SceneStatus>('loading')
+  // 다시 만들기에 실패해 지금 거리를 유지할 때 잠시 보여 주는 안내입니다.
+  const [sceneNotice, setSceneNotice] = useState('')
+  useEffect(() => {
+    if (!sceneNotice) return
+    const timer = window.setTimeout(() => setSceneNotice(''), SCENE_NOTICE_MS)
+    return () => window.clearTimeout(timer)
+  }, [sceneNotice])
+  const sceneText = sceneStatus === 'ready' ? sceneNotice : SCENE_TEXT[sceneStatus]
   const [showBuildings, setShowBuildings] = useState(false)
   const showBuildingsRef = useRef(showBuildings)
   const [translucentModels, setTranslucentModels] = useState(false)
@@ -208,7 +230,7 @@ export function GamcheonMap({
   useEffect(() => {
     if (terrainModeRef.current === terrainMode) return
     terrainModeRef.current = terrainMode
-    try { localStorage.setItem(TERRAIN_MODE_KEY, terrainMode ? '1' : '0') } catch { /* 이 기기에 기억하지 못해도 됩니다. */ }
+    saveTerrainMode(terrainMode)
     rebuildStreetRef.current?.(terrainMode)
   }, [terrainMode])
   const alley = useAlleyEditing(mapRef, mode === 'alleys', alleys, onAlleysChange, terrainMode)
@@ -368,6 +390,10 @@ export function GamcheonMap({
     // 3D 거리 장면은 만드는 데 몇 초가 걸리므로, 바탕 지도를 먼저 그린 뒤에 만들어 빈 화면으로 기다리지 않게 합니다.
     let streetLayer: StreetSceneLayer | null = null
     let disposed = false
+    let builtWithTerrain = false
+    let buildFailed = false
+    let graphicsLost = false
+    let graphicsTimer = 0
     const addStreetLayer = () => {
       if (!streetLayer || map.getLayer(streetLayer.id)) return
       map.addLayer(streetLayer)
@@ -378,43 +404,57 @@ export function GamcheonMap({
     let buildVersion = 0
     const createStreetLayer = async (terrain?: TerrainSampler) => {
       const version = ++buildVersion
-      // 지금 화면 중심 근처 건물부터 만들어 3D 거리를 빨리 띄웁니다.
-      const edits = buildingEditsRef.current
-      // 미리 삼각분할한 도로·보도 면. 받지 못하면 3D 거리 없이 바탕 지도만 보여 줍니다.
-      let roadGround
-      try { roadGround = await loadRoadGroundMesh() } catch (cause) {
-        console.error('road ground mesh failed to load', cause)
-        if (!disposed && version === buildVersion) setPlacedModelError('3D 거리 데이터를 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.')
-        return
+      try {
+        // 지금 화면 중심 근처 건물부터 만들어 3D 거리를 빨리 띄웁니다.
+        const edits = buildingEditsRef.current
+        // 미리 삼각분할한 도로·보도 면
+        const roadGround = await loadRoadGroundMesh()
+        if (disposed || version !== buildVersion) return
+        const next = new StreetSceneLayer({
+          terrain, focus: map.getCenter().toArray() as [number, number], buildingEdits: edits,
+          picking: !!buildingEditor, roadGround,
+          onModelError: (name) => setPlacedModelError(`3D 모델 '${name}'을(를) 불러오지 못했습니다.`),
+        })
+        // 첫 장면을 만드는 동안 그때까지 생긴 재질의 셰이더를 미리 컴파일합니다(컴파일은 그래픽 드라이버가 뒤에서 하므로
+        // 만들기와 겹침). 내장 GPU PC에서 컴파일만 0.8초라, 다 만든 뒤에 시작하면 그만큼 3D 거리가 늦게 보였습니다.
+        let warmUp: Promise<void> = Promise.resolve()
+        await next.prepare(() => { warmUp = next.warmUp(map) })
+        await warmUp
+        // 나중에 생긴 재질까지 마저 컴파일합니다(이미 된 것은 건너뜀).
+        await next.warmUp(map)
+        // 만드는 사이에 다른 설정으로 다시 만들기 시작했으면 이 거리는 버립니다.
+        if (disposed || version !== buildVersion) return
+        if (streetLayer && map.getLayer(streetLayer.id)) map.removeLayer(streetLayer.id)
+        setPlacedModelError('')
+        streetLayer = next
+        builtWithTerrain = Boolean(terrain)
+        buildFailed = false
+        streetLayer.setOtherBuildingsHidden(workshopOnlyRef.current, false)
+        streetLayer.setBuildingOpacity(modelsSeeThroughRef.current ? SEE_THROUGH_OPACITY : 1)
+        streetLayerRef.current = streetLayer
+        streetLayer.setMapPlaces(scenePlacesRef.current)
+        addStreetLayer()
+        if (map.getSource(DEM_SOURCE_ID)) map.setTerrain(terrain ? { source: DEM_SOURCE_ID, exaggeration: 1 } : null)
+        // 만드는 사이에 건물을 고쳤으면 바뀐 건물만 반영합니다(많이 바뀌었으면 다시 만듭니다).
+        const latest = buildingEditsRef.current
+        if (latest && latest !== edits && !streetLayer.updateBuildingEdits(latest)) void createStreetLayer(terrain)
+        setSceneNotice('')
+        if (!graphicsLost) setSceneStatus('ready')
+      } catch (cause) {
+        // 데이터를 받지 못한 경우와 만드는 중 오류를 모두 여기서 받습니다. 이미 보이는 거리가 있으면 그대로 둡니다.
+        console.error('3D street failed to build', cause)
+        if (disposed || version !== buildVersion) return
+        buildFailed = !streetLayer
+        if (streetLayer) {
+          setSceneNotice('3D 거리를 다시 만들지 못해 지금 보기를 유지합니다.')
+          if (terrainModeRef.current !== builtWithTerrain) {
+            terrainModeRef.current = builtWithTerrain
+            setTerrainMode(builtWithTerrain)
+            saveTerrainMode(builtWithTerrain)
+          }
+        }
+        if (!graphicsLost) setSceneStatus(streetLayer ? 'ready' : 'failed')
       }
-      if (disposed || version !== buildVersion) return
-      const next = new StreetSceneLayer({
-        terrain, focus: map.getCenter().toArray() as [number, number], buildingEdits: edits,
-        picking: !!buildingEditor, roadGround,
-        onModelError: (name) => setPlacedModelError(`3D 모델 '${name}'을(를) 불러오지 못했습니다.`),
-      })
-      // 첫 장면을 만드는 동안 그때까지 생긴 재질의 셰이더를 미리 컴파일합니다(컴파일은 그래픽 드라이버가 뒤에서 하므로
-      // 만들기와 겹침). 내장 GPU PC에서 컴파일만 0.8초라, 다 만든 뒤에 시작하면 그만큼 3D 거리가 늦게 보였습니다.
-      let warmUp: Promise<void> = Promise.resolve()
-      await next.prepare(() => { warmUp = next.warmUp(map) })
-      await warmUp
-      // 나중에 생긴 재질까지 마저 컴파일합니다(이미 된 것은 건너뜀).
-      await next.warmUp(map)
-      // 만드는 사이에 다른 설정으로 다시 만들기 시작했으면 이 거리는 버립니다.
-      if (disposed || version !== buildVersion) return
-      if (streetLayer && map.getLayer(streetLayer.id)) map.removeLayer(streetLayer.id)
-      setPlacedModelError('')
-      streetLayer = next
-      streetLayer.setOtherBuildingsHidden(workshopOnlyRef.current, false)
-      streetLayer.setBuildingOpacity(modelsSeeThroughRef.current ? SEE_THROUGH_OPACITY : 1)
-      streetLayerRef.current = streetLayer
-      streetLayer.setMapPlaces(scenePlacesRef.current)
-      addStreetLayer()
-      if (map.getSource(DEM_SOURCE_ID)) map.setTerrain(terrain ? { source: DEM_SOURCE_ID, exaggeration: 1 } : null)
-      // 만드는 사이에 건물을 고쳤으면 바뀐 건물만 반영합니다(많이 바뀌었으면 다시 만듭니다).
-      const latest = buildingEditsRef.current
-      if (latest && latest !== edits && !streetLayer.updateBuildingEdits(latest)) void createStreetLayer(terrain)
-      setSceneStatus('ready')
     }
     let buildStarted = false
     const buildStreetLayer = () => window.setTimeout(async () => {
@@ -425,7 +465,7 @@ export function GamcheonMap({
     }, 0)
     rebuildStreetRef.current = async (useTerrain) => {
       if (!buildStarted) return // 처음 만들 때 지금 설정을 따릅니다.
-      setSceneStatus('loading')
+      if (!graphicsLost) setSceneStatus('loading')
       const terrain = useTerrain ? await loadTerrain().catch(() => undefined) : undefined
       if (!disposed && terrainModeRef.current === useTerrain) await createStreetLayer(terrain)
     }
@@ -448,7 +488,12 @@ export function GamcheonMap({
     // 번갈아 돌아가므로 바탕 지도가 늦게 뜨지는 않습니다.
     map.once('style.load', buildStreetLayer)
     // 휴대폰에서 메모리가 모자라면 그래픽(WebGL) 연결이 끊길 수 있습니다. 다시 연결되면 3D 층을 새로 붙입니다.
-    const handleContextLost = () => setSceneStatus('lost')
+    const handleContextLost = () => {
+      graphicsLost = true
+      setSceneStatus('lost')
+      window.clearTimeout(graphicsTimer)
+      graphicsTimer = window.setTimeout(() => setSceneStatus('stalled'), GRAPHICS_RESTORE_WAIT_MS)
+    }
     // MapLibre는 연결이 끊길 때 사용자 정의 3D 층을 스스로 떼어 내므로, 스타일이 다시 준비되면 붙입니다.
     const handleContextRestored = () => {
       if (disposed) return
@@ -456,8 +501,10 @@ export function GamcheonMap({
         map.once('styledata', handleContextRestored)
         return
       }
+      graphicsLost = false
+      window.clearTimeout(graphicsTimer)
       attachLayers()
-      setSceneStatus(streetLayer ? 'ready' : 'loading')
+      setSceneStatus(streetLayer ? 'ready' : buildFailed ? 'failed' : 'loading')
       map.triggerRepaint()
     }
     map.on('webglcontextlost', handleContextLost)
@@ -481,6 +528,7 @@ export function GamcheonMap({
       markersRef.current = []
       disposed = true
       window.clearTimeout(fallbackTimer)
+      window.clearTimeout(graphicsTimer)
       streetLayerRef.current = null
       map.off('style.load', attachLayers)
       map.off('style.load', buildStreetLayer)
@@ -709,9 +757,7 @@ export function GamcheonMap({
           ].map(([label, action]) => <button key={label as string} type="button" role="menuitem" onClick={() => { (action as () => void)(); setMoreOpen(false) }}>{label as string}</button>)}
         </div>
       </>}
-      {sceneStatus !== 'ready' && <p className="gamcheon-map__scene-status" role="status">
-        {sceneStatus === 'lost' ? '그래픽 연결이 끊겨 3D 지도를 다시 불러오는 중입니다.' : '3D 거리를 불러오는 중입니다.'}
-      </p>}
+      {sceneText && <p className="gamcheon-map__scene-status" role="status">{sceneText}</p>}
 
       <nav className="gamcheon-map__desktop-nav" aria-label="PC 지도 메뉴">
         <span className="gamcheon-map__desktop-nav-mark" aria-hidden="true">G</span>

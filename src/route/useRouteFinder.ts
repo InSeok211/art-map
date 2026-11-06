@@ -19,6 +19,8 @@ export type { GpsState, GpsStatus } from '../map/useMyLocation'
 
 // 이 거리(m)보다 경로에서 벗어나면 현재 위치에서 다시 찾습니다.
 export const OFF_ROUTE_DISTANCE = 25
+// 경로를 찾지 못한 상태에서 이만큼(m) 움직이면 현재 위치에서 다시 찾습니다. 위치가 흔들릴 때마다 다시 찾지 않게 합니다.
+export const ROUTE_RETRY_DISTANCE = 30
 // 목적지에 이만큼(m) 가까워지면 도착으로 봅니다.
 export const ARRIVAL_DISTANCE = 15
 // 찾은 길에 화면을 맞출 때의 여백. 휴대폰(좁은 화면)은 위 이름표와 아래 길찾기 카드·하단 메뉴가 지도를
@@ -109,10 +111,12 @@ export function useRouteFinder(
     fixCountRef.current = 0
   }, [usesGps])
 
-  // 첫 위치를 받으면 경로를 찾고, 이후에는 경로를 크게 벗어났을 때만 현재 위치에서 다시 찾습니다.
+  // 첫 위치를 받으면 경로를 찾고, 이후에는 경로를 크게 벗어났거나, 경로를 찾지 못한 채 움직였을 때만 현재 위치에서 다시 찾습니다.
   useEffect(() => {
     if (!usesGps || gps.status !== 'ok' || !gps.position) return
-    if (!gpsOrigin || (route && distanceFromRoute(route, gps.position) > OFF_ROUTE_DISTANCE)) setGpsOrigin(gps.position)
+    const stale = !gpsOrigin
+      || (route ? distanceFromRoute(route, gps.position) > OFF_ROUTE_DISTANCE : Boolean(routeError) && meters(gpsOrigin, gps.position) >= ROUTE_RETRY_DISTANCE)
+    if (stale) setGpsOrigin(gps.position)
   }, [usesGps, gps.position?.[0], gps.position?.[1], gps.status])
 
   // 내 위치 따라가기: 첫 위치에서는 경로 전체를 보여 주고, 그다음 위치부터 지도를 내 위치로 옮깁니다.
