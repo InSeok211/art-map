@@ -189,6 +189,50 @@ describe('서버 초안 저장', () => {
     expect(leaving()).toBe(false)
   })
 
+  it('되돌리기 실패 안내는 뒤이은 자동 저장이 성공해도 남고, 다음 수정에 사라진다', async () => {
+    const { result, puts, state } = await hostedStore()
+    state.discardStatus = 500
+    act(() => result.current.onChange(edit(12)))
+    act(() => result.current.onDiscard())
+    await tick(700)
+    expect(puts).toEqual([edit(12)])
+    expect(result.current.status).toMatch(/되돌리기 오류/)
+
+    act(() => result.current.onChange(edit(13)))
+    expect(result.current.status).toBe('')
+  })
+
+  it('되돌리기 실패 뒤 다시 저장까지 실패하면 저장 실패를 먼저 알린다', async () => {
+    const { result, state } = await hostedStore()
+    state.discardStatus = 500
+    state.putStatus = 500
+    act(() => result.current.onChange(edit(12)))
+    act(() => result.current.onDiscard())
+    await tick(700)
+    expect(result.current.status).toMatch(/저장하지 못했습니다/)
+  })
+
+  it('공개 완료 안내는 다음 수정에 사라진다', async () => {
+    const { result } = await hostedStore()
+    act(() => result.current.onPublish())
+    await tick()
+    expect(result.current.status).toMatch(/반영했습니다/)
+    act(() => result.current.onChange(edit(12)))
+    expect(result.current.status).toBe('')
+  })
+
+  it('초안 저장 실패 안내는 공개가 끝나면 공개 결과로 바뀐다', async () => {
+    const { result, state } = await hostedStore()
+    state.putStatus = 500
+    act(() => result.current.onChange(edit(12)))
+    await tick(700)
+    expect(result.current.status).toMatch(/저장하지 못했습니다/)
+    state.putStatus = 200
+    act(() => result.current.onPublish())
+    await tick()
+    expect(result.current.status).toMatch(/반영했습니다/)
+  })
+
   it('되돌리기가 실패하면 화면에 남은 수정을 잃지 않게 다시 저장한다', async () => {
     const { result, puts, state } = await hostedStore()
     state.discardStatus = 500

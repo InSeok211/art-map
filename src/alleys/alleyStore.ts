@@ -38,6 +38,14 @@ async function json(response: Response) {
   return response.json() as Promise<Record<string, unknown>>
 }
 
+type AlleyProblem = { index?: number; id?: string; name?: string; reason?: string }
+
+function skippedNotice(skipped: AlleyProblem[]) {
+  const shown = skipped.slice(0, 3).map((item) => `${item.name || item.id || `${Number(item.index) + 1}번째 항목`}: ${item.reason}`).join(' ')
+  const more = skipped.length > 3 ? ` 외 ${skipped.length - 3}개.` : ''
+  return `서버에 저장된 골목길 ${skipped.length}개가 규칙에 맞지 않아 지도에서 빠졌습니다. ${shown}${more} 원본은 서버에 보존되며 저장해도 지워지지 않습니다.`
+}
+
 const putTrail = (trails: GpsTrail[], trail: GpsTrail) => [...trails.filter((item) => item.id !== trail.id), trail]
 
 export function useAlleyStore() {
@@ -47,7 +55,11 @@ export function useAlleyStore() {
   const [dismissed, setDismissed] = useState<LngLat[][]>(() => readLocal(DISMISSED_KEY, sanitizeLines, []))
   const [server, setServer] = useState(false)
   const [ready, setReady] = useState(!hosted)
-  const [notice, setNotice] = useState('')
+  // 불러오기, 골목길 저장, 기록 작업의 안내를 따로 둡니다. 저장이 성공해도 다른 작업의 실패 안내까지 지우지 않기 위해서입니다.
+  const [loadNotice, setLoadNotice] = useState('')
+  const [saveNotice, setSaveNotice] = useState('')
+  const [trailNotice, setTrailNotice] = useState('')
+  const [problems, setProblems] = useState<Record<string, string>>({})
   const latest = useRef({ alleys, dismissed })
   latest.current = { alleys, dismissed }
 
@@ -65,9 +77,12 @@ export function useAlleyStore() {
         setTrails(sanitizeTrails(savedTrails))
         setDismissed(sanitizeLines(saved.dismissed))
         setAlleys(serverAlleys)
+        const skipped = Array.isArray(saved.skipped) ? saved.skipped as AlleyProblem[] : []
+        if (saved.damaged) setLoadNotice('서버에 저장된 골목길 목록이 손상되어 읽지 못했습니다. 원본을 지키려고 저장을 막았습니다. 복구가 필요합니다.')
+        else if (skipped.length) setLoadNotice(skippedNotice(skipped))
         setReady(true)
       } catch {
-        if (!cancelled) setNotice('골목길 서버 데이터를 불러오지 못했습니다. 페이지를 새로고침해 주세요.')
+        if (!cancelled) setLoadNotice('골목길 서버 데이터를 불러오지 못했습니다. 페이지를 새로고침해 주세요.')
       }
     })()
     return () => { cancelled = true }
@@ -80,8 +95,8 @@ export function useAlleyStore() {
       body: JSON.stringify({ alleys: nextAlleys, dismissed: nextDismissed }),
     })
     if (!response.ok) {
-      const body = await response.json().catch(() => ({})) as { error?: string }
-      throw new Error(body.error || '골목길을 저장하지 못했습니다.')
+      const body = await response.json().catch(() => ({})) as { error?: string; problems?: AlleyProblem[] }
+      throw Object.assign(new Error(body.error || '골목길을 저장하지 못했습니다.'), { problems: body.problems })
     }
   }
 
@@ -89,8 +104,11 @@ export function useAlleyStore() {
   const autosave = useAutosave<{ alleys: Alley[]; dismissed: LngLat[][] }>({
     delayMs: 800,
     save: (value) => putAlleys(value.alleys, value.dismissed),
-    onSaved: () => setNotice(''),
-    onError: (error) => setNotice(`${error.message} 잠시 뒤 다시 고쳐 주세요.`),
+    onSaved: () => { setSaveNotice(''); setProblems({}) },
+    onError: (error: Error & { problems?: AlleyProblem[] }) => {
+      setSaveNotice(`${error.message} 잠시 뒤 다시 고쳐 주세요.`)
+      setProblems(Object.fromEntries((error.problems ?? []).flatMap((item) => item.id ? [[item.id, item.reason ?? '']] : [])))
+    },
   })
 
   function scheduleSave() {
@@ -133,7 +151,10 @@ export function useAlleyStore() {
         if (!server) writeLocal(TRAILS_KEY, next)
         return next
       })
-      if (server) deleteTrail(id).catch(() => setNotice('기록을 지우지 못했습니다. 새로고침 후 다시 시도해 주세요.'))
+      if (server) {
+        setTrailNotice('')
+        deleteTrail(id).catch(() => setTrailNotice('기록을 지우지 못했습니다. 새로고침 후 다시 시도해 주세요.'))
+      }
     },
     onDismiss: (line) => {
       if (!ready) return
@@ -145,5 +166,6 @@ export function useAlleyStore() {
     },
   }
 
-  return { alleys, updateAlleys, gpsTrails, server, ready, notice }
+  const notice = [loadNotice, trailNotice, saveNotice].filter(Boolean).join(' ')
+  return { alleys, updateAlleys, gpsTrails, server, ready, notice, problems }
 }

@@ -55,12 +55,20 @@ function server() {
     new Request(`${ORIGIN}${path}`, { ...init, headers: { ...(init.method && init.method !== 'GET' ? { origin: ORIGIN } : {}), ...init.headers } }),
     { ...env, isAdmin: async () => admin },
   )
-  return { admin: as(true), visitor: as(false), bucket }
+  return { admin: as(true), visitor: as(false), bucket, db: env.DB }
 }
 
 const body = (value: unknown) => JSON.stringify(value)
 const inArea: [number, number] = [129.009, 35.095]
 const alley = { id: 'a1', name: '계단길', coordinates: [inArea, [129.0095, 35.0955]], widthMeters: 3 }
+const ALLEYS = '/api/admin/map-alleys'
+// 작업 범위(동쪽 129.0135)의 바깥이지만 지도(동쪽 약 129.0173) 안쪽입니다.
+const mapOnly: [number, number] = [129.015, 35.095]
+const badAlley = { id: 'bad', name: '옛 길', coordinates: [inArea, [127, 37.5]], widthMeters: 3 }
+type Db = ReturnType<typeof server>['db']
+// 규칙을 어긴 값은 API로 넣을 수 없어 저장소에 직접 넣고 읽습니다.
+const storeRaw = (db: Db, alleys: unknown[]) => db.prepare("UPDATE map_alleys SET alleys_json = ? WHERE id = 'active'").bind(JSON.stringify(alleys)).run()
+const readRaw = async (db: Db) => (await db.prepare("SELECT alleys_json FROM map_alleys WHERE id = 'active'").first<{ alleys_json: string }>())!.alleys_json
 
 describe('골목길과 GPS 기록의 공개 범위', () => {
   it('공개 지도에는 확인한 골목길만 나가고 버린 후보는 나가지 않는다', async () => {
@@ -80,6 +88,132 @@ describe('골목길과 GPS 기록의 공개 범위', () => {
     const outside = { ...alley, coordinates: [inArea, [127, 37.5]] }
     expect((await admin('/api/admin/map-alleys', { method: 'PUT', body: body({ alleys: [outside] }) })).status).toBe(400)
     expect(await (await visitor('/api/map-alleys')).json()).toMatchObject({ alleys: [alley] })
+  })
+
+  it('작업 범위 밖이어도 지도 안이면 편집 화면처럼 골목길로 저장되고 공개된다', async () => {
+    const { admin, visitor } = server()
+    const wide = { ...alley, coordinates: [inArea, mapOnly] }
+    expect((await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [wide] }) })).status).toBe(200)
+    expect(await (await visitor('/api/map-alleys')).json()).toMatchObject({ alleys: [wide] })
+  })
+
+  it('거부할 때 문제가 된 골목의 번호와 이유를 알려 주고 아무것도 바꾸지 않는다', async () => {
+    const { admin, visitor } = server()
+    await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [alley] }) })
+    const good = { ...alley, id: 'a2' }
+    const named = { ...alley, id: 'a3', name: '높은 길', coordinates: [inArea, [127, 37.5]] }
+    const wide = { ...alley, id: 'a4', name: undefined, widthMeters: 20 }
+    const response = await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [good, named, wide] }) })
+    expect(response.status).toBe(400)
+    const result = await response.json() as { error: string; problems: unknown[] }
+    expect(result.problems).toEqual([
+      { index: 1, id: 'a3', name: '높은 길', reason: expect.stringMatching(/지도 범위/) },
+      { index: 2, id: 'a4', reason: expect.stringMatching(/폭/) },
+    ])
+    expect(result.error).toMatch(/높은 길.*지도 범위/)
+    expect(result.error).toMatch(/외 1개/)
+    expect(await (await visitor('/api/map-alleys')).json()).toMatchObject({ alleys: [alley] })
+  })
+
+  it('목록이 아니거나 개수가 너무 많으면 거부한다', async () => {
+    const { admin } = server()
+    for (const alleys of ['목록 아님', undefined, Array.from({ length: 501 }, (_, index) => ({ ...alley, id: `a${index}` }))]) {
+      const response = await admin(ALLEYS, { method: 'PUT', body: body({ alleys }) })
+      expect(response.status).toBe(400)
+      expect(((await response.json()) as { error: string }).error).toMatch(/500개/)
+    }
+  })
+
+  it('버린 후보도 지도 안이면 저장하고, 잘못된 값은 거부한다', async () => {
+    const { admin } = server()
+    const line = [inArea, mapOnly]
+    expect((await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [], dismissed: [line] }) })).status).toBe(200)
+    expect((await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [], dismissed: [[inArea, [127, 37.5]]] }) })).status).toBe(400)
+    expect((await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [], dismissed: '목록 아님' }) })).status).toBe(400)
+    expect(await (await admin(ALLEYS)).json()).toMatchObject({ dismissed: [line] })
+  })
+
+  it('저장된 골목 하나가 잘못되어도 나머지는 공개되고, 운영자는 이유를 본다', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { admin, visitor, db } = server()
+    await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [alley] }) })
+    await storeRaw(db, [alley, badAlley, null])
+
+    const shown = await (await visitor('/api/map-alleys')).json() as Record<string, unknown>
+    expect(shown.alleys).toEqual([alley])
+    expect(shown).not.toHaveProperty('skipped')
+    expect(JSON.stringify(shown)).not.toContain('127')
+
+    const seen = await (await admin(ALLEYS)).json() as Record<string, unknown>
+    expect(seen.alleys).toEqual([alley])
+    expect(seen.skipped).toEqual([
+      { index: 1, id: 'bad', name: '옛 길', reason: expect.stringMatching(/지도 범위/) },
+      { index: 2, reason: expect.stringMatching(/형식/) },
+    ])
+    expect(JSON.stringify(seen)).not.toContain('127')
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/골목길 2개/))
+    warn.mockRestore()
+  })
+
+  it('잘못된 골목은 다음 저장에도 지워지지 않는다', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { admin, db } = server()
+    await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [alley] }) })
+    await storeRaw(db, [alley, badAlley])
+
+    const next = { ...alley, id: 'a2' }
+    const response = await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [next] }) })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ alleys: [next], skipped: [{ id: 'bad' }] })
+
+    expect(JSON.parse(await readRaw(db))).toEqual([next, badAlley])
+    expect(await (await admin(ALLEYS)).json()).toMatchObject({ alleys: [next], skipped: [{ index: 1, id: 'bad' }] })
+    warn.mockRestore()
+  })
+
+  it('저장된 목록 전체가 깨져도 지도는 비어서 열리고, 운영자 저장은 막아 원본을 지킨다', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    for (const damaged of ['{깨진 JSON', '{"목록":"아님"}']) {
+      const { admin, visitor, db } = server()
+      await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [alley], dismissed: [alley.coordinates] }) })
+      await db.prepare("UPDATE map_alleys SET alleys_json = ? WHERE id = 'active'").bind(damaged).run()
+
+      const shown = await visitor('/api/map-alleys')
+      expect(shown.status).toBe(200)
+      expect(await shown.json()).toMatchObject({ alleys: [] })
+      expect(await (await admin(ALLEYS)).json()).toMatchObject({ alleys: [], damaged: true, dismissed: [alley.coordinates] })
+
+      const saved = await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [alley] }) })
+      expect(saved.status).toBe(409)
+      expect(((await saved.json()) as { error: string }).error).toMatch(/손상/)
+      expect(await readRaw(db)).toBe(damaged)
+    }
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('버린 후보 하나가 잘못되어도 나머지 후보와 골목길은 그대로다', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { admin, db } = server()
+    await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [alley], dismissed: [alley.coordinates] }) })
+    await db.prepare("UPDATE map_alleys SET dismissed_json = ? WHERE id = 'active'").bind(body([alley.coordinates, [[127, 37.5], inArea]])).run()
+    expect(await (await admin(ALLEYS)).json()).toMatchObject({ alleys: [alley], dismissed: [alley.coordinates] })
+
+    await db.prepare("UPDATE map_alleys SET dismissed_json = ? WHERE id = 'active'").bind('{깨진 JSON').run()
+    const seen = await admin(ALLEYS)
+    expect(seen.status).toBe(200)
+    expect(await seen.json()).toMatchObject({ alleys: [alley], dismissed: [], damaged: false })
+    warn.mockRestore()
+  })
+
+  it('GPS 기록은 지도 안이어도 작업 범위 밖의 점을 남기지 않는다', async () => {
+    const { admin } = server()
+    const point = (index: number): number[] => [129.009 + index / 10000, 35.095, 5, index * 1000]
+    const trail = { id: 't1', startedAt: '2026-03-01T09:30:00Z', points: [[...mapOnly, 5, 5000], ...[0, 1, 2, 3, 4].map(point)] }
+    expect((await admin('/api/admin/gps-trails', { method: 'POST', body: body(trail) })).status).toBe(200)
+    const { trails } = await (await admin('/api/admin/gps-trails')).json() as { trails: { points: number[][] }[] }
+    expect(trails[0].points).toHaveLength(5)
+    expect(trails[0].points.some(([lng]) => lng === mapOnly[0])).toBe(false)
   })
 
   it('GPS 기록은 운영자만 볼 수 있고, 범위 밖 점과 절대 시각을 남기지 않는다', async () => {

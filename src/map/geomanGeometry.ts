@@ -1,4 +1,5 @@
 import type { Geometry } from 'geojson'
+import { MAX_LINE_POINTS } from '../alleys/alleyRules'
 import { isInsideGamcheonMap } from './gamcheonBoundary'
 import { streetMeters } from './streetCoordinates'
 
@@ -17,6 +18,7 @@ export function geometryPoints(geometry: Geometry): GeometryPoint[] | null {
 export function validateGeometry(points: GeometryPoint[], shape: 'line' | 'polygon'): string {
   if (points.length < (shape === 'line' ? 2 : 3)) return shape === 'line' ? '골목길에는 점이 두 개 이상 필요합니다.' : '건물에는 점이 세 개 이상 필요합니다.'
   if (!points.every(([lng, lat]) => isInsideGamcheonMap(lng, lat))) return '사각형 지도 안쪽에 그려 주세요.'
+  if (shape === 'line' && points.length > MAX_LINE_POINTS) return `골목길 점은 ${MAX_LINE_POINTS}개까지 사용할 수 있습니다.`
   if (shape === 'polygon') {
     if (points.length > 60) return '건물 꼭짓점은 60개까지 사용할 수 있습니다.'
     const meters = points.map(streetMeters)

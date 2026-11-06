@@ -72,7 +72,7 @@ function Studio() {
         </div>
       </header>
       <main className="demo-main">
-        <GamcheonMap initialView={reviewView} places={places} onPlacesChange={placeStore.update} editable={editing && !placeStore.saving} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} buildingEditor={buildingStore} />
+        <GamcheonMap initialView={reviewView} places={places} onPlacesChange={placeStore.update} editable={editing && !placeStore.saving} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} alleyProblems={alleyStore.problems} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} buildingEditor={buildingStore} />
       </main>
       {alleyStore.notice && <div className="demo-note is-alert" role="status">{alleyStore.notice}</div>}
       {placeStore.notice && <div className="studio-place-status" role="status">{placeStore.notice}</div>}

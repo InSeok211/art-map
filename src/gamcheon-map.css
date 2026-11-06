@@ -126,6 +126,8 @@
 .gamcheon-map__model-placed { display: flex; flex-direction: column; gap: 4px; max-height: 150px; overflow-y: auto; }
 .gamcheon-map__model-placed button { width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: 7px; background: #f5f6fa; color: #3f4656; text-align: left; font: inherit; font-size: 10px; cursor: pointer; }
 .gamcheon-map__model-placed button.is-selected { border-color: #8d9af5; background: #eef0ff; }
+.gamcheon-map__model-placed button.is-problem { border-color: #d9534f; }
+.gamcheon-map__model-placed button em { color: #b3322e; font-style: normal; font-weight: 700; }
 .gamcheon-map__model-placed button span { margin-right: 9px; color: #9aa3c4; font-weight: 800; }
 .gamcheon-map__model-empty { grid-column: 1 / -1; margin: 8px 0; color: #97a79b; font-size: 10px; }
 .gamcheon-map__model-inspector { display: flex; flex-direction: column; gap: 11px; margin-top: 14px; padding: 13px; border: 1px solid #e1e5f5; border-radius: 10px; background: #f7f8fc; }

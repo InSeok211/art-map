@@ -1,4 +1,7 @@
 import { pathLengthMeters } from '../map/streetCoordinates'
+import { alleyProblem } from './alleyRules'
+
+export { ALLEY_WIDTH_RANGE } from './alleyRules'
 
 export type LngLat = [number, number]
 
@@ -9,22 +12,9 @@ export interface Alley {
   widthMeters: number
 }
 
-export const ALLEY_WIDTH_RANGE = { min: 1, max: 8, default: 3 } as const
-
-const isPosition = (value: unknown): value is LngLat =>
-  Array.isArray(value) && value.length === 2 && value.every((part) => Number.isFinite(part))
-
 export function sanitizeAlleys(value: unknown): Alley[] {
   if (!Array.isArray(value)) return []
-  return value.filter((item): item is Alley => {
-    if (!item || typeof item !== 'object') return false
-    const alley = item as Partial<Alley>
-    return typeof alley.id === 'string'
-      && (alley.name === undefined || typeof alley.name === 'string')
-      && Array.isArray(alley.coordinates) && alley.coordinates.length >= 2 && alley.coordinates.every(isPosition)
-      && Number.isFinite(alley.widthMeters)
-      && Number(alley.widthMeters) >= ALLEY_WIDTH_RANGE.min && Number(alley.widthMeters) <= ALLEY_WIDTH_RANGE.max
-  })
+  return value.filter((item): item is Alley => alleyProblem(item) === null)
 }
 
 export function alleysToGeoJSON(alleys: Alley[], selectedId: string | null) {

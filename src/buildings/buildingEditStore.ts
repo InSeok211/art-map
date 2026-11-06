@@ -57,7 +57,9 @@ export function useBuildingEditStore(): BuildingEditStore {
   const [draft, setDraft] = useState<BuildingEdits>(() => readLocal(DRAFT_KEY))
   const [published, setPublished] = useState<BuildingEdits>(() => readLocal(PUBLISHED_KEY))
   const [mode, setMode] = useState<'loading' | 'server' | 'local' | 'error'>(hosted ? 'loading' : 'local')
-  const [status, setStatus] = useState('')
+  // 자동 저장 안내와 공개·되돌리기 결과를 따로 둡니다. 자동 저장이 성공해도 되돌리기 실패 안내까지 지우지 않기 위해서입니다.
+  const [saveStatus, setSaveStatus] = useState('')
+  const [actionStatus, setActionStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const busyRef = useRef(false)
   const latestDraft = useRef(draft)
@@ -80,7 +82,7 @@ export function useBuildingEditStore(): BuildingEditStore {
     }).catch((error: Error) => {
       if (cancelled) return
       setMode('error')
-      setStatus(`건물 편집 내용을 불러오지 못했습니다: ${error.message}. 페이지를 새로고침해 주세요.`)
+      setActionStatus(`건물 편집 내용을 불러오지 못했습니다: ${error.message}. 페이지를 새로고침해 주세요.`)
     })
     return () => { cancelled = true }
   }, [hosted])
@@ -89,13 +91,13 @@ export function useBuildingEditStore(): BuildingEditStore {
   const autosave = useAutosave<BuildingEdits>({
     delayMs: 700,
     save: async (next) => { await call(API, { method: 'PUT', body: JSON.stringify({ draft: next }) }) },
-    onSaved: () => setStatus(''),
-    onError: (error) => setStatus(`초안을 저장하지 못했습니다: ${error.message}`),
+    onSaved: () => setSaveStatus(''),
+    onError: (error) => setSaveStatus(`초안을 저장하지 못했습니다: ${error.message}`),
   })
 
   function saveDraftSoon(next: BuildingEdits) {
     if (mode === 'local') {
-      setStatus(writeLocal(DRAFT_KEY, next) ? '이 브라우저에 초안을 저장했습니다.' : '저장 공간이 부족합니다. 백업을 내려받아 주세요.')
+      setSaveStatus(writeLocal(DRAFT_KEY, next) ? '이 브라우저에 초안을 저장했습니다.' : '저장 공간이 부족합니다. 백업을 내려받아 주세요.')
       return
     }
     autosave.change(next)
@@ -107,6 +109,7 @@ export function useBuildingEditStore(): BuildingEditStore {
     setDraft(clean)
     latestDraft.current = clean
     refreshHistory((value) => value + 1)
+    setActionStatus('')
     saveDraftSoon(clean)
   }
 
@@ -116,10 +119,11 @@ export function useBuildingEditStore(): BuildingEditStore {
     setBusy(true)
     try {
       await action()
-      setStatus(done)
+      setActionStatus(done)
     } catch (error) {
-      setStatus(`${(error as Error).message || '실패했습니다.'} 잠시 뒤 다시 시도해 주세요.`)
+      setActionStatus(`${(error as Error).message || '실패했습니다.'} 잠시 뒤 다시 시도해 주세요.`)
     } finally {
+      setSaveStatus('')
       busyRef.current = false
       setBusy(false)
     }
@@ -129,7 +133,7 @@ export function useBuildingEditStore(): BuildingEditStore {
     draft,
     published,
     dirty: !sameBuildingEdits(draft, published),
-    status,
+    status: saveStatus || actionStatus,
     busy: busy || mode === 'loading' || mode === 'error',
     server: mode === 'server' ? true : mode === 'local' ? false : null,
     onChange: (next) => { if (!busyRef.current && mode !== 'loading' && mode !== 'error') changeDraft(next) },

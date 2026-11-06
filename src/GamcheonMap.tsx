@@ -112,6 +112,8 @@ export interface GamcheonMapProps {
   onPlacesChange?: (places: Place[]) => void
   alleys?: Alley[]
   onAlleysChange?: (alleys: Alley[]) => void
+  // 서버가 저장을 거부한 골목과 이유입니다(골목 번호 → 이유).
+  alleyProblems?: Record<string, string>
   // 관리자가 걸으며 남긴 GPS 기록으로 골목길 후보를 찾습니다(편집 화면의 골목길 탭). 없으면 그 기능을 숨깁니다.
   gpsTrails?: GpsTrailStore
   // 관리자가 고친 건물(높이·색·지붕·숨기기). 공개 지도는 공개본을 넘깁니다.
@@ -133,6 +135,7 @@ export function GamcheonMap({
   onPlacesChange,
   alleys = EMPTY_ALLEYS,
   onAlleysChange,
+  alleyProblems,
   gpsTrails,
   buildingEdits,
   buildingEditor,
@@ -763,7 +766,7 @@ export function GamcheonMap({
               걸어서 찾기{alleyFinder.panelProps.candidates.length > 0 && <em>{alleyFinder.panelProps.candidates.length}</em>}
             </button>
           </div>}
-          {alleyFinder.enabled && alleyTool === 'walk' ? <TrailPanel {...alleyFinder.panelProps} /> : <AlleyEditor {...alley.editorProps} />}
+          {alleyFinder.enabled && alleyTool === 'walk' ? <TrailPanel {...alleyFinder.panelProps} /> : <AlleyEditor {...alley.editorProps} problems={alleyProblems} />}
         </> : editor ? <PlaceForm
           draft={editor}
           onChange={setEditor}

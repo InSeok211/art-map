@@ -15,6 +15,7 @@ export const BUILDING_OUTLINE_INPUTS = [
   'src/data/recorded-alleys.json',
   'src/alleys/recordedAlleys.ts',
   'src/alleys/alleys.ts',
+  'src/alleys/alleyRules.ts',
 ]
 
 // 도로 바닥(road-ground.json): 위 입력과 깎은 윤곽, 바닥 도형 코드
@@ -35,6 +36,7 @@ export const ROAD_GROUND_INPUTS = [
   'src/data/recorded-alleys.json',
   'src/alleys/recordedAlleys.ts',
   'src/alleys/alleys.ts',
+  'src/alleys/alleyRules.ts',
 ]
 
 function inputsHash(files, root) {

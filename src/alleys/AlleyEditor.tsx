@@ -7,6 +7,8 @@ interface AlleyEditorProps {
   drawing: boolean
   draftCount: number
   error: string
+  // 서버가 저장을 거부한 골목과 이유입니다.
+  problems?: Record<string, string>
   onStartDrawing: () => void
   onUndoPoint: () => void
   onFinishDrawing: () => void
@@ -19,7 +21,7 @@ interface AlleyEditorProps {
 const alleyLabel = (alley: Alley, index: number) => alley.name || `골목길 ${index + 1}`
 
 export function AlleyEditor({
-  alleys, selectedId, drawing, draftCount, error,
+  alleys, selectedId, drawing, draftCount, error, problems = {},
   onStartDrawing, onUndoPoint, onFinishDrawing, onCancelDrawing, onSelect, onUpdate, onDelete,
 }: AlleyEditorProps) {
   const selectedIndex = alleys.findIndex((alley) => alley.id === selectedId)
@@ -41,13 +43,14 @@ export function AlleyEditor({
     {error && <p className="gamcheon-map__model-error" role="alert">{error}</p>}
     <div className="gamcheon-map__model-section-title">골목길 목록 <strong>{alleys.length}개</strong></div>
     <div className="gamcheon-map__model-placed">
-      {alleys.map((alley, index) => <button key={alley.id} type="button" className={selectedId === alley.id ? 'is-selected' : ''} onClick={() => onSelect(alley.id)}>
-        <span>{String(index + 1).padStart(2, '0')}</span>{alleyLabel(alley, index)}
+      {alleys.map((alley, index) => <button key={alley.id} type="button" className={[selectedId === alley.id ? 'is-selected' : '', problems[alley.id] ? 'is-problem' : ''].filter(Boolean).join(' ')} onClick={() => onSelect(alley.id)}>
+        <span>{String(index + 1).padStart(2, '0')}</span>{alleyLabel(alley, index)}{problems[alley.id] && <em> · 저장 안 됨</em>}
       </button>)}
       {alleys.length === 0 && <p className="gamcheon-map__model-empty">아직 골목길이 없습니다.</p>}
     </div>
     {selected && !drawing && <div className="gamcheon-map__model-inspector">
       <strong>{alleyLabel(selected, selectedIndex)} 수정</strong>
+      {problems[selected.id] && <p className="gamcheon-map__model-error" role="alert">저장되지 않았습니다: {problems[selected.id]}</p>}
       <label>이름<input className="gamcheon-map__alley-name" aria-label="골목길 이름" value={selected.name ?? ''} maxLength={60} placeholder={`골목길 ${selectedIndex + 1}`} onChange={(event) => onUpdate(selected.id, { name: event.target.value })} /></label>
       <label>폭 <span>{selected.widthMeters}m</span><input aria-label="골목길 폭" type="range" min={ALLEY_WIDTH_RANGE.min} max={ALLEY_WIDTH_RANGE.max} step="0.5" value={selected.widthMeters} onChange={(event) => onUpdate(selected.id, { widthMeters: Number(event.target.value) })} /></label>
       <div className="gamcheon-map__model-coordinates">점 {selected.coordinates.length}개 · 길이 약 {Math.round(alleyLengthMeters(selected.coordinates))}m</div>

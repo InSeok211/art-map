@@ -13,18 +13,18 @@ const trail: GpsTrail = { id: 't1', startedAt: '2026-03-01', points: [[129.009, 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 
 // 지도 앱 서버 자리에 두는 가짜 응답입니다. 저장 요청을 기록하고, 필요하면 응답을 붙잡아 둡니다.
-function stubServer({ alleys = [] as Alley[], trails = [] as GpsTrail[], load = 200 } = {}) {
+function stubServer({ alleys = [] as Alley[], trails = [] as GpsTrail[], load = 200, extra = {} as object } = {}) {
   const puts: { alleys: Alley[]; dismissed: unknown[] }[] = []
   const held: ((response: Response) => void)[] = []
-  const state = { hold: false, putStatus: 200, trailStatus: 200, deleteStatus: 200 }
+  const state = { hold: false, putStatus: 200, trailStatus: 200, deleteStatus: 200, putBody: {} as object }
   vi.stubGlobal('fetch', vi.fn(async (path: string, init: RequestInit = {}) => {
     const method = init.method ?? 'GET'
-    if (path === ALLEYS && method === 'GET') return load === 200 ? json({ alleys, dismissed: [] }) : json({ error: 'no' }, load)
+    if (path === ALLEYS && method === 'GET') return load === 200 ? json({ alleys, dismissed: [], ...extra }) : json({ error: 'no' }, load)
     if (path === TRAILS && method === 'GET') return json({ trails })
     if (path === ALLEYS && method === 'PUT') {
       puts.push(JSON.parse(String(init.body)))
       if (state.hold) return new Promise<Response>((resolve) => held.push(resolve))
-      return json({ ok: true }, state.putStatus)
+      return state.putStatus === 200 ? json({ ok: true }) : json(state.putBody, state.putStatus)
     }
     if (path === TRAILS && method === 'POST') {
       const sent = JSON.parse(String(init.body)) as GpsTrail
@@ -116,6 +116,40 @@ describe('자동 저장', () => {
     expect(puts).toEqual([{ alleys: [alley('a1')], dismissed: [line] }])
   })
 
+  it('서버가 거부한 골목을 번호로 알려 주고, 저장되면 표시를 지운다', async () => {
+    const { result, state } = await hostedStore()
+    state.putStatus = 400
+    state.putBody = { error: '높은 길: 지도 범위 밖의 점이 있습니다.', problems: [{ index: 1, id: 'a2', name: '높은 길', reason: '지도 범위 밖의 점이 있습니다.' }] }
+    act(() => result.current.updateAlleys([alley('a1'), alley('a2')]))
+    await tick(800)
+    expect(result.current.notice).toMatch(/높은 길: 지도 범위/)
+    expect(result.current.problems).toEqual({ a2: '지도 범위 밖의 점이 있습니다.' })
+
+    state.putStatus = 200
+    act(() => result.current.updateAlleys([alley('a1')]))
+    await tick(800)
+    expect(result.current.problems).toEqual({})
+    expect(result.current.notice).toBe('')
+  })
+
+  it('서버가 건너뛴 골목이 있으면 불러올 때 알리고, 저장이 성공해도 안내를 유지한다', async () => {
+    const skipped = [{ index: 3, id: 'bad', name: '옛 길', reason: '지도 범위 밖의 점이 있습니다.' }, { index: 4, reason: '골목길 형식이 올바르지 않습니다.' }]
+    const { result } = await hostedStore({ alleys: [alley('a1')], extra: { skipped } })
+    expect(result.current.alleys).toEqual([alley('a1')])
+    expect(result.current.notice).toMatch(/2개/)
+    expect(result.current.notice).toMatch(/옛 길/)
+    expect(result.current.notice).toMatch(/보존/)
+
+    act(() => result.current.updateAlleys([alley('a2')]))
+    await tick(800)
+    expect(result.current.notice).toMatch(/옛 길/)
+  })
+
+  it('저장된 목록 전체가 깨졌으면 불러올 때 알린다', async () => {
+    const { result } = await hostedStore({ extra: { damaged: true } })
+    expect(result.current.notice).toMatch(/손상/)
+  })
+
   it('저장에 실패하면 서버 오류를 안내하고, 다음 수정이 성공하면 안내를 지운다', async () => {
     const { result, state } = await hostedStore()
     state.putStatus = 400
@@ -172,6 +206,33 @@ describe('GPS 기록', () => {
     state.trailStatus = 500
     await act(async () => { await expect(result.current.gpsTrails.onAddTrail(trail)).rejects.toThrow() })
     expect(result.current.gpsTrails.trails).toEqual([])
+  })
+
+  it('골목길 저장이 성공해도 기록을 지우지 못한 안내는 지우지 않는다', async () => {
+    const { result, state } = await hostedStore({ trails: [trail] })
+    state.deleteStatus = 500
+    act(() => result.current.gpsTrails.onDeleteTrail('t1'))
+    await tick()
+    act(() => result.current.updateAlleys([alley('a1')]))
+    await tick(800)
+    expect(result.current.notice).toMatch(/지우지 못했습니다/)
+  })
+
+  it('저장 실패와 기록 삭제 실패는 함께 보이고, 저장이 되면 저장 안내만 사라진다', async () => {
+    const { result, state } = await hostedStore({ trails: [trail] })
+    state.deleteStatus = 500
+    state.putStatus = 500
+    act(() => result.current.gpsTrails.onDeleteTrail('t1'))
+    act(() => result.current.updateAlleys([alley('a1')]))
+    await tick(800)
+    expect(result.current.notice).toMatch(/지우지 못했습니다/)
+    expect(result.current.notice).toMatch(/다시 고쳐 주세요/)
+
+    state.putStatus = 200
+    act(() => result.current.updateAlleys([alley('a2')]))
+    await tick(800)
+    expect(result.current.notice).toMatch(/지우지 못했습니다/)
+    expect(result.current.notice).not.toMatch(/다시 고쳐 주세요/)
   })
 
   it('지우지 못하면 안내한다', async () => {
