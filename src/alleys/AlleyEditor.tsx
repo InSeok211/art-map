@@ -1,4 +1,6 @@
-import { ALLEY_WIDTH_RANGE, alleyLengthMeters } from './alleys'
+import { useMemo } from 'react'
+import { ALLEY_NAME_MAX, ALLEY_WIDTH_RANGE, alleyLabel, alleyProblem } from './alleyRules'
+import { alleyLengthMeters } from './alleys'
 import type { Alley } from './alleys'
 
 interface AlleyEditorProps {
@@ -7,8 +9,6 @@ interface AlleyEditorProps {
   drawing: boolean
   draftCount: number
   error: string
-  // 서버가 저장을 거부한 골목과 이유입니다.
-  problems?: Record<string, string>
   onStartDrawing: () => void
   onUndoPoint: () => void
   onFinishDrawing: () => void
@@ -18,14 +18,14 @@ interface AlleyEditorProps {
   onDelete: (id: string) => void
 }
 
-const alleyLabel = (alley: Alley, index: number) => alley.name || `골목길 ${index + 1}`
-
 export function AlleyEditor({
-  alleys, selectedId, drawing, draftCount, error, problems = {},
+  alleys, selectedId, drawing, draftCount, error,
   onStartDrawing, onUndoPoint, onFinishDrawing, onCancelDrawing, onSelect, onUpdate, onDelete,
 }: AlleyEditorProps) {
   const selectedIndex = alleys.findIndex((alley) => alley.id === selectedId)
   const selected = alleys[selectedIndex]
+  // 서버와 같은 규칙입니다. 하나라도 어긋나면 전체 저장이 거부되므로 고치기 전에 바로 보여 줍니다.
+  const problems = useMemo(() => new Map(alleys.map((alley) => [alley.id, alleyProblem(alley)])), [alleys])
 
   return <div className="gamcheon-map__model-editor">
     <p className="gamcheon-map__model-help">
@@ -43,15 +43,15 @@ export function AlleyEditor({
     {error && <p className="gamcheon-map__model-error" role="alert">{error}</p>}
     <div className="gamcheon-map__model-section-title">골목길 목록 <strong>{alleys.length}개</strong></div>
     <div className="gamcheon-map__model-placed">
-      {alleys.map((alley, index) => <button key={alley.id} type="button" className={[selectedId === alley.id ? 'is-selected' : '', problems[alley.id] ? 'is-problem' : ''].filter(Boolean).join(' ')} onClick={() => onSelect(alley.id)}>
-        <span>{String(index + 1).padStart(2, '0')}</span>{alleyLabel(alley, index)}{problems[alley.id] && <em> · 저장 안 됨</em>}
+      {alleys.map((alley, index) => <button key={alley.id} type="button" className={[selectedId === alley.id ? 'is-selected' : '', problems.get(alley.id) ? 'is-problem' : ''].filter(Boolean).join(' ')} onClick={() => onSelect(alley.id)}>
+        <span>{String(index + 1).padStart(2, '0')}</span>{alleyLabel(alley, index)}{problems.get(alley.id) && <em> · 저장 안 됨</em>}
       </button>)}
       {alleys.length === 0 && <p className="gamcheon-map__model-empty">아직 골목길이 없습니다.</p>}
     </div>
     {selected && !drawing && <div className="gamcheon-map__model-inspector">
       <strong>{alleyLabel(selected, selectedIndex)} 수정</strong>
-      {problems[selected.id] && <p className="gamcheon-map__model-error" role="alert">저장되지 않았습니다: {problems[selected.id]}</p>}
-      <label>이름<input className="gamcheon-map__alley-name" aria-label="골목길 이름" value={selected.name ?? ''} maxLength={60} placeholder={`골목길 ${selectedIndex + 1}`} onChange={(event) => onUpdate(selected.id, { name: event.target.value })} /></label>
+      {problems.get(selected.id) && <p className="gamcheon-map__model-error" role="alert">저장되지 않았습니다: {problems.get(selected.id)}</p>}
+      <label>이름<input className="gamcheon-map__alley-name" aria-label="골목길 이름" value={selected.name ?? ''} maxLength={ALLEY_NAME_MAX} placeholder={`골목길 ${selectedIndex + 1}`} onChange={(event) => onUpdate(selected.id, { name: event.target.value })} /></label>
       <label>폭 <span>{selected.widthMeters}m</span><input aria-label="골목길 폭" type="range" min={ALLEY_WIDTH_RANGE.min} max={ALLEY_WIDTH_RANGE.max} step="0.5" value={selected.widthMeters} onChange={(event) => onUpdate(selected.id, { widthMeters: Number(event.target.value) })} /></label>
       <div className="gamcheon-map__model-coordinates">점 {selected.coordinates.length}개 · 길이 약 {Math.round(alleyLengthMeters(selected.coordinates))}m</div>
       <p className="gamcheon-map__model-help gamcheon-map__alley-tip">평면 보기에서 꼭짓점을 드래그해 옮기세요. 점 사이의 손잡이를 드래그하면 새 점이 추가됩니다. 꼭짓점을 오른쪽 클릭하면 지웁니다.</p>

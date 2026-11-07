@@ -116,19 +116,17 @@ describe('자동 저장', () => {
     expect(puts).toEqual([{ alleys: [alley('a1')], dismissed: [line] }])
   })
 
-  it('서버가 거부한 골목을 번호로 알려 주고, 저장되면 표시를 지운다', async () => {
+  it('서버가 거부한 이유를 알려 주고, 저장되면 안내를 지운다', async () => {
     const { result, state } = await hostedStore()
     state.putStatus = 400
     state.putBody = { error: '높은 길: 지도 범위 밖의 점이 있습니다.', problems: [{ index: 1, id: 'a2', name: '높은 길', reason: '지도 범위 밖의 점이 있습니다.' }] }
     act(() => result.current.updateAlleys([alley('a1'), alley('a2')]))
     await tick(800)
     expect(result.current.notice).toMatch(/높은 길: 지도 범위/)
-    expect(result.current.problems).toEqual({ a2: '지도 범위 밖의 점이 있습니다.' })
 
     state.putStatus = 200
     act(() => result.current.updateAlleys([alley('a1')]))
     await tick(800)
-    expect(result.current.problems).toEqual({})
     expect(result.current.notice).toBe('')
   })
 
@@ -143,6 +141,12 @@ describe('자동 저장', () => {
     act(() => result.current.updateAlleys([alley('a2')]))
     await tick(800)
     expect(result.current.notice).toMatch(/옛 길/)
+  })
+
+  it('버린 후보도 저장 규칙에 맞는 것만 받아, 다음 저장이 거부되지 않게 한다', async () => {
+    const good = [[129.009, 35.095], [129.0095, 35.0955]]
+    const { result } = await hostedStore({ extra: { dismissed: [good, [[129.009, 35.095], [129.02, 35.095]], '선 아님'] } })
+    expect(result.current.gpsTrails.dismissed).toEqual([good])
   })
 
   it('저장된 목록 전체가 깨졌으면 불러올 때 알린다', async () => {

@@ -91,8 +91,7 @@ export const STREET_LAYER_FALLBACK_MS = 3500
 export const GRAPHICS_RESTORE_WAIT_MS = 20_000
 // 3D 거리를 다시 만들지 못했다는 안내를 보여 주는 시간입니다.
 export const SCENE_NOTICE_MS = 8000
-type SceneStatus = 'loading' | 'lost' | 'stalled' | 'ready' | 'failed'
-const SCENE_TEXT: Record<Exclude<SceneStatus, 'ready'>, string> = {
+const SCENE_TEXT = {
   loading: '3D 거리를 불러오는 중입니다.',
   lost: '그래픽 연결이 끊겨 3D 지도를 다시 불러오는 중입니다.',
   stalled: '그래픽 연결이 돌아오지 않았습니다. 페이지를 새로고침해 주세요.',
@@ -126,8 +125,6 @@ export interface GamcheonMapProps {
   onPlacesChange?: (places: Place[]) => void
   alleys?: Alley[]
   onAlleysChange?: (alleys: Alley[]) => void
-  // 서버가 저장을 거부한 골목과 이유입니다(골목 번호 → 이유).
-  alleyProblems?: Record<string, string>
   // 관리자가 걸으며 남긴 GPS 기록으로 골목길 후보를 찾습니다(편집 화면의 골목길 탭). 없으면 그 기능을 숨깁니다.
   gpsTrails?: GpsTrailStore
   // 관리자가 고친 건물(높이·색·지붕·숨기기). 공개 지도는 공개본을 넘깁니다.
@@ -149,7 +146,6 @@ export function GamcheonMap({
   onPlacesChange,
   alleys = EMPTY_ALLEYS,
   onAlleysChange,
-  alleyProblems,
   gpsTrails,
   buildingEdits,
   buildingEditor,
@@ -206,8 +202,9 @@ export function GamcheonMap({
   }, [selectedId])
   // 관리자가 올린 3D 모델(건물 탭)을 3D 거리에 불러오지 못했을 때
   const [placedModelError, setPlacedModelError] = useState('')
-  // 3D 거리 장면 상태: 만드는 중(loading), 그래픽 연결이 끊김(lost), 오래 돌아오지 않음(stalled), 정상(ready), 만들지 못함(failed)
-  const [sceneStatus, setSceneStatus] = useState<SceneStatus>('loading')
+  // 그래픽 연결과 3D 거리 만들기 상태는 서로 독립입니다. 연결이 끊긴 동안 만들기가 끝나도 끊김 안내를 먼저 보여 줍니다.
+  const [graphics, setGraphics] = useState<'ok' | 'lost' | 'stalled'>('ok')
+  const [sceneBuild, setSceneBuild] = useState<'loading' | 'ready' | 'failed'>('loading')
   // 다시 만들기에 실패해 지금 거리를 유지할 때 잠시 보여 주는 안내입니다.
   const [sceneNotice, setSceneNotice] = useState('')
   useEffect(() => {
@@ -215,7 +212,7 @@ export function GamcheonMap({
     const timer = window.setTimeout(() => setSceneNotice(''), SCENE_NOTICE_MS)
     return () => window.clearTimeout(timer)
   }, [sceneNotice])
-  const sceneText = sceneStatus === 'ready' ? sceneNotice : SCENE_TEXT[sceneStatus]
+  const sceneText = graphics !== 'ok' ? SCENE_TEXT[graphics] : sceneBuild !== 'ready' ? SCENE_TEXT[sceneBuild] : sceneNotice
   const [showBuildings, setShowBuildings] = useState(false)
   const showBuildingsRef = useRef(showBuildings)
   const [translucentModels, setTranslucentModels] = useState(false)
@@ -271,8 +268,8 @@ export function GamcheonMap({
     return () => window.clearTimeout(timer)
   }, [sceneEditsKey])
   // 사용자가 그리거나 GPS 기록으로 추가한 골목길을 3D 거리 바닥에도 골목길 포장으로 그립니다.
-  useEffect(() => { streetLayerRef.current?.setExtraAlleys(alley.editorProps.alleys) }, [alley.editorProps.alleys, sceneStatus])
-  useEffect(() => { streetLayerRef.current?.setMapPlaces(localPlaces) }, [localPlaces, sceneStatus])
+  useEffect(() => { streetLayerRef.current?.setExtraAlleys(alley.editorProps.alleys) }, [alley.editorProps.alleys, graphics, sceneBuild])
+  useEffect(() => { streetLayerRef.current?.setMapPlaces(localPlaces) }, [localPlaces, graphics, sceneBuild])
   // 지도를 여는 순간부터 내 위치와 방향을 보여 줍니다. 바깥 화면이 장소를 골라 열었으면 그 장소를 먼저 보여 줍니다.
   // 공개 지도의 휴대폰 화면은 처음 위치를 받으면 지도가 바라보는 방향을 따라 돌도록(방향 보기) 기본으로 켭니다.
   // 바깥 화면이 장소를 골라 열었으면 그 장소를 먼저 보여 주므로 켜지 않습니다.
@@ -280,7 +277,7 @@ export function GamcheonMap({
   const [locationNotice, setLocationNotice] = useState('')
   // 내 위치를 거리 장면에 알려, 내 위치를 가리는 근처 건물을 반투명하게 합니다(지도 밖이면 끔).
   const myStreetPosition = myLocation.gps.status === 'ok' ? myLocation.gps.position ?? null : null
-  useEffect(() => { streetLayerRef.current?.setMyPosition(myStreetPosition) }, [myStreetPosition?.[0], myStreetPosition?.[1], sceneStatus])
+  useEffect(() => { streetLayerRef.current?.setMyPosition(myStreetPosition) }, [myStreetPosition?.[0], myStreetPosition?.[1], graphics, sceneBuild])
   const [moreOpen, setMoreOpen] = useState(false)
   const locate = () => {
     const notice = myLocation.locate()
@@ -297,7 +294,7 @@ export function GamcheonMap({
     const map = mapRef.current
     streetLayerRef.current?.setRouteLine(terrainMode ? routeLine : null)
     if (map) for (const id of ROUTE_LAYER_IDS) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', terrainMode ? 'none' : 'visible')
-  }, [routeLine, terrainMode, sceneStatus])
+  }, [routeLine, terrainMode, graphics, sceneBuild])
   const selectedPlace = localPlaces.find((place) => place.id === selectedId && isInsideGamcheonMap(place.longitude, place.latitude))
 
   const visiblePlaces = useMemo(
@@ -391,8 +388,6 @@ export function GamcheonMap({
     let streetLayer: StreetSceneLayer | null = null
     let disposed = false
     let builtWithTerrain = false
-    let buildFailed = false
-    let graphicsLost = false
     let graphicsTimer = 0
     const addStreetLayer = () => {
       if (!streetLayer || map.getLayer(streetLayer.id)) return
@@ -428,7 +423,6 @@ export function GamcheonMap({
         setPlacedModelError('')
         streetLayer = next
         builtWithTerrain = Boolean(terrain)
-        buildFailed = false
         streetLayer.setOtherBuildingsHidden(workshopOnlyRef.current, false)
         streetLayer.setBuildingOpacity(modelsSeeThroughRef.current ? SEE_THROUGH_OPACITY : 1)
         streetLayerRef.current = streetLayer
@@ -439,12 +433,11 @@ export function GamcheonMap({
         const latest = buildingEditsRef.current
         if (latest && latest !== edits && !streetLayer.updateBuildingEdits(latest)) void createStreetLayer(terrain)
         setSceneNotice('')
-        if (!graphicsLost) setSceneStatus('ready')
+        setSceneBuild('ready')
       } catch (cause) {
         // 데이터를 받지 못한 경우와 만드는 중 오류를 모두 여기서 받습니다. 이미 보이는 거리가 있으면 그대로 둡니다.
         console.error('3D street failed to build', cause)
         if (disposed || version !== buildVersion) return
-        buildFailed = !streetLayer
         if (streetLayer) {
           setSceneNotice('3D 거리를 다시 만들지 못해 지금 보기를 유지합니다.')
           if (terrainModeRef.current !== builtWithTerrain) {
@@ -453,7 +446,7 @@ export function GamcheonMap({
             saveTerrainMode(builtWithTerrain)
           }
         }
-        if (!graphicsLost) setSceneStatus(streetLayer ? 'ready' : 'failed')
+        setSceneBuild(streetLayer ? 'ready' : 'failed')
       }
     }
     let buildStarted = false
@@ -465,7 +458,7 @@ export function GamcheonMap({
     }, 0)
     rebuildStreetRef.current = async (useTerrain) => {
       if (!buildStarted) return // 처음 만들 때 지금 설정을 따릅니다.
-      if (!graphicsLost) setSceneStatus('loading')
+      setSceneBuild('loading')
       const terrain = useTerrain ? await loadTerrain().catch(() => undefined) : undefined
       if (!disposed && terrainModeRef.current === useTerrain) await createStreetLayer(terrain)
     }
@@ -489,10 +482,9 @@ export function GamcheonMap({
     map.once('style.load', buildStreetLayer)
     // 휴대폰에서 메모리가 모자라면 그래픽(WebGL) 연결이 끊길 수 있습니다. 다시 연결되면 3D 층을 새로 붙입니다.
     const handleContextLost = () => {
-      graphicsLost = true
-      setSceneStatus('lost')
+      setGraphics('lost')
       window.clearTimeout(graphicsTimer)
-      graphicsTimer = window.setTimeout(() => setSceneStatus('stalled'), GRAPHICS_RESTORE_WAIT_MS)
+      graphicsTimer = window.setTimeout(() => setGraphics('stalled'), GRAPHICS_RESTORE_WAIT_MS)
     }
     // MapLibre는 연결이 끊길 때 사용자 정의 3D 층을 스스로 떼어 내므로, 스타일이 다시 준비되면 붙입니다.
     const handleContextRestored = () => {
@@ -501,10 +493,9 @@ export function GamcheonMap({
         map.once('styledata', handleContextRestored)
         return
       }
-      graphicsLost = false
       window.clearTimeout(graphicsTimer)
       attachLayers()
-      setSceneStatus(streetLayer ? 'ready' : buildFailed ? 'failed' : 'loading')
+      setGraphics('ok')
       map.triggerRepaint()
     }
     map.on('webglcontextlost', handleContextLost)
@@ -812,7 +803,7 @@ export function GamcheonMap({
               걸어서 찾기{alleyFinder.panelProps.candidates.length > 0 && <em>{alleyFinder.panelProps.candidates.length}</em>}
             </button>
           </div>}
-          {alleyFinder.enabled && alleyTool === 'walk' ? <TrailPanel {...alleyFinder.panelProps} /> : <AlleyEditor {...alley.editorProps} problems={alleyProblems} />}
+          {alleyFinder.enabled && alleyTool === 'walk' ? <TrailPanel {...alleyFinder.panelProps} /> : <AlleyEditor {...alley.editorProps} />}
         </> : editor ? <PlaceForm
           draft={editor}
           onChange={setEditor}

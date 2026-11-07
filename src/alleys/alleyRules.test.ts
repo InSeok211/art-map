@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alleyProblem, isInsideWorkArea, lineProblem, MAX_LINE_POINTS } from './alleyRules'
+import { alleyProblem, lineProblem, MAX_LINE_POINTS } from './alleyRules'
 import { sanitizeAlleys } from './alleys'
 import { RECORDED_ALLEYS } from './recordedAlleys'
 import { validateGeometry } from '../map/geomanGeometry'
@@ -23,11 +23,6 @@ describe('골목길 범위', () => {
     const tooMany = Array.from({ length: MAX_LINE_POINTS + 1 }, () => insideWorkArea)
     expect(validateGeometry(tooMany, 'line')).not.toBe('')
     expect(lineProblem(tooMany)).toMatch(/2~500/)
-  })
-
-  it('GPS 기록의 범위는 골목길보다 좁게 유지한다', () => {
-    expect(isInsideWorkArea(...insideWorkArea)).toBe(true)
-    expect(isInsideWorkArea(...mapOnly)).toBe(false)
   })
 
   it('규칙에 어긋나면 이유를 알려 준다', () => {

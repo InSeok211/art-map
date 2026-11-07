@@ -20,7 +20,7 @@ export type { GpsState, GpsStatus } from '../map/useMyLocation'
 // 이 거리(m)보다 경로에서 벗어나면 현재 위치에서 다시 찾습니다.
 export const OFF_ROUTE_DISTANCE = 25
 // 경로를 찾지 못한 상태에서 이만큼(m) 움직이면 현재 위치에서 다시 찾습니다. 위치가 흔들릴 때마다 다시 찾지 않게 합니다.
-export const ROUTE_RETRY_DISTANCE = 30
+const ROUTE_RETRY_DISTANCE = 30
 // 목적지에 이만큼(m) 가까워지면 도착으로 봅니다.
 export const ARRIVAL_DISTANCE = 15
 // 찾은 길에 화면을 맞출 때의 여백. 휴대폰(좁은 화면)은 위 이름표와 아래 길찾기 카드·하단 메뉴가 지도를

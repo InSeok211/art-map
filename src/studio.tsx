@@ -75,7 +75,7 @@ function Studio() {
       <main className="demo-main">
         {/* 지도만 따로 감싸, 지도가 깨져도 저장소의 자동 저장과 이탈 경고, 안내는 그대로 둡니다. */}
         <MapErrorBoundary variant="studio">
-          <GamcheonMap initialView={reviewView} places={places} onPlacesChange={placeStore.update} editable={editing && !placeStore.saving} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} alleyProblems={alleyStore.problems} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} buildingEditor={buildingStore} />
+          <GamcheonMap initialView={reviewView} places={places} onPlacesChange={placeStore.update} editable={editing && !placeStore.saving} editTools={EDIT_TOOLS} className={editing ? '' : 'is-site-hosted'} alleys={alleyStore.alleys} onAlleysChange={alleyStore.updateAlleys} gpsTrails={alleyStore.gpsTrails} buildingEditor={buildingStore} />
         </MapErrorBoundary>
       </main>
       {alleyStore.notice && <div className="demo-note is-alert" role="status">{alleyStore.notice}</div>}

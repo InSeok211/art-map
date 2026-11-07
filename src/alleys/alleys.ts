@@ -1,8 +1,6 @@
 import { pathLengthMeters } from '../map/streetCoordinates'
 import { alleyProblem } from './alleyRules'
 
-export { ALLEY_WIDTH_RANGE } from './alleyRules'
-
 export type LngLat = [number, number]
 
 export interface Alley {

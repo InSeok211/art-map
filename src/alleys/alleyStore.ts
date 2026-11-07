@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { lineProblem } from './alleyRules'
+import type { AlleyProblem } from './alleyRules'
 import { sanitizeAlleys } from './alleys'
 import type { Alley, LngLat } from './alleys'
 import { sanitizeTrails } from './gpsTrails'
@@ -29,8 +31,7 @@ function writeLocal(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* 저장소를 못 쓰면 이번 화면에서만 유지됩니다. */ }
 }
 const sanitizeLines = (value: unknown): LngLat[][] => Array.isArray(value)
-  ? value.filter((line): line is LngLat[] => Array.isArray(line) && line.length >= 2
-    && line.every((point) => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite)))
+  ? value.filter((line): line is LngLat[] => lineProblem(line) === null)
   : []
 
 async function json(response: Response) {
@@ -38,10 +39,8 @@ async function json(response: Response) {
   return response.json() as Promise<Record<string, unknown>>
 }
 
-type AlleyProblem = { index?: number; id?: string; name?: string; reason?: string }
-
 function skippedNotice(skipped: AlleyProblem[]) {
-  const shown = skipped.slice(0, 3).map((item) => `${item.name || item.id || `${Number(item.index) + 1}번째 항목`}: ${item.reason}`).join(' ')
+  const shown = skipped.slice(0, 3).map((item) => `${item.name || item.id || `${item.index + 1}번째 항목`}: ${item.reason}`).join(' ')
   const more = skipped.length > 3 ? ` 외 ${skipped.length - 3}개.` : ''
   return `서버에 저장된 골목길 ${skipped.length}개가 규칙에 맞지 않아 지도에서 빠졌습니다. ${shown}${more} 원본은 서버에 보존되며 저장해도 지워지지 않습니다.`
 }
@@ -55,11 +54,9 @@ export function useAlleyStore() {
   const [dismissed, setDismissed] = useState<LngLat[][]>(() => readLocal(DISMISSED_KEY, sanitizeLines, []))
   const [server, setServer] = useState(false)
   const [ready, setReady] = useState(!hosted)
-  // 불러오기, 골목길 저장, 기록 작업의 안내를 따로 둡니다. 저장이 성공해도 다른 작업의 실패 안내까지 지우지 않기 위해서입니다.
+  // 불러오기와 기록 작업의 안내를 저장 실패와 따로 둡니다. 저장이 성공해도 다른 작업의 실패 안내까지 지우지 않기 위해서입니다.
   const [loadNotice, setLoadNotice] = useState('')
-  const [saveNotice, setSaveNotice] = useState('')
   const [trailNotice, setTrailNotice] = useState('')
-  const [problems, setProblems] = useState<Record<string, string>>({})
   const latest = useRef({ alleys, dismissed })
   latest.current = { alleys, dismissed }
 
@@ -95,8 +92,8 @@ export function useAlleyStore() {
       body: JSON.stringify({ alleys: nextAlleys, dismissed: nextDismissed }),
     })
     if (!response.ok) {
-      const body = await response.json().catch(() => ({})) as { error?: string; problems?: AlleyProblem[] }
-      throw Object.assign(new Error(body.error || '골목길을 저장하지 못했습니다.'), { problems: body.problems })
+      const body = await response.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error || '골목길을 저장하지 못했습니다.')
     }
   }
 
@@ -104,11 +101,6 @@ export function useAlleyStore() {
   const autosave = useAutosave<{ alleys: Alley[]; dismissed: LngLat[][] }>({
     delayMs: 800,
     save: (value) => putAlleys(value.alleys, value.dismissed),
-    onSaved: () => { setSaveNotice(''); setProblems({}) },
-    onError: (error: Error & { problems?: AlleyProblem[] }) => {
-      setSaveNotice(`${error.message} 잠시 뒤 다시 고쳐 주세요.`)
-      setProblems(Object.fromEntries((error.problems ?? []).flatMap((item) => item.id ? [[item.id, item.reason ?? '']] : [])))
-    },
   })
 
   function scheduleSave() {
@@ -166,6 +158,7 @@ export function useAlleyStore() {
     },
   }
 
+  const saveNotice = autosave.saveError ? `${autosave.saveError.message} 잠시 뒤 다시 고쳐 주세요.` : ''
   const notice = [loadNotice, trailNotice, saveNotice].filter(Boolean).join(' ')
-  return { alleys, updateAlleys, gpsTrails, server, ready, notice, problems }
+  return { alleys, updateAlleys, gpsTrails, server, ready, notice }
 }

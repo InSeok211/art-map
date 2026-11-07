@@ -1,17 +1,17 @@
 import { isInsideGamcheonMap } from '../map/gamcheonBoundary'
 
-// 골목길과 GPS 기록의 범위 규칙입니다. 편집 화면과 서버가 이 모듈 하나를 함께 씁니다.
-//  - 골목길은 지도 전체에 그릴 수 있습니다. 공개 지도에 나가는 길이라 개인정보가 없습니다.
-//  - GPS 기록은 좁은 작업 범위 안의 점만 남깁니다. 집과 이동 경로가 서버에 남지 않게 하기 위해서입니다.
-export const WORK_AREA = { west: 129.006, south: 35.09274, east: 129.0135, north: 35.0992 }
-export const MAX_ALLEYS = 500
+// 골목길 하나의 규칙입니다. 편집 화면과 서버가 이 모듈 하나를 함께 씁니다. 골목길은 지도 전체에 그릴 수 있습니다.
+// 공개 지도에 나가는 길이라 개인정보가 없습니다. GPS 기록의 좁은 작업 범위는 서버(server/alleys.ts)에 있습니다.
 export const MAX_LINE_POINTS = 500
 export const ALLEY_NAME_MAX = 60
-export const ALLEY_ID_MAX = 80
+const ALLEY_ID_MAX = 80
 export const ALLEY_WIDTH_RANGE = { min: 1, max: 8, default: 3 } as const
 
-export const isInsideWorkArea = (longitude: number, latitude: number) =>
-  longitude >= WORK_AREA.west && longitude <= WORK_AREA.east && latitude >= WORK_AREA.south && latitude <= WORK_AREA.north
+/** 저장을 거부하거나 읽을 때 건너뛴 골목을 서버가 알려 주는 모양입니다. */
+export type AlleyProblem = { index: number; id?: string; name?: string; reason: string }
+
+/** 이름이 없는 골목은 편집 목록의 순서로 부릅니다. */
+export const alleyLabel = ({ name }: { name?: string }, index: number) => name || `골목길 ${index + 1}`
 
 /** 선이 규칙에 맞으면 null, 아니면 운영자에게 보여 줄 이유를 돌려줍니다. */
 export function lineProblem(value: unknown): string | null {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { RefObject } from 'react'
 import type { GeoJSONSource, Map, MapLayerMouseEvent } from 'maplibre-gl'
-import { ALLEY_WIDTH_RANGE } from './alleys'
+import { ALLEY_WIDTH_RANGE } from './alleyRules'
 import type { Alley, LngLat } from './alleys'
 import { candidatesToGeoJSON, findAlleyCandidates, PASS_THRESHOLD_RANGE, trailsToGeoJSON } from './gpsTrails'
 import type { GpsTrail } from './gpsTrails'

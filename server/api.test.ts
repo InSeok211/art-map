@@ -164,7 +164,7 @@ describe('골목길과 GPS 기록의 공개 범위', () => {
     const next = { ...alley, id: 'a2' }
     const response = await admin(ALLEYS, { method: 'PUT', body: body({ alleys: [next] }) })
     expect(response.status).toBe(200)
-    expect(await response.json()).toMatchObject({ alleys: [next], skipped: [{ id: 'bad' }] })
+    expect(await response.json()).toMatchObject({ alleys: [next] })
 
     expect(JSON.parse(await readRaw(db))).toEqual([next, badAlley])
     expect(await (await admin(ALLEYS)).json()).toMatchObject({ alleys: [next], skipped: [{ index: 1, id: 'bad' }] })

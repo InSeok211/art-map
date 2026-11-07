@@ -18,10 +18,8 @@ function fakeSave() {
 
 function setup(delayMs = 800) {
   const fake = fakeSave()
-  const onSaved = vi.fn()
-  const onError = vi.fn()
-  const hook = renderHook(() => useAutosave<string>({ delayMs, save: fake.save, onSaved, onError }))
-  return { ...fake, onSaved, onError, ...hook, autosave: () => hook.result.current }
+  const hook = renderHook(() => useAutosave<string>({ delayMs, save: fake.save }))
+  return { ...fake, ...hook, autosave: () => hook.result.current }
 }
 
 const tick = (ms = 0) => act(async () => { await vi.advanceTimersByTimeAsync(ms) })
@@ -44,18 +42,46 @@ describe('묶음 저장', () => {
     expect(sent).toEqual(['b'])
   })
 
-  it('저장이 끝나면 onSaved로 알린다', async () => {
-    const { autosave, finish, onSaved, onError } = setup()
+  it('저장에 실패하면 알리고, 다음 저장이 성공하면 지운다', async () => {
+    const { autosave, finish } = setup()
+    expect(autosave().saveError).toBeNull()
     autosave().change('a')
     await tick(800)
-    expect(onSaved).not.toHaveBeenCalled()
-    finish[0].ok()
+    finish[0].fail('일시 오류')
     await tick()
-    expect(onSaved).toHaveBeenCalledTimes(1)
-    expect(onError).not.toHaveBeenCalled()
+    expect(autosave().saveError?.message).toBe('일시 오류')
+
+    autosave().change('b')
+    await tick(800)
+    expect(autosave().saveError?.message).toBe('일시 오류')
+    finish[1].ok()
+    await tick()
+    expect(autosave().saveError).toBeNull()
   })
 
-  it('다시 그려져도 새로 받은 save와 알림을 쓴다', async () => {
+  it('flush와 discard를 시작하면 지난 실패를 지운다', async () => {
+    const failed = async () => {
+      const value = setup()
+      value.autosave().change('a')
+      await tick(800)
+      value.finish[0].fail('일시 오류')
+      await tick()
+      expect(value.autosave().saveError?.message).toBe('일시 오류')
+      return value
+    }
+    const flushing = await failed()
+    let flushed: Promise<void>
+    await act(async () => { flushed = flushing.autosave().flush(); await vi.advanceTimersByTimeAsync(0) })
+    expect(flushing.autosave().saveError).toBeNull()
+    flushing.finish[1].ok()
+    await act(async () => { await flushed })
+
+    const discarding = await failed()
+    await act(async () => { await discarding.autosave().discard() })
+    expect(discarding.autosave().saveError).toBeNull()
+  })
+
+  it('다시 그려져도 새로 받은 save를 쓴다', async () => {
     const first = fakeSave()
     const second = fakeSave()
     const hook = renderHook(({ save }) => useAutosave<string>({ delayMs: 800, save }), { initialProps: { save: first.save } })
@@ -201,15 +227,15 @@ describe('flush: 지금까지의 수정을 끝까지 저장', () => {
     expect(sent).toEqual([])
   })
 
-  it('실패하면 호출한 쪽에 실패를 돌려주고 onError는 부르지 않으며, 다음 flush가 다시 보낸다', async () => {
-    const { autosave, sent, finish, onError } = setup()
+  it('실패하면 호출한 쪽에 실패를 돌려주고 saveError는 두지 않으며, 다음 flush가 다시 보낸다', async () => {
+    const { autosave, sent, finish } = setup()
     autosave().change('a')
     const state = track(autosave().flush())
     await tick()
     finish[0].fail('공개 전 저장 실패')
     await tick()
     expect(state.error?.message).toBe('공개 전 저장 실패')
-    expect(onError).not.toHaveBeenCalled()
+    expect(autosave().saveError).toBeNull()
     // 지워진 예약이 나중에 저절로 다시 보내지 않는다
     await tick(800)
     expect(sent).toEqual(['a'])
@@ -284,8 +310,8 @@ describe('저장 순서', () => {
     expect(sent).toEqual(['a', 'c'])
   })
 
-  it('앞선 저장이 실패하면 onError로 알리고, 기다리던 수정은 이어서 저장한다', async () => {
-    const { autosave, sent, finish, onError } = setup()
+  it('앞선 저장이 실패하면 알리고, 기다리던 수정은 이어서 저장한다', async () => {
+    const { autosave, sent, finish } = setup()
     autosave().change('a')
     await tick(800)
     autosave().change('b')
@@ -293,7 +319,7 @@ describe('저장 순서', () => {
 
     finish[0].fail('일시 오류')
     await tick()
-    expect(onError.mock.calls[0][0].message).toBe('일시 오류')
+    expect(autosave().saveError?.message).toBe('일시 오류')
     expect(sent).toEqual(['a', 'b'])
   })
 
@@ -311,17 +337,16 @@ describe('저장 순서', () => {
   })
 
   it('save가 바로 오류를 던져도 저장 순서가 막히지 않는다', async () => {
-    const onError = vi.fn()
     const sent: string[] = []
     const save = (value: string) => {
       sent.push(value)
       if (value === 'a') throw new Error('바로 실패')
       return Promise.resolve()
     }
-    const { result } = renderHook(() => useAutosave<string>({ delayMs: 800, save, onError }))
+    const { result } = renderHook(() => useAutosave<string>({ delayMs: 800, save }))
     result.current.change('a')
     await tick(800)
-    expect(onError).toHaveBeenCalledTimes(1)
+    expect(result.current.saveError?.message).toBe('바로 실패')
     result.current.change('b')
     await tick(800)
     expect(sent).toEqual(['a', 'b'])

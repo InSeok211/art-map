@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 // 편집 내용을 서버에 자동으로 저장합니다(골목길, 건물 초안).
 //  - 연속 수정은 delayMs 뒤 최신 값 한 번으로 저장합니다.
@@ -9,8 +9,6 @@ export interface AutosaveOptions<T> {
   delayMs: number
   // 실패하면 reject합니다.
   save: (value: T) => Promise<void>
-  onSaved?: () => void
-  onError?: (error: Error) => void
 }
 
 export interface Autosave<T> {
@@ -20,9 +18,12 @@ export interface Autosave<T> {
   flush: () => Promise<void>
   // 진행 중인 저장을 기다린 뒤 남은 수정을 버립니다.
   discard: () => Promise<void>
+  // 예약된 자동 저장의 마지막 실패입니다. 다음 저장이 성공하거나 flush·discard를 시작하면 지웁니다.
+  saveError: Error | null
 }
 
 export function useAutosave<T>(options: AutosaveOptions<T>): Autosave<T> {
+  const [saveError, setSaveError] = useState<Error | null>(null)
   const latestOptions = useRef(options)
   latestOptions.current = options
 
@@ -54,10 +55,7 @@ export function useAutosave<T>(options: AutosaveOptions<T>): Autosave<T> {
         waiting = true
         return
       }
-      start().then(
-        () => latestOptions.current.onSaved?.(),
-        (error: Error) => latestOptions.current.onError?.(error),
-      )
+      start().then(() => setSaveError(null), (error: Error) => setSaveError(error))
     }
 
     async function settle() {
@@ -66,18 +64,20 @@ export function useAutosave<T>(options: AutosaveOptions<T>): Autosave<T> {
       while (running) await running
     }
 
-    const autosave: Autosave<T> = {
-      change(next) {
+    const autosave = {
+      change(next: T) {
         value = next
         editCount += 1
         clearTimeout(timer)
         timer = setTimeout(send, latestOptions.current.delayMs)
       },
       async flush() {
+        setSaveError(null)
         await settle()
         if (editCount !== savedCount) await start()
       },
       async discard() {
+        setSaveError(null)
         await settle()
         savedCount = editCount
       },
@@ -96,5 +96,5 @@ export function useAutosave<T>(options: AutosaveOptions<T>): Autosave<T> {
     return () => window.removeEventListener('beforeunload', warn)
   }, [hasUnsaved])
 
-  return autosave
+  return useMemo(() => ({ ...autosave, saveError }), [autosave, saveError])
 }

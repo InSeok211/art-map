@@ -38,7 +38,7 @@ export class MapErrorBoundary extends Component<Props, { failed: boolean }> {
     if (!this.state.failed) return this.props.children
     const { variant } = this.props
     const { title, message } = TEXT[variant]
-    return <main className="map-error" role="alert">
+    return <div className="map-error" role="alert">
       <div className="map-error__box">
         <h1>{title}</h1>
         <p>{message}</p>
@@ -46,6 +46,6 @@ export class MapErrorBoundary extends Component<Props, { failed: boolean }> {
         {/* 공개 지도는 홈페이지 안에 끼워져 있을 수 있어, 좁은 틀이 아니라 화면 전체에서 엽니다. */}
         {variant === 'public' && <a href="/artists" target="_top">작가 목록 보기</a>}
       </div>
-    </main>
+    </div>
   }
 }

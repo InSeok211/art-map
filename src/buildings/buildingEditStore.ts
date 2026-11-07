@@ -57,8 +57,7 @@ export function useBuildingEditStore(): BuildingEditStore {
   const [draft, setDraft] = useState<BuildingEdits>(() => readLocal(DRAFT_KEY))
   const [published, setPublished] = useState<BuildingEdits>(() => readLocal(PUBLISHED_KEY))
   const [mode, setMode] = useState<'loading' | 'server' | 'local' | 'error'>(hosted ? 'loading' : 'local')
-  // 자동 저장 안내와 공개·되돌리기 결과를 따로 둡니다. 자동 저장이 성공해도 되돌리기 실패 안내까지 지우지 않기 위해서입니다.
-  const [saveStatus, setSaveStatus] = useState('')
+  // 공개·되돌리기 결과입니다. 자동 저장 실패는 따로 있어, 저장이 성공해도 되돌리기 실패 안내를 지우지 않습니다.
   const [actionStatus, setActionStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const busyRef = useRef(false)
@@ -91,13 +90,11 @@ export function useBuildingEditStore(): BuildingEditStore {
   const autosave = useAutosave<BuildingEdits>({
     delayMs: 700,
     save: async (next) => { await call(API, { method: 'PUT', body: JSON.stringify({ draft: next }) }) },
-    onSaved: () => setSaveStatus(''),
-    onError: (error) => setSaveStatus(`초안을 저장하지 못했습니다: ${error.message}`),
   })
 
   function saveDraftSoon(next: BuildingEdits) {
     if (mode === 'local') {
-      setSaveStatus(writeLocal(DRAFT_KEY, next) ? '이 브라우저에 초안을 저장했습니다.' : '저장 공간이 부족합니다. 백업을 내려받아 주세요.')
+      setActionStatus(writeLocal(DRAFT_KEY, next) ? '이 브라우저에 초안을 저장했습니다.' : '저장 공간이 부족합니다. 백업을 내려받아 주세요.')
       return
     }
     autosave.change(next)
@@ -123,7 +120,6 @@ export function useBuildingEditStore(): BuildingEditStore {
     } catch (error) {
       setActionStatus(`${(error as Error).message || '실패했습니다.'} 잠시 뒤 다시 시도해 주세요.`)
     } finally {
-      setSaveStatus('')
       busyRef.current = false
       setBusy(false)
     }
@@ -133,7 +129,7 @@ export function useBuildingEditStore(): BuildingEditStore {
     draft,
     published,
     dirty: !sameBuildingEdits(draft, published),
-    status: saveStatus || actionStatus,
+    status: autosave.saveError ? `초안을 저장하지 못했습니다: ${autosave.saveError.message}` : actionStatus,
     busy: busy || mode === 'loading' || mode === 'error',
     server: mode === 'server' ? true : mode === 'local' ? false : null,
     onChange: (next) => { if (!busyRef.current && mode !== 'loading' && mode !== 'error') changeDraft(next) },
